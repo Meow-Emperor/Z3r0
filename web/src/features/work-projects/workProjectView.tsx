@@ -59,14 +59,17 @@ export function WorkProjectTasks({
 }) {
   return (
     <div className={className}>
-      {project.tasks.map((task) => (
-        <div key={task.id ?? task.title} className={rowClassName}>
-          {showIcon ? <ClipboardList size={14} /> : null}
-          <span>{task.title}</span>
-          <Tag color={WORK_PROJECT_TASK_STATUS_COLOR[task.status]}>{WORK_PROJECT_TASK_STATUS_LABEL[task.status]}</Tag>
-          <Progress percent={task.progress} size="small" showInfo={false} />
-        </div>
-      ))}
+      {project.tasks.map((task) => {
+        const taskRowClassName = showIcon ? rowClassName : `${rowClassName} work-project-task-row-no-icon`;
+        return (
+          <div key={task.id ?? task.title} className={taskRowClassName}>
+            {showIcon ? <ClipboardList size={14} /> : null}
+            <span className="work-project-task-title">{task.title}</span>
+            <Tag color={WORK_PROJECT_TASK_STATUS_COLOR[task.status]}>{WORK_PROJECT_TASK_STATUS_LABEL[task.status]}</Tag>
+            <Progress percent={task.progress} size="small" showInfo={false} />
+          </div>
+        );
+      })}
     </div>
   );
 }

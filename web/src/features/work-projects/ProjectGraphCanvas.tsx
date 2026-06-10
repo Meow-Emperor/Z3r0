@@ -1,5 +1,5 @@
 import { Maximize2, Minus, Plus } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   WORK_PROJECT_ASSET_TYPE,
@@ -37,36 +37,55 @@ const NODE_RADIUS = 8;
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 4;
 // Minimum center-to-center distance enforced after layout so related nodes never overlap.
-const MIN_SEPARATION = 78;
+const MIN_SEPARATION = 58;
+const VIEW_PADDING = 56;
+const FIT_PADDING = 58;
+const MAX_LAYOUT_EXTENT = 3000;
+const MAX_PAN_OFFSET = 12000;
+const TOOLTIP_OFFSET = 14;
+const TOOLTIP_MARGIN = 10;
 
 type Point = { x: number; y: number };
+type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 type ViewTransform = { x: number; y: number; k: number };
 type HoverTarget =
   | { kind: "node"; asset: WorkProjectAsset }
   | { kind: "edge"; edge: WorkProjectGraphEdge };
-type HoverState = { target: HoverTarget; left: number; top: number };
+type HoverState = { target: HoverTarget; left: number; top: number; containerWidth: number; containerHeight: number };
+type DragState =
+  | { kind: "node"; pointerId: number; id: number }
+  | { kind: "pan"; pointerId: number; startX: number; startY: number; originX: number; originY: number };
 
 export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset[]; edges: WorkProjectGraphEdge[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const dragRef = useRef<DragState | null>(null);
 
   const assetById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
   const visibleEdges = useMemo(
     () => edges.filter((edge) => assetById.has(edge.source_asset_id) && assetById.has(edge.target_asset_id)),
     [edges, assetById],
   );
+  const edgeCurveById = useMemo(() => edgeCurves(visibleEdges), [visibleEdges]);
   const layout = useMemo(() => computeLayout(assets, visibleEdges), [assets, visibleEdges]);
+  const layoutBounds = useMemo(() => boundsFor(layout, assets), [assets, layout]);
+  const fittedView = useMemo(() => fitView(layoutBounds), [layoutBounds]);
 
   const [positions, setPositions] = useState<Record<number, Point>>(layout);
-  const [view, setView] = useState<ViewTransform>({ x: 0, y: 0, k: 1 });
+  const [view, setView] = useState<ViewTransform>(fittedView);
   const [hover, setHover] = useState<HoverState | null>(null);
 
-  useEffect(() => setPositions(layout), [layout]);
+  useEffect(() => {
+    setPositions(layout);
+    setView(fittedView);
+    setHover(null);
+    dragRef.current = null;
+  }, [fittedView, layout]);
 
   // Translate a pointer event into the unscaled viewBox coordinate space.
   const toViewBox = useCallback((clientX: number, clientY: number): Point => {
     const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
+    if (!rect || rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 };
     return {
       x: ((clientX - rect.left) / rect.width) * VIEW_WIDTH,
       y: ((clientY - rect.top) / rect.height) * VIEW_HEIGHT,
@@ -76,26 +95,32 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
   const toContent = useCallback(
     (clientX: number, clientY: number): Point => {
       const local = toViewBox(clientX, clientY);
-      return { x: (local.x - view.x) / view.k, y: (local.y - view.y) / view.k };
+      if (!isFinitePoint(local) || !Number.isFinite(view.k) || view.k <= 0) return { x: VIEW_WIDTH / 2, y: VIEW_HEIGHT / 2 };
+      return sanitizePoint({ x: (local.x - view.x) / view.k, y: (local.y - view.y) / view.k });
     },
     [toViewBox, view],
   );
 
-  const containerPoint = useCallback((clientX: number, clientY: number): Point => {
+  const containerPoint = useCallback((clientX: number, clientY: number): Omit<HoverState, "target"> => {
     const rect = containerRef.current?.getBoundingClientRect();
-    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
+    return {
+      left: clientX - (rect?.left ?? 0),
+      top: clientY - (rect?.top ?? 0),
+      containerWidth: rect?.width ?? VIEW_WIDTH,
+      containerHeight: rect?.height ?? VIEW_HEIGHT,
+    };
   }, []);
-
-  const dragRef = useRef<{ id: number } | null>(null);
-  const panRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
 
   const zoomAt = useCallback((clientX: number, clientY: number, factor: number) => {
     setView((current) => {
-      const next = clamp(current.k * factor, MIN_SCALE, MAX_SCALE);
+      if (!Number.isFinite(factor) || factor <= 0) return current;
+      const currentScale = Number.isFinite(current.k) && current.k > 0 ? current.k : 1;
+      const next = clamp(currentScale * factor, MIN_SCALE, MAX_SCALE);
       const local = toViewBox(clientX, clientY);
-      const cx = (local.x - current.x) / current.k;
-      const cy = (local.y - current.y) / current.k;
-      return { k: next, x: local.x - cx * next, y: local.y - cy * next };
+      if (!isFinitePoint(local)) return current;
+      const cx = (local.x - current.x) / currentScale;
+      const cy = (local.y - current.y) / currentScale;
+      return sanitizeView({ k: next, x: local.x - cx * next, y: local.y - cy * next });
     });
   }, [toViewBox]);
 
@@ -113,44 +138,54 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
 
   const onNodePointerDown = (event: ReactPointerEvent, id: number) => {
     event.stopPropagation();
-    dragRef.current = { id };
+    dragRef.current = { kind: "node", pointerId: event.pointerId, id };
     setHover(null);
-    svgRef.current?.setPointerCapture(event.pointerId);
+    capturePointer(event.pointerId);
   };
 
   const onBackgroundPointerDown = (event: ReactPointerEvent) => {
-    panRef.current = { startX: event.clientX, startY: event.clientY, originX: view.x, originY: view.y };
-    svgRef.current?.setPointerCapture(event.pointerId);
+    if (event.button !== 0) return;
+    dragRef.current = {
+      kind: "pan",
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: Number.isFinite(view.x) ? view.x : 0,
+      originY: Number.isFinite(view.y) ? view.y : 0,
+    };
+    setHover(null);
+    capturePointer(event.pointerId);
   };
 
   const onPointerMove = (event: ReactPointerEvent) => {
-    if (dragRef.current) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag.kind === "node") {
       const point = toContent(event.clientX, event.clientY);
-      const id = dragRef.current.id;
+      const id = drag.id;
       setPositions((current) => ({ ...current, [id]: point }));
       return;
     }
-    if (panRef.current) {
-      const rect = svgRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const dx = ((event.clientX - panRef.current.startX) / rect.width) * VIEW_WIDTH;
-      const dy = ((event.clientY - panRef.current.startY) / rect.height) * VIEW_HEIGHT;
-      setView((current) => ({ ...current, x: panRef.current!.originX + dx, y: panRef.current!.originY + dy }));
-    }
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+    const dx = ((event.clientX - drag.startX) / rect.width) * VIEW_WIDTH;
+    const dy = ((event.clientY - drag.startY) / rect.height) * VIEW_HEIGHT;
+    setView((current) => sanitizeView({ ...current, x: drag.originX + dx, y: drag.originY + dy }));
   };
 
   const endInteraction = (event: ReactPointerEvent) => {
+    if (dragRef.current && dragRef.current.pointerId !== event.pointerId) return;
     dragRef.current = null;
-    panRef.current = null;
-    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
-      svgRef.current.releasePointerCapture(event.pointerId);
-    }
+    releasePointer(event.pointerId);
+  };
+
+  const onCanvasPointerLeave = () => {
+    if (!dragRef.current) setHover(null);
   };
 
   const moveHover = (event: ReactPointerEvent, target: HoverTarget) => {
-    if (dragRef.current || panRef.current) return;
-    const point = containerPoint(event.clientX, event.clientY);
-    setHover({ target, left: point.x, top: point.y });
+    if (dragRef.current) return;
+    setHover({ target, ...containerPoint(event.clientX, event.clientY) });
   };
 
   const zoomFromCenter = (factor: number) => {
@@ -159,7 +194,25 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
     zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, factor);
   };
 
-  const resetView = () => setView({ x: 0, y: 0, k: 1 });
+  const resetView = () => setView(fittedView);
+
+  const capturePointer = (pointerId: number) => {
+    try {
+      svgRef.current?.setPointerCapture(pointerId);
+    } catch {
+      // Pointer capture may fail if the pointer has already been canceled by the browser.
+    }
+  };
+
+  const releasePointer = (pointerId: number) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    try {
+      if (svg.hasPointerCapture(pointerId)) svg.releasePointerCapture(pointerId);
+    } catch {
+      // Ignore stale pointer ids from lost/canceled interactions.
+    }
+  };
 
   return (
     <div className="project-graph" ref={containerRef}>
@@ -172,7 +225,9 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
         onPointerDown={onBackgroundPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endInteraction}
-        onPointerLeave={endInteraction}
+        onPointerCancel={endInteraction}
+        onPointerLeave={onCanvasPointerLeave}
+        onLostPointerCapture={endInteraction}
       >
         <defs>
           {WORK_PROJECT_GRAPH_EDGE_CATEGORIES.map((category) => (
@@ -199,25 +254,22 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
             if (!source || !target) return null;
             const category = workProjectEdgeCategory(edge.type);
             const end = retract(source, target, NODE_RADIUS + 1);
+            const curve = resolvedEdgeCurve(edge, edgeCurveById.get(edge.id) ?? 0);
             const active = hover?.target.kind === "edge" && hover.target.edge.id === edge.id;
             return (
               <g key={edge.id}>
-                <line
+                <path
                   className="project-graph-edge"
                   stroke={EDGE_CATEGORY_COLOR[category]}
                   strokeWidth={active ? 3 : category === "offensive" ? 2 : 1.5}
-                  x1={source.x}
-                  y1={source.y}
-                  x2={end.x}
-                  y2={end.y}
+                  fill="none"
+                  d={edgePath(source, end, curve)}
                   markerEnd={`url(#graph-arrow-${category})`}
                 />
-                <line
+                <path
                   className="project-graph-edge-hit"
-                  x1={source.x}
-                  y1={source.y}
-                  x2={target.x}
-                  y2={target.y}
+                  fill="none"
+                  d={edgePath(source, target, curve)}
                   onPointerEnter={(event) => moveHover(event, { kind: "edge", edge })}
                   onPointerMove={(event) => moveHover(event, { kind: "edge", edge })}
                   onPointerLeave={() => setHover(null)}
@@ -293,22 +345,60 @@ function GraphLegend() {
 }
 
 function GraphTooltip({ hover, assetById }: { hover: HoverState; assetById: Map<number, WorkProjectAsset> }) {
-  const rows = hover.target.kind === "node"
-    ? nodeRows(hover.target.asset)
-    : edgeRows(hover.target.edge, assetById);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const rows = useMemo(
+    () => hover.target.kind === "node"
+      ? nodeRows(hover.target.asset)
+      : edgeRows(hover.target.edge, assetById),
+    [assetById, hover.target],
+  );
+
+  useLayoutEffect(() => {
+    const element = tooltipRef.current;
+    if (!element) return;
+    const updateSize = () => {
+      const next = { width: element.offsetWidth, height: element.offsetHeight };
+      setSize((current) => (
+        current.width === next.width && current.height === next.height ? current : next
+      ));
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [rows]);
+
+  const style = tooltipStyle(hover, size);
+
   return (
-    <div className="project-graph-tooltip" style={{ left: hover.left, top: hover.top }}>
+    <div ref={tooltipRef} className="project-graph-tooltip" style={style}>
       <strong>{rows.title}</strong>
       <dl>
         {rows.items.map(([label, value]) => (
-          <div key={label}>
+          <Fragment key={label}>
             <dt>{label}</dt>
             <dd>{value}</dd>
-          </div>
+          </Fragment>
         ))}
       </dl>
     </div>
   );
+}
+
+function tooltipStyle(hover: HoverState, size: { width: number; height: number }): { left: number; top: number } {
+  const maxLeft = Math.max(TOOLTIP_MARGIN, hover.containerWidth - size.width - TOOLTIP_MARGIN);
+  const maxTop = Math.max(TOOLTIP_MARGIN, hover.containerHeight - size.height - TOOLTIP_MARGIN);
+  const left = hover.left + TOOLTIP_OFFSET + size.width > hover.containerWidth - TOOLTIP_MARGIN
+    ? hover.left - size.width - TOOLTIP_OFFSET
+    : hover.left + TOOLTIP_OFFSET;
+  const top = hover.top + TOOLTIP_OFFSET + size.height > hover.containerHeight - TOOLTIP_MARGIN
+    ? hover.top - size.height - TOOLTIP_OFFSET
+    : hover.top + TOOLTIP_OFFSET;
+  return {
+    left: clamp(left, TOOLTIP_MARGIN, maxLeft),
+    top: clamp(top, TOOLTIP_MARGIN, maxTop),
+  };
 }
 
 function nodeRows(asset: WorkProjectAsset): { title: string; items: Array<[string, string]> } {
@@ -342,18 +432,24 @@ function keepFilled(items: Array<[string, string | undefined]>): Array<[string, 
 function computeLayout(assets: WorkProjectAsset[], edges: WorkProjectGraphEdge[]): Record<number, Point> {
   const count = assets.length;
   const positions: Record<number, Point> = {};
+  if (!count) return positions;
+  const density = count > 1 ? edges.length / count : 0;
+  const layoutSize = layoutDimensions(count, edges.length);
+  const center = { x: layoutSize.width / 2, y: layoutSize.height / 2 };
   assets.forEach((asset, index) => {
     const angle = (2 * Math.PI * index) / Math.max(count, 1);
+    const ring = 0.22 + ((index % 5) * 0.045);
     positions[asset.id] = {
-      x: VIEW_WIDTH / 2 + Math.cos(angle) * VIEW_WIDTH * 0.3,
-      y: VIEW_HEIGHT / 2 + Math.sin(angle) * VIEW_HEIGHT * 0.3,
+      x: center.x + Math.cos(angle) * layoutSize.width * ring,
+      y: center.y + Math.sin(angle) * layoutSize.height * ring,
     };
   });
   if (count <= 1) return positions;
 
-  const ideal = Math.sqrt((VIEW_WIDTH * VIEW_HEIGHT) / count);
-  const iterations = count > 120 ? 120 : 300;
-  let temperature = VIEW_WIDTH / 10;
+  const degrees = nodeDegrees(assets, edges);
+  const ideal = clamp(Math.sqrt((layoutSize.width * layoutSize.height) / count) * (0.82 + Math.min(density, 3) * 0.08), 72, 160);
+  const iterations = count > 160 ? 150 : count > 90 ? 210 : 300;
+  let temperature = Math.min(layoutSize.width, layoutSize.height) / 10;
 
   for (let step = 0; step < iterations; step += 1) {
     const displacement: Record<number, Point> = {};
@@ -366,7 +462,8 @@ function computeLayout(assets: WorkProjectAsset[], edges: WorkProjectGraphEdge[]
         const dx = a.x - b.x;
         const dy = a.y - b.y;
         const distance = Math.hypot(dx, dy) || 0.01;
-        const force = (ideal * ideal) / distance;
+        const degreeBoost = 1 + Math.min((degrees.get(assets[i].id) ?? 0) + (degrees.get(assets[j].id) ?? 0), 12) * 0.018;
+        const force = ((ideal * ideal) / distance) * degreeBoost;
         const ux = (dx / distance) * force;
         const uy = (dy / distance) * force;
         displacement[assets[i].id].x += ux;
@@ -382,7 +479,10 @@ function computeLayout(assets: WorkProjectAsset[], edges: WorkProjectGraphEdge[]
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const distance = Math.hypot(dx, dy) || 0.01;
-      const force = (distance * distance) / ideal;
+      const sourceDegree = degrees.get(edge.source_asset_id) ?? 1;
+      const targetDegree = degrees.get(edge.target_asset_id) ?? 1;
+      const edgeIdeal = ideal * (1 + Math.min(sourceDegree + targetDegree, 14) * 0.006);
+      const force = (distance * distance) / edgeIdeal;
       const ux = (dx / distance) * force;
       const uy = (dy / distance) * force;
       displacement[edge.source_asset_id].x -= ux;
@@ -395,20 +495,24 @@ function computeLayout(assets: WorkProjectAsset[], edges: WorkProjectGraphEdge[]
       const move = displacement[asset.id];
       const length = Math.hypot(move.x, move.y) || 0.01;
       const limited = Math.min(length, temperature);
-      positions[asset.id].x += (move.x / length) * limited;
-      positions[asset.id].y += (move.y / length) * limited;
+      positions[asset.id].x = clamp(positions[asset.id].x + (move.x / length) * limited, VIEW_PADDING, layoutSize.width - VIEW_PADDING);
+      positions[asset.id].y = clamp(positions[asset.id].y + (move.y / length) * limited, VIEW_PADDING, layoutSize.height - VIEW_PADDING);
     }
-    temperature *= 0.95;
+    temperature *= 0.94;
   }
 
-  const placed = normalize(positions, assets);
-  separate(placed, assets);
-  return placed;
+  separate(positions, assets, minSeparation(count, edges.length), layoutSize);
+  return sanitizePositions(positions, assets);
 }
 
 // Push apart any node pair closer than MIN_SEPARATION so densely linked clusters stay readable.
-function separate(positions: Record<number, Point>, assets: WorkProjectAsset[]): void {
-  for (let pass = 0; pass < 200; pass += 1) {
+function separate(
+  positions: Record<number, Point>,
+  assets: WorkProjectAsset[],
+  minDistance: number,
+  layoutSize: { width: number; height: number },
+): void {
+  for (let pass = 0; pass < 260; pass += 1) {
     let moved = false;
     for (let i = 0; i < assets.length; i += 1) {
       for (let j = i + 1; j < assets.length; j += 1) {
@@ -423,14 +527,18 @@ function separate(positions: Record<number, Point>, assets: WorkProjectAsset[]):
           dy = 1;
           distance = Math.hypot(dx, dy);
         }
-        if (distance >= MIN_SEPARATION) continue;
-        const shift = (MIN_SEPARATION - distance) / 2;
+        if (distance >= minDistance) continue;
+        const shift = (minDistance - distance) / 2;
         const ux = (dx / distance) * shift;
         const uy = (dy / distance) * shift;
         a.x -= ux;
         a.y -= uy;
         b.x += ux;
         b.y += uy;
+        a.x = clamp(a.x, VIEW_PADDING, layoutSize.width - VIEW_PADDING);
+        a.y = clamp(a.y, VIEW_PADDING, layoutSize.height - VIEW_PADDING);
+        b.x = clamp(b.x, VIEW_PADDING, layoutSize.width - VIEW_PADDING);
+        b.y = clamp(b.y, VIEW_PADDING, layoutSize.height - VIEW_PADDING);
         moved = true;
       }
     }
@@ -438,27 +546,102 @@ function separate(positions: Record<number, Point>, assets: WorkProjectAsset[]):
   }
 }
 
-function normalize(positions: Record<number, Point>, assets: WorkProjectAsset[]): Record<number, Point> {
-  const padding = 70;
-  const xs = assets.map((asset) => positions[asset.id].x);
-  const ys = assets.map((asset) => positions[asset.id].y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const spanX = maxX - minX || 1;
-  const spanY = maxY - minY || 1;
-  const scale = Math.min((VIEW_WIDTH - padding * 2) / spanX, (VIEW_HEIGHT - padding * 2) / spanY);
-  const offsetX = (VIEW_WIDTH - spanX * scale) / 2;
-  const offsetY = (VIEW_HEIGHT - spanY * scale) / 2;
+function sanitizePositions(positions: Record<number, Point>, assets: WorkProjectAsset[]): Record<number, Point> {
   const result: Record<number, Point> = {};
   for (const asset of assets) {
-    result[asset.id] = {
-      x: offsetX + (positions[asset.id].x - minX) * scale,
-      y: offsetY + (positions[asset.id].y - minY) * scale,
-    };
+    result[asset.id] = sanitizePoint(positions[asset.id]);
   }
   return result;
+}
+
+function layoutDimensions(nodeCount: number, edgeCount: number): { width: number; height: number } {
+  const complexity = Math.max(1, nodeCount + edgeCount * 0.28);
+  const scale = clamp(Math.sqrt(complexity / 22), 1, 2.8);
+  return {
+    width: Math.min(MAX_LAYOUT_EXTENT, VIEW_WIDTH * scale),
+    height: Math.min(MAX_LAYOUT_EXTENT, VIEW_HEIGHT * scale),
+  };
+}
+
+function minSeparation(nodeCount: number, edgeCount: number): number {
+  const density = nodeCount > 0 ? edgeCount / nodeCount : 0;
+  return clamp(MIN_SEPARATION + density * 5 + Math.sqrt(nodeCount) * 0.7, MIN_SEPARATION, 92);
+}
+
+function boundsFor(positions: Record<number, Point>, assets: WorkProjectAsset[]): Bounds {
+  const points = assets.map((asset) => positions[asset.id]).filter(isFinitePoint);
+  if (!points.length) {
+    return { minX: 0, minY: 0, maxX: VIEW_WIDTH, maxY: VIEW_HEIGHT };
+  }
+  return {
+    minX: Math.min(...points.map((point) => point.x)),
+    minY: Math.min(...points.map((point) => point.y)),
+    maxX: Math.max(...points.map((point) => point.x)),
+    maxY: Math.max(...points.map((point) => point.y)),
+  };
+}
+
+function fitView(bounds: Bounds): ViewTransform {
+  const width = Math.max(bounds.maxX - bounds.minX, NODE_RADIUS * 2);
+  const height = Math.max(bounds.maxY - bounds.minY, NODE_RADIUS * 2);
+  const scale = clamp(Math.min((VIEW_WIDTH - FIT_PADDING * 2) / width, (VIEW_HEIGHT - FIT_PADDING * 2) / height), MIN_SCALE, MAX_SCALE);
+  return sanitizeView({
+    k: scale,
+    x: (VIEW_WIDTH - width * scale) / 2 - bounds.minX * scale,
+    y: (VIEW_HEIGHT - height * scale) / 2 - bounds.minY * scale,
+  });
+}
+
+function nodeDegrees(assets: WorkProjectAsset[], edges: WorkProjectGraphEdge[]): Map<number, number> {
+  const degrees = new Map(assets.map((asset) => [asset.id, 0]));
+  for (const edge of edges) {
+    degrees.set(edge.source_asset_id, (degrees.get(edge.source_asset_id) ?? 0) + 1);
+    degrees.set(edge.target_asset_id, (degrees.get(edge.target_asset_id) ?? 0) + 1);
+  }
+  return degrees;
+}
+
+function edgeCurves(edges: WorkProjectGraphEdge[]): Map<number, number> {
+  const groups = new Map<string, WorkProjectGraphEdge[]>();
+  for (const edge of edges) {
+    const key = edgePairKey(edge);
+    const group = groups.get(key) ?? [];
+    group.push(edge);
+    groups.set(key, group);
+  }
+  const curves = new Map<number, number>();
+  for (const group of groups.values()) {
+    group.sort((a, b) => a.id - b.id);
+    for (let index = 0; index < group.length; index += 1) {
+      curves.set(group[index].id, (index - (group.length - 1) / 2) * 26);
+    }
+  }
+  return curves;
+}
+
+function edgePairKey(edge: WorkProjectGraphEdge): string {
+  const low = Math.min(edge.source_asset_id, edge.target_asset_id);
+  const high = Math.max(edge.source_asset_id, edge.target_asset_id);
+  return `${low}:${high}`;
+}
+
+function resolvedEdgeCurve(edge: WorkProjectGraphEdge, curve: number): number {
+  if (curve === 0) return 0;
+  return edge.source_asset_id <= edge.target_asset_id ? curve : -curve;
+}
+
+function edgePath(source: Point, target: Point, curve: number): string {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const distance = Math.hypot(dx, dy) || 1;
+  const nx = -dy / distance;
+  const ny = dx / distance;
+  const cx = (source.x + target.x) / 2 + nx * curve;
+  const cy = (source.y + target.y) / 2 + ny * curve;
+  if (Math.abs(curve) < 0.1) {
+    return `M ${source.x} ${source.y} L ${target.x} ${target.y}`;
+  }
+  return `M ${source.x} ${source.y} Q ${cx} ${cy} ${target.x} ${target.y}`;
 }
 
 function retract(source: Point, target: Point, distance: number): Point {
@@ -470,6 +653,29 @@ function retract(source: Point, target: Point, distance: number): Point {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function finiteOr(value: number, fallback: number): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function isFinitePoint(point: Point): boolean {
+  return Number.isFinite(point.x) && Number.isFinite(point.y);
+}
+
+function sanitizePoint(point: Point): Point {
+  return {
+    x: clamp(finiteOr(point.x, VIEW_WIDTH / 2), -MAX_LAYOUT_EXTENT, MAX_LAYOUT_EXTENT),
+    y: clamp(finiteOr(point.y, VIEW_HEIGHT / 2), -MAX_LAYOUT_EXTENT, MAX_LAYOUT_EXTENT),
+  };
+}
+
+function sanitizeView(view: ViewTransform): ViewTransform {
+  return {
+    x: clamp(finiteOr(view.x, 0), -MAX_PAN_OFFSET, MAX_PAN_OFFSET),
+    y: clamp(finiteOr(view.y, 0), -MAX_PAN_OFFSET, MAX_PAN_OFFSET),
+    k: clamp(finiteOr(view.k, 1), MIN_SCALE, MAX_SCALE),
+  };
 }
 
 function truncate(value: string, max: number): string {

@@ -629,8 +629,10 @@
 
 .work-project-task-list {
   display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   max-height: 220px;
-  gap: 8px;
+  gap: 0;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-color: #b8c6d6 transparent;
@@ -640,20 +642,35 @@
 .work-project-task-row {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) max-content 82px;
-  align-items: center;
+  align-items: start;
   gap: 8px;
-  min-height: 30px;
-  padding-bottom: 6px;
+  min-height: 36px;
+  overflow: visible;
+  padding: 7px 0 8px;
   border-bottom: 1px solid #edf2f7;
   color: #26344d;
   font-size: 13px;
 }
 
-.work-project-task-row > span {
+.work-project-task-row-no-icon {
+  grid-template-columns: minmax(0, 1fr) max-content 82px;
+}
+
+.work-project-task-title {
+  display: block;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.work-project-task-row .semi-tag,
+.work-project-task-row .semi-progress {
+  margin-top: 1px;
+}
+
+.work-project-task-row .semi-progress {
+  min-width: 0;
 }
 
 .work-project-summary-list {
@@ -861,6 +878,7 @@
 
 .project-info-scroll-list {
   display: grid;
+  grid-auto-rows: max-content;
   align-content: start;
   height: 100%;
   gap: 8px;
@@ -911,13 +929,16 @@
   grid-template-columns: minmax(0, 1fr) max-content minmax(72px, 86px);
   align-items: start;
   gap: 8px;
+  overflow: visible;
 }
 
-.project-info-task-row > span {
+.project-info-task-row .work-project-task-title {
+  display: block;
   min-width: 0;
   font-size: 13px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .project-info-task-row .semi-progress {
@@ -1277,14 +1298,31 @@
 .project-graph-tooltip {
   position: absolute;
   z-index: 2;
-  max-width: 280px;
-  transform: translate(14px, 14px);
+  box-sizing: border-box;
+  width: min(360px, calc(100% - 20px));
+  max-height: min(320px, calc(100% - 20px));
+  overflow: auto;
   padding: 8px 10px;
   border: 1px solid #dbe3ee;
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 6px 20px rgba(20, 40, 80, 0.16);
   pointer-events: none;
+  scrollbar-color: #b8c6d6 transparent;
+  scrollbar-width: thin;
+}
+
+.project-graph-tooltip::-webkit-scrollbar {
+  width: 6px;
+}
+
+.project-graph-tooltip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.project-graph-tooltip::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #b8c6d6;
 }
 
 .project-graph-tooltip strong {
@@ -1292,26 +1330,30 @@
   margin-bottom: 4px;
   color: #1f2a3d;
   font-size: 13px;
-  word-break: break-all;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .project-graph-tooltip dl {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 2px 10px;
+  grid-template-columns: minmax(42px, max-content) minmax(0, 1fr);
+  gap: 4px 10px;
   margin: 0;
 }
 
 .project-graph-tooltip dt {
   color: #8593a8;
   font-size: 11px;
+  line-height: 1.45;
 }
 
 .project-graph-tooltip dd {
+  min-width: 0;
   margin: 0;
   color: #41506a;
   font-size: 12px;
-  word-break: break-all;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .resource-cell-created,
