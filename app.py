@@ -30,9 +30,6 @@ from router.sandbox.images import router as sandbox_image_router
 from router.system_config.config import router as system_config_router
 from router.system_user.users import router as system_user_router
 from router.work_project.projects import router as work_project_router
-from router.work_project.assets import router as work_project_asset_router
-from router.work_project.findings import router as work_project_finding_router
-from router.work_project.graph import router as work_project_graph_router
 from schema.system_user.users import SystemUserRole
 from service.agent.recovery import recover_pending_sessions
 from service.sandbox.status import (
@@ -140,9 +137,6 @@ def create_app() -> FastAPI:
     app.include_router(sandbox_image_router, prefix=API_PREFIX)
     app.include_router(sandbox_container_router, prefix=API_PREFIX)
     app.include_router(work_project_router, prefix=API_PREFIX)
-    app.include_router(work_project_asset_router, prefix=API_PREFIX)
-    app.include_router(work_project_finding_router, prefix=API_PREFIX)
-    app.include_router(work_project_graph_router, prefix=API_PREFIX)
     app.include_router(agent_router, prefix=API_PREFIX)
     app.include_router(agent_session_router, prefix=API_PREFIX)
     app.include_router(system_config_router, prefix=API_PREFIX)

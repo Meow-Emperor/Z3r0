@@ -1171,58 +1171,6 @@
         "title": "CommonResponse[QuerySystemUsersResponse]",
         "type": "object"
       },
-      "CommonResponse_QueryWorkProjectAssetsResponse_": {
-        "properties": {
-          "code": {
-            "default": 200,
-            "title": "Code",
-            "type": "integer"
-          },
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/QueryWorkProjectAssetsResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "message": {
-            "default": "success",
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "title": "CommonResponse[QueryWorkProjectAssetsResponse]",
-        "type": "object"
-      },
-      "CommonResponse_QueryWorkProjectFindingsResponse_": {
-        "properties": {
-          "code": {
-            "default": 200,
-            "title": "Code",
-            "type": "integer"
-          },
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/QueryWorkProjectFindingsResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "message": {
-            "default": "success",
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "title": "CommonResponse[QueryWorkProjectFindingsResponse]",
-        "type": "object"
-      },
       "CommonResponse_QueryWorkProjectsResponse_": {
         "properties": {
           "code": {
@@ -1405,7 +1353,7 @@
         "title": "CommonResponse[UpdateInstanceConfigResponse]",
         "type": "object"
       },
-      "CommonResponse_WorkProjectGraphSnapshotSchema_": {
+      "CommonResponse_WorkProjectRecordSnapshotSchema_": {
         "properties": {
           "code": {
             "default": 200,
@@ -1415,7 +1363,7 @@
           "data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/WorkProjectGraphSnapshotSchema"
+                "$ref": "#/components/schemas/WorkProjectRecordSnapshotSchema"
               },
               {
                 "type": "null"
@@ -1428,7 +1376,7 @@
             "type": "string"
           }
         },
-        "title": "CommonResponse[WorkProjectGraphSnapshotSchema]",
+        "title": "CommonResponse[WorkProjectRecordSnapshotSchema]",
         "type": "object"
       },
       "CommonResponse_WorkProjectSchema_": {
@@ -2263,68 +2211,6 @@
           "items"
         ],
         "title": "QuerySystemUsersResponse",
-        "type": "object"
-      },
-      "QueryWorkProjectAssetsResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/WorkProjectAssetSchema"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "size": {
-            "title": "Size",
-            "type": "integer"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "page",
-          "size",
-          "total",
-          "items"
-        ],
-        "title": "QueryWorkProjectAssetsResponse",
-        "type": "object"
-      },
-      "QueryWorkProjectFindingsResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/WorkProjectFindingSchema"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "size": {
-            "title": "Size",
-            "type": "integer"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "page",
-          "size",
-          "total",
-          "items"
-        ],
-        "title": "QueryWorkProjectFindingsResponse",
         "type": "object"
       },
       "QueryWorkProjectsResponse": {
@@ -4166,6 +4052,50 @@
           "username"
         ],
         "title": "WorkProjectOwnerSchema",
+        "type": "object"
+      },
+      "WorkProjectRecordSnapshotSchema": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/WorkProjectSchema"
+          },
+          "records": {
+            "$ref": "#/components/schemas/WorkProjectRecordsSchema"
+          }
+        },
+        "required": [
+          "project",
+          "records"
+        ],
+        "title": "WorkProjectRecordSnapshotSchema",
+        "type": "object"
+      },
+      "WorkProjectRecordsSchema": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectAssetSchema"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectFindingSchema"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/WorkProjectGraphSnapshotSchema"
+          }
+        },
+        "required": [
+          "assets",
+          "findings",
+          "graph"
+        ],
+        "title": "WorkProjectRecordsSchema",
         "type": "object"
       },
       "WorkProjectSchema": {
@@ -7503,71 +7433,6 @@
         "tags": [
           "work-projects"
         ]
-      },
-      "get": {
-        "operationId": "get_work_project_route_api_work_projects__id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "title": "Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_WorkProjectSchema_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Work project not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "summary": "Get Work Project Route",
-        "tags": [
-          "work-projects"
-        ]
       }
     },
     "/api/work-projects/{id}/cancel": {
@@ -7749,6 +7614,73 @@
           }
         ],
         "summary": "Update Work Project Metadata Route",
+        "tags": [
+          "work-projects"
+        ]
+      }
+    },
+    "/api/work-projects/{id}/record-snapshot": {
+      "get": {
+        "operationId": "get_work_project_record_snapshot_route_api_work_projects__id__record_snapshot_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_WorkProjectRecordSnapshotSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get Work Project Record Snapshot Route",
         "tags": [
           "work-projects"
         ]
@@ -8056,243 +7988,6 @@
         "summary": "Delete Work Project Session Route",
         "tags": [
           "work-projects"
-        ]
-      }
-    },
-    "/api/work-projects/{project_id}/assets": {
-      "get": {
-        "operationId": "query_work_project_assets_route_api_work_projects__project_id__assets_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "title": "Project Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "size",
-            "required": false,
-            "schema": {
-              "default": 100,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Size",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "keyword",
-            "required": false,
-            "schema": {
-              "default": "",
-              "title": "Keyword",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_QueryWorkProjectAssetsResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "summary": "Query Work Project Assets Route",
-        "tags": [
-          "work-project-assets"
-        ]
-      }
-    },
-    "/api/work-projects/{project_id}/findings": {
-      "get": {
-        "operationId": "query_work_project_findings_route_api_work_projects__project_id__findings_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "title": "Project Id",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "size",
-            "required": false,
-            "schema": {
-              "default": 100,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Size",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "keyword",
-            "required": false,
-            "schema": {
-              "default": "",
-              "title": "Keyword",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_QueryWorkProjectFindingsResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "summary": "Query Work Project Findings Route",
-        "tags": [
-          "work-project-findings"
-        ]
-      }
-    },
-    "/api/work-projects/{project_id}/graph": {
-      "get": {
-        "operationId": "get_work_project_graph_snapshot_route_api_work_projects__project_id__graph_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "project_id",
-            "required": true,
-            "schema": {
-              "title": "Project Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_WorkProjectGraphSnapshotSchema_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "summary": "Get Work Project Graph Snapshot Route",
-        "tags": [
-          "work-project-graph"
         ]
       }
     }

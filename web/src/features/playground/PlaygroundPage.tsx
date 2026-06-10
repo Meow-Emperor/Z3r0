@@ -221,7 +221,6 @@ export function PlaygroundPage() {
       </div>
       <WorkProjectInfoModal
         open={projectRecordsOpen && Boolean(activeProjectId)}
-        project={null}
         projectId={activeProjectId}
         initialTab="assets"
         onClose={() => setProjectRecordsOpen(false)}

@@ -4,9 +4,6 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from schema.common.responses import PaginatedResponse
-
-
 class WorkProjectAssetType(StrEnum):
     SERVICE = "service"
     DOMAIN = "domain"
@@ -114,10 +111,6 @@ class WorkProjectAssetRequest(BaseModel):
     def identity(self) -> tuple[WorkProjectAssetType, str]:
         """Composite identity that distinguishes assets of different types sharing an identifier."""
         return self.type, self.identifier
-
-
-class QueryWorkProjectAssetsResponse(PaginatedResponse[WorkProjectAssetSchema]):
-    pass
 
 
 def _normalize_network(value: str) -> str:

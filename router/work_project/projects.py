@@ -6,7 +6,7 @@ from handler.work_project.projects import (
     create_work_project_session_handler,
     delete_work_project_handler,
     delete_work_project_session_handler,
-    get_work_project_handler,
+    get_work_project_record_snapshot_handler,
     list_work_project_sessions_handler,
     query_work_projects_handler,
     retry_work_project_handler,
@@ -24,6 +24,7 @@ from schema.work_project.projects import (
     UpdateWorkProjectMetadataRequest,
     WorkProjectSchema,
 )
+from schema.work_project.records import WorkProjectRecordSnapshotSchema
 
 
 NOT_FOUND_RESPONSE = not_found_response("Work project")
@@ -51,11 +52,11 @@ async def create_work_project_route(
     return await create_work_project_handler(request=request)
 
 
-async def get_work_project_route(
+async def get_work_project_record_snapshot_route(
     id: int,
     user: AuthUser = Depends(require_user),
-) -> CommonResponse[WorkProjectSchema]:
-    return await get_work_project_handler(id=id, user=user)
+) -> CommonResponse[WorkProjectRecordSnapshotSchema]:
+    return await get_work_project_record_snapshot_handler(id=id, user=user)
 
 
 async def update_work_project_metadata_route(
@@ -105,10 +106,10 @@ router.add_api_route(
 )
 
 router.add_api_route(
-    "/{id}",
-    get_work_project_route,
+    "/{id}/record-snapshot",
+    get_work_project_record_snapshot_route,
     methods=["GET"],
-    response_model=CommonResponse[WorkProjectSchema],
+    response_model=CommonResponse[WorkProjectRecordSnapshotSchema],
     responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
 )
 

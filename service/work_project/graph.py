@@ -29,21 +29,25 @@ from schema.work_project.graph import (
 # ---------------------------------------------------------------------------
 async def get_work_project_graph_snapshot(project_id: int) -> WorkProjectGraphSnapshotSchema:
     async with get_async_session() as session:
-        edges = (await session.exec(
-            select(WorkProjectGraphEdge)
-            .where(WorkProjectGraphEdge.project_id == project_id)
-            .order_by(WorkProjectGraphEdge.id)
-        )).all()
-        attack_paths = (await session.exec(
-            select(WorkProjectAttackPath)
-            .where(WorkProjectAttackPath.project_id == project_id)
-            .order_by(WorkProjectAttackPath.id)
-        )).all()
-        steps = (await session.exec(
-            select(WorkProjectAttackPathStep)
-            .where(WorkProjectAttackPathStep.project_id == project_id)
-            .order_by(WorkProjectAttackPathStep.path_id, WorkProjectAttackPathStep.sequence)
-        )).all()
+        return await get_work_project_graph_snapshot_in_tx(session, project_id)
+
+
+async def get_work_project_graph_snapshot_in_tx(session, project_id: int) -> WorkProjectGraphSnapshotSchema:
+    edges = (await session.exec(
+        select(WorkProjectGraphEdge)
+        .where(WorkProjectGraphEdge.project_id == project_id)
+        .order_by(WorkProjectGraphEdge.id)
+    )).all()
+    attack_paths = (await session.exec(
+        select(WorkProjectAttackPath)
+        .where(WorkProjectAttackPath.project_id == project_id)
+        .order_by(WorkProjectAttackPath.id)
+    )).all()
+    steps = (await session.exec(
+        select(WorkProjectAttackPathStep)
+        .where(WorkProjectAttackPathStep.project_id == project_id)
+        .order_by(WorkProjectAttackPathStep.path_id, WorkProjectAttackPathStep.sequence)
+    )).all()
     return WorkProjectGraphSnapshotSchema(
         edges=[WorkProjectGraphEdgeSchema.model_validate(item) for item in edges],
         attack_paths=[WorkProjectAttackPathSchema.model_validate(item) for item in attack_paths],

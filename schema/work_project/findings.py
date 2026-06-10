@@ -4,9 +4,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from schema.common.responses import PaginatedResponse
-
-
 class WorkProjectFindingSeverity(StrEnum):
     INFO = "info"
     LOW = "low"
@@ -57,7 +54,3 @@ class WorkProjectFindingRequest(BaseModel):
         if isinstance(value, str):
             return value.strip()
         return value
-
-
-class QueryWorkProjectFindingsResponse(PaginatedResponse[WorkProjectFindingSchema]):
-    pass

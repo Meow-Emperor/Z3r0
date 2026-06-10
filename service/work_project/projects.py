@@ -11,13 +11,14 @@ from logger import get_logger
 from model.agent.sessions import AgentSessionMeta
 from model.sandbox.containers import SandboxContainer
 from model.system_user.users import SystemUser
+from model.work_project.assets import WorkProjectAsset
 from model.work_project.findings import WorkProjectFinding
 from model.work_project.projects import WorkProject, WorkProjectOwner
-from model.work_project.assets import WorkProjectAsset
 from schema.agent.sessions import AgentSessionSummarySchema, SessionType
 from schema.sandbox.containers import SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from schema.work_project.assets import WorkProjectAssetOrigin, WorkProjectAssetRequest, WorkProjectAssetType
+from schema.work_project.findings import WorkProjectFindingSchema
 from schema.work_project.projects import (
     CreateWorkProjectRequest,
     UpdateWorkProjectMetadataRequest,
@@ -27,10 +28,11 @@ from schema.work_project.projects import (
     WorkProjectStatus,
     WorkProjectTaskSchema,
 )
+from schema.work_project.records import WorkProjectRecordSnapshotSchema, WorkProjectRecordsSchema
 from service.agent.sessions import cancel_sessions, delete_session, ensure_sdk_session_row, list_sessions
 from service.common.pagination import Page, paginate_statement
 from service.work_project.assets import apply_asset_request
-from service.work_project.graph import purge_edges_touching_asset
+from service.work_project.graph import get_work_project_graph_snapshot_in_tx, purge_edges_touching_asset
 from service.work_project.progress import derive_work_project_status
 
 
@@ -119,18 +121,34 @@ async def create_work_project(request: CreateWorkProjectRequest) -> WorkProjectS
     return schema
 
 
-async def get_work_project_for_user(
+async def get_work_project_record_snapshot_for_user(
     id: int,
     user_id: int,
     user_role: SystemUserRole,
-) -> WorkProjectSchema | None:
-    if not await can_access_work_project(id, user_id, user_role):
-        return None
+) -> WorkProjectRecordSnapshotSchema | None:
     async with get_async_session() as session:
+        if not await _can_access_work_project_in_tx(session, id, user_id, user_role):
+            return None
         project = await session.get(WorkProject, id)
         if project is None:
             return None
-        return await _project_schema(session, project)
+        project_schema = await _project_schema(session, project)
+        assets = project_schema.assets
+        findings = (await session.exec(
+            select(WorkProjectFinding)
+            .where(WorkProjectFinding.project_id == id)
+            .order_by(WorkProjectFinding.id)
+        )).all()
+        graph = await get_work_project_graph_snapshot_in_tx(session, id)
+
+    return WorkProjectRecordSnapshotSchema(
+        project=project_schema,
+        records=WorkProjectRecordsSchema(
+            assets=assets,
+            findings=[WorkProjectFindingSchema.model_validate(item) for item in findings],
+            graph=graph,
+        ),
+    )
 
 
 async def update_work_project_metadata(

@@ -1,43 +1,18 @@
 import { Button, Empty, Spin } from "@douyinfe/semi-ui";
 import { ArrowLeft, FileText } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { showApiError } from "../../shared/api/feedback";
-import type { WorkProject } from "../../shared/api/types";
 import { MetricStrip } from "../../shared/components/ResourcePageShell";
 import { WorkProjectRecordTabs } from "./ProjectRecordViews";
-import {
-  EMPTY_WORK_PROJECT_RECORDS,
-  loadWorkProjectRecordSnapshot,
-  type WorkProjectRecords,
-} from "./workProjectRecords";
+import { useWorkProjectRecordSnapshot } from "./workProjectRecords";
 import { workProjectOwnerNames, WorkProjectStatusTag, WorkProjectTypeTag } from "./workProjectView";
 
 export function WorkProjectWorkspacePage() {
   const params = useParams();
   const navigate = useNavigate();
   const projectId = Number(params.projectId);
-  const [project, setProject] = useState<WorkProject | null>(null);
-  const [records, setRecords] = useState<WorkProjectRecords>(EMPTY_WORK_PROJECT_RECORDS);
-  const [loading, setLoading] = useState(false);
-
-  const loadWorkspace = useCallback(async () => {
-    if (!Number.isFinite(projectId) || projectId <= 0) return;
-    setLoading(true);
-    try {
-      const snapshot = await loadWorkProjectRecordSnapshot(projectId);
-      setProject(snapshot.project);
-      setRecords(snapshot.records);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    void loadWorkspace();
-  }, [loadWorkspace]);
+  const validProjectId = Number.isFinite(projectId) && projectId > 0 ? projectId : null;
+  const { project, records, loading } = useWorkProjectRecordSnapshot(validProjectId);
 
   const metrics = useMemo(() => [
     { label: "Assets", value: records.assets.length },
@@ -46,7 +21,7 @@ export function WorkProjectWorkspacePage() {
     { label: "Sessions", value: project?.session_count ?? 0 },
   ], [project, records]);
 
-  if (!Number.isFinite(projectId) || projectId <= 0) {
+  if (!validProjectId) {
     return <Empty className="empty-state" image={<FileText size={42} />} title="Invalid project" description="" />;
   }
 

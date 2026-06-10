@@ -1,26 +1,12 @@
-import {
-  getWorkProject,
-  getWorkProjectGraph,
-  queryWorkProjectFindings,
-} from "../../shared/api/workProjects";
-import type {
-  WorkProject,
-  WorkProjectAsset,
-  WorkProjectFinding,
-  WorkProjectGraphSnapshot,
-} from "../../shared/api/types";
+import { useEffect, useState } from "react";
+import { showApiError } from "../../shared/api/feedback";
+import { getWorkProjectRecordSnapshot } from "../../shared/api/workProjects";
+import type { WorkProject, WorkProjectGraphSnapshot, WorkProjectRecordSnapshot, WorkProjectRecords } from "../../shared/api/types";
 
-export type ProjectRecordTab = "assets" | "findings" | "attack-paths" | "graph";
-
-export type WorkProjectRecords = {
-  assets: WorkProjectAsset[];
-  findings: WorkProjectFinding[];
-  graph: WorkProjectGraphSnapshot;
-};
-
-export type WorkProjectRecordSnapshot = {
+export type WorkProjectSnapshotState = {
   project: WorkProject | null;
   records: WorkProjectRecords;
+  loading: boolean;
 };
 
 export const EMPTY_WORK_PROJECT_GRAPH: WorkProjectGraphSnapshot = {
@@ -36,19 +22,45 @@ export const EMPTY_WORK_PROJECT_RECORDS: WorkProjectRecords = {
 };
 
 export async function loadWorkProjectRecordSnapshot(projectId: number): Promise<WorkProjectRecordSnapshot> {
-  const [projectResponse, findingsResponse, graphResponse] = await Promise.all([
-    getWorkProject(projectId),
-    queryWorkProjectFindings(projectId, { page: 1, size: 100, keyword: "" }),
-    getWorkProjectGraph(projectId),
-  ]);
-  const project = projectResponse.data ?? null;
-
-  return {
-    project,
-    records: {
-      assets: project?.assets ?? [],
-      findings: findingsResponse.data?.items ?? [],
-      graph: graphResponse.data ?? EMPTY_WORK_PROJECT_GRAPH,
-    },
-  };
+  const response = await getWorkProjectRecordSnapshot(projectId);
+  if (!response.data) throw new Error("Work project snapshot is empty");
+  return response.data;
 }
+
+export function useWorkProjectRecordSnapshot(projectId: number | null, enabled = true): WorkProjectSnapshotState {
+  const [state, setState] = useState<WorkProjectSnapshotState>({
+    project: null,
+    records: EMPTY_WORK_PROJECT_RECORDS,
+    loading: false,
+  });
+
+  useEffect(() => {
+    let canceled = false;
+    if (!enabled || !projectId) {
+      setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: false });
+      return () => {
+        canceled = true;
+      };
+    }
+
+    setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: true });
+    loadWorkProjectRecordSnapshot(projectId)
+      .then((snapshot) => {
+        if (!canceled) setState({ project: snapshot.project, records: snapshot.records, loading: false });
+      })
+      .catch((error) => {
+        if (!canceled) {
+          showApiError(error);
+          setState({ project: null, records: EMPTY_WORK_PROJECT_RECORDS, loading: false });
+        }
+      });
+
+    return () => {
+      canceled = true;
+    };
+  }, [enabled, projectId]);
+
+  return state;
+}
+
+export type { WorkProjectRecordSnapshot, WorkProjectRecords };

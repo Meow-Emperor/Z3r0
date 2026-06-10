@@ -16,7 +16,7 @@ from service.work_project.projects import (
     create_work_project_session,
     delete_work_project,
     delete_work_project_session,
-    get_work_project_for_user,
+    get_work_project_record_snapshot_for_user,
     list_work_project_sessions,
     query_work_projects_for_user,
     retry_work_project,
@@ -35,11 +35,11 @@ async def create_work_project_handler(request: CreateWorkProjectRequest) -> Comm
     return CommonResponse(data=project)
 
 
-async def get_work_project_handler(id: int, user: AuthUser) -> CommonResponse:
-    project = await get_work_project_for_user(id, user_id=user.id, user_role=user.role)
-    if project is None:
+async def get_work_project_record_snapshot_handler(id: int, user: AuthUser) -> CommonResponse:
+    snapshot = await get_work_project_record_snapshot_for_user(id, user_id=user.id, user_role=user.role)
+    if snapshot is None:
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="work project not found")
-    return CommonResponse(data=project)
+    return CommonResponse(data=snapshot)
 
 
 async def update_work_project_metadata_handler(

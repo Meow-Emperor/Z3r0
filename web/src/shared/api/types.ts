@@ -129,12 +129,13 @@ export type WorkProjectGraphSnapshot = components["schemas"]["WorkProjectGraphSn
 export type WorkProjectAttackPath = components["schemas"]["WorkProjectAttackPathSchema"];
 export type WorkProjectAttackPathStatus = components["schemas"]["WorkProjectAttackPathStatus"];
 export type WorkProjectAttackPathStep = components["schemas"]["WorkProjectAttackPathStepSchema"];
+export type WorkProjectRecords = components["schemas"]["WorkProjectRecordsSchema"];
+export type WorkProjectRecordSnapshot = components["schemas"]["WorkProjectRecordSnapshotSchema"];
 
 export type CreateWorkProjectRequest = JsonRequestBody<paths["/api/work-projects"]["post"]>;
 export type CreateWorkProjectResponse = JsonResponse<paths["/api/work-projects"]["post"]>;
 
-export type WorkProjectPathParams = PathParameters<paths["/api/work-projects/{id}"]["delete"]>;
-export type GetWorkProjectResponse = JsonResponse<paths["/api/work-projects/{id}"]["get"]>;
+export type WorkProjectPathParams = PathParameters<paths["/api/work-projects/{id}/record-snapshot"]["get"]>;
 export type UpdateWorkProjectMetadataRequest = JsonRequestBody<paths["/api/work-projects/{id}/metadata"]["patch"]>;
 export type UpdateWorkProjectMetadataResponse = JsonResponse<paths["/api/work-projects/{id}/metadata"]["patch"]>;
 export type DeleteWorkProjectResponse = JsonResponse<paths["/api/work-projects/{id}"]["delete"]>;
@@ -145,17 +146,7 @@ export type RetryWorkProjectResponse = JsonResponse<paths["/api/work-projects/{i
 export type ListWorkProjectSessionsResponse = JsonResponse<paths["/api/work-projects/{id}/sessions"]["get"]>;
 export type CreateWorkProjectSessionResponse = JsonResponse<paths["/api/work-projects/{id}/sessions"]["post"]>;
 export type DeleteWorkProjectSessionResponse = JsonResponse<paths["/api/work-projects/{id}/sessions/{session_id}"]["delete"]>;
-
-export type WorkProjectAssetsPathParams = PathParameters<paths["/api/work-projects/{project_id}/assets"]["get"]>;
-export type QueryWorkProjectAssetsParams = QueryParameters<paths["/api/work-projects/{project_id}/assets"]["get"]>;
-export type QueryWorkProjectAssetsResponse = JsonResponse<paths["/api/work-projects/{project_id}/assets"]["get"]>;
-
-export type WorkProjectFindingsPathParams = PathParameters<paths["/api/work-projects/{project_id}/findings"]["get"]>;
-export type QueryWorkProjectFindingsParams = QueryParameters<paths["/api/work-projects/{project_id}/findings"]["get"]>;
-export type QueryWorkProjectFindingsResponse = JsonResponse<paths["/api/work-projects/{project_id}/findings"]["get"]>;
-
-export type WorkProjectGraphPathParams = PathParameters<paths["/api/work-projects/{project_id}/graph"]["get"]>;
-export type GetWorkProjectGraphResponse = JsonResponse<paths["/api/work-projects/{project_id}/graph"]["get"]>;
+export type GetWorkProjectRecordSnapshotResponse = JsonResponse<paths["/api/work-projects/{id}/record-snapshot"]["get"]>;
 
 export type AgentSessionSummary = components["schemas"]["AgentSessionSummarySchema"];
 export type SessionType = components["schemas"]["SessionType"];

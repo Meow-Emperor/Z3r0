@@ -8,6 +8,7 @@ import type {
   WorkProjectFinding,
   WorkProjectGraphEdge,
   WorkProjectGraphSnapshot,
+  WorkProjectRecords,
 } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import {
@@ -22,31 +23,27 @@ import {
   WORK_PROJECT_FINDING_STATUS_LABEL,
 } from "../../shared/lib/labels";
 import { ProjectGraphCanvas } from "./ProjectGraphCanvas";
-import type { ProjectRecordTab, WorkProjectRecords } from "./workProjectRecords";
 import { formatWorkProjectAsset } from "./workProjectView";
+
+export type ProjectRecordTab = "assets" | "findings" | "attack-paths" | "graph";
 
 type WorkProjectRecordTabsProps = {
   records: WorkProjectRecords;
-  activeTab?: ProjectRecordTab;
+  initialTab?: ProjectRecordTab;
   className?: string;
-  onActiveTabChange?: (tab: ProjectRecordTab) => void;
 };
 
 export function WorkProjectRecordTabs({
   records,
-  activeTab,
-  className = "project-record-tabs",
-  onActiveTabChange,
+  initialTab = "assets",
+  className,
 }: WorkProjectRecordTabsProps) {
+  const tabsClassName = ["project-record-tabs", className].filter(Boolean).join(" ");
   return (
     <Tabs
       type="line"
-      className={className}
-      activeKey={activeTab}
-      onChange={(key) => {
-        const tab = projectRecordTabFromKey(key);
-        if (tab) onActiveTabChange?.(tab);
-      }}
+      className={tabsClassName}
+      defaultActiveKey={initialTab}
     >
       <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="Assets" />} itemKey="assets">
         <AssetList assets={records.assets} />
@@ -200,13 +197,6 @@ function RecordEmpty({ title }: { title: string }) {
 
 function TabLabel({ icon, text }: { icon: ReactNode; text: string }) {
   return <span className="workspace-tab-label">{icon}{text}</span>;
-}
-
-function projectRecordTabFromKey(key: string): ProjectRecordTab | null {
-  if (key === "assets" || key === "findings" || key === "attack-paths" || key === "graph") {
-    return key;
-  }
-  return null;
 }
 
 function groupSteps(steps: WorkProjectAttackPathStep[]) {

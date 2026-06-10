@@ -6,7 +6,6 @@ import { showApiError } from "../../shared/api/feedback";
 import {
   createWorkProjectSession,
   deleteWorkProjectSession,
-  getWorkProject,
   listWorkProjectSessions,
   queryWorkProjects,
 } from "../../shared/api/workProjects";
@@ -93,8 +92,7 @@ export function SessionList({
   const [expandedProjectId, setExpandedProjectId] = useState<number | null>(null);
   const [projectSessions, setProjectSessions] = useState<Map<number, ProjectSessionState>>(() => new Map());
   const [infoOpen, setInfoOpen] = useState(false);
-  const [infoLoading, setInfoLoading] = useState(false);
-  const [infoProject, setInfoProject] = useState<WorkProject | null>(null);
+  const [infoProjectId, setInfoProjectId] = useState<number | null>(null);
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   const { saving: renaming, submit } = useResourceSubmit();
@@ -206,18 +204,9 @@ export function SessionList({
     });
   };
 
-  const showProjectInfo = async (project: WorkProject) => {
+  const showProjectInfo = (project: WorkProject) => {
+    setInfoProjectId(project.id);
     setInfoOpen(true);
-    setInfoProject(project);
-    setInfoLoading(true);
-    try {
-      const response = await getWorkProject(project.id);
-      setInfoProject(response.data ?? project);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setInfoLoading(false);
-    }
   };
 
   const empty = sessions.length === 0 && projects.length === 0 && !loading && !projectsLoading;
@@ -252,7 +241,7 @@ export function SessionList({
                   activeSessionId={activeSessionId}
                   canDeleteProjectSession={canDeleteProjectSession}
                   onToggle={toggleProject}
-                  onShowInfo={(targetProject) => void showProjectInfo(targetProject)}
+                  onShowInfo={showProjectInfo}
                   onCreateSession={(targetProject) => void createProjectSession(targetProject)}
                   onSelectSession={onSelect}
                   onRenameSession={(targetSession, projectId) => openRename({ session: targetSession, projectId })}
@@ -265,9 +254,11 @@ export function SessionList({
       </div>
       <WorkProjectInfoModal
         open={infoOpen}
-        loading={infoLoading}
-        project={infoProject}
-        onClose={() => setInfoOpen(false)}
+        projectId={infoProjectId}
+        onClose={() => {
+          setInfoOpen(false);
+          setInfoProjectId(null);
+        }}
       />
       <Modal
         visible={Boolean(renameTarget)}

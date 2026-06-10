@@ -280,17 +280,17 @@ function WorkProjectExpanded({
         <WorkProjectPanel title="Tasks" empty={project.tasks.length === 0 ? "No tasks." : ""} className="work-project-panel" emptyClassName="work-project-panel-empty">
           <WorkProjectTasks project={project} className="work-project-task-list" rowClassName="work-project-task-row" showIcon />
         </WorkProjectPanel>
+        <WorkProjectPanel title="Agent Summaries" empty={project.agent_summaries.length === 0 ? "No summaries." : ""} className="work-project-panel" emptyClassName="work-project-panel-empty">
+          <WorkProjectSummaries
+            project={project}
+            className="work-project-summary-list"
+            rowClassName="work-project-summary-row"
+            progressClassName="work-project-summary-progress"
+            blockClassName="work-project-summary-block"
+            showIcon
+          />
+        </WorkProjectPanel>
       </section>
-      <WorkProjectPanel title="Agent Summaries" empty={project.agent_summaries.length === 0 ? "No summaries." : ""} className="work-project-panel" emptyClassName="work-project-panel-empty">
-        <WorkProjectSummaries
-          project={project}
-          className="work-project-summary-list"
-          rowClassName="work-project-summary-row"
-          progressClassName="work-project-summary-progress"
-          blockClassName="work-project-summary-block"
-          showIcon
-        />
-      </WorkProjectPanel>
     </div>
   );
 }
