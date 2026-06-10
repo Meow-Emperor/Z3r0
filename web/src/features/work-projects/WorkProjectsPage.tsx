@@ -9,7 +9,7 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRefreshWorkProjects } from "../../app/layouts/AdminLayout";
 import { WORK_PROJECT_STATUS } from "../../shared/api/contract";

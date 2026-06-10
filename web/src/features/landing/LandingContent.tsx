@@ -16,7 +16,6 @@ import {
   Layers3,
   LockKeyhole,
   MessageSquareCode,
-  Network,
   Repeat2,
   ShieldCheck,
   SquareTerminal,

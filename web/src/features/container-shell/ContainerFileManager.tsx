@@ -359,7 +359,6 @@ export function ContainerFileManager({ containerId, containerHash, containerName
           <Suspense fallback={<div className="file-manager-loading">Loading viewer...</div>}>
             <FileViewer
               containerId={containerId}
-              containerHash={containerHash}
               file={viewingFile}
               onClose={() => setViewingFile(null)}
             />

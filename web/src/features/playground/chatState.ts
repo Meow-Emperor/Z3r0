@@ -15,7 +15,6 @@ import {
   subagentExecutionItemFromEvent,
 } from "./transcriptReducer";
 import type {
-  AgentTranscript,
   ChatNode,
   ChatState,
   ToolExecutionItem,

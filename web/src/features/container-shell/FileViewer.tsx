@@ -9,16 +9,8 @@ const CodeEditor = lazy(() => import("./CodeEditor").then((module) => ({ default
 
 type ViewerType = "text" | "image" | "binary";
 
-type ViewerHandle = {
-  content: string;
-  loading: boolean;
-  error: string | null;
-  save: (newContent: string) => Promise<void>;
-};
-
 type Props = {
   containerId: number;
-  containerHash: string;
   file: ContainerFileInfo;
   onClose: () => void;
 };
@@ -62,7 +54,7 @@ function determineViewerType(file: ContainerFileInfo): ViewerType {
   return "text";
 }
 
-export function FileViewer({ containerId, containerHash, file, onClose }: Props) {
+export function FileViewer({ containerId, file, onClose }: Props) {
   const viewerType = useMemo(() => determineViewerType(file), [file]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);

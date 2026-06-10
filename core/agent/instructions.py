@@ -12,6 +12,14 @@ Always write user-facing responses as valid GitHub-Flavored Markdown.
 - Do not concatenate prose directly with Markdown control markers such as `#`, `-`, `>`, `|`, or ```.
 """
 
+DIAGRAM_INSTRUCTIONS = """## Diagram Policy
+
+- Use Mermaid, and only Mermaid, for user-facing diagrams such as structures, flows, sequences, dependencies, state transitions, call chains, hierarchies, timelines, and data flow.
+- Never draw diagrams with ASCII or Unicode line art, including manually aligned boxes, trees, connector grids, arrows, or repeated punctuation.
+- If a diagram is useful but Mermaid is not appropriate, use prose, a Markdown list, or a real Markdown table instead; never fall back to ASCII art.
+- Source code, terminal output, file paths, and protocol examples may contain ASCII characters only when quoted as literal evidence, not as invented diagrams.
+"""
+
 
 SANDBOX_COMMAND_INSTRUCTIONS = """## Sandbox Command Execution
 
@@ -75,7 +83,7 @@ def build_instructions(
     include_work_project_tools: bool,
     include_delegation_tools: bool,
 ) -> str:
-    runtime_guidance = [MARKDOWN_OUTPUT_INSTRUCTIONS]
+    runtime_guidance = [MARKDOWN_OUTPUT_INSTRUCTIONS, DIAGRAM_INSTRUCTIONS]
     if include_agent_knowledges:
         runtime_guidance.append(KNOWLEDGE_TOOL_INSTRUCTIONS)
     if include_delegation_tools:
