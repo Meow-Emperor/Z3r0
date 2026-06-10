@@ -2,6 +2,26 @@
 
 All notable changes to Z3r0 are documented in this file.
 
+## [0.2.0] - 2026-06-10
+
+### Added
+
+- Added WorkProject attack-chain graphing with assets, findings, attack paths, and auditable record snapshots.
+- Added project workspace views for graph exploration, record review, and richer project editing.
+- Added Mermaid diagram enforcement and rendering in playground transcripts.
+
+### Changed
+
+- Refined WorkProject tool contracts around assets, findings, task summaries, shared task updates, graph edges, and attack paths.
+- Improved project graph layout, task label wrapping, and frontend resource presentation.
+- Repositioned README and landing copy around authorized red-team research and controlled multi-agent workflows.
+
+### Fixed
+
+- Consolidated WorkProject record snapshot flow and hardened record persistence.
+- Aligned generated API contracts, frontend constants, and backend tool schemas for WorkProject records.
+- Moved JWT authentication from bearer authorization to the custom access-token header contract.
+
 ## [0.1.1] - 2026-06-05
 
 ### Added
