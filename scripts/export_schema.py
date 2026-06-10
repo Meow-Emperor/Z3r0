@@ -67,6 +67,7 @@ def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
         f"export const SANDBOX_IMAGE_STATUSES = {_enum_values_ts(schema, 'SandboxImageStatus')} as const;\n"
         f"export const SANDBOX_CONTAINER_STATUSES = {_enum_values_ts(schema, 'SandboxContainerStatus')} as const;\n"
         f"export const SESSION_TYPES = {_enum_values_ts(schema, 'SessionType')} as const;\n\n"
+        f"export const ACCESS_TOKEN_HEADER = {json.dumps(_get_access_token_header())};\n"
         f"export const SANDBOX_CONTAINER_DEFAULT_COMMAND = {json.dumps(default_command)};\n",
         encoding="utf-8",
     )
@@ -98,20 +99,26 @@ def _get_schema_property_default(schema: dict[str, Any], schema_name: str, prope
         raise RuntimeError(f"OpenAPI schema is missing {schema_name}.{property_name}.default") from exc
 
 
+def _get_access_token_header() -> str:
+    from middleware.auth import ACCESS_TOKEN_HEADER
+
+    return ACCESS_TOKEN_HEADER
+
+
 def _patch_auth_contracts(app: Any, schema: dict[str, Any]) -> None:
     """drive OpenAPI security from the FastAPI dependency tree.
 
-    routes that depend on require_user get BearerAuth + 401; routes that
+    routes that depend on require_user get AccessTokenAuth + 401; routes that
     additionally depend on require_admin also get 403."""
     from middleware.auth import require_admin, require_user
 
     components = schema.setdefault("components", {})
     schemas = components.setdefault("schemas", {})
     schemas.setdefault("CommonResponse_Any_", _common_response_any_schema())
-    components.setdefault("securitySchemes", {})["BearerAuth"] = {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
+    components.setdefault("securitySchemes", {})["AccessTokenAuth"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": _get_access_token_header(),
     }
 
     paths = schema.get("paths", {})
@@ -129,7 +136,7 @@ def _patch_auth_contracts(app: Any, schema: dict[str, Any]) -> None:
             operation = paths[path].get(method.lower())
             if operation is None:
                 continue
-            operation["security"] = [{"BearerAuth": []}]
+            operation["security"] = [{"AccessTokenAuth": []}]
             responses = operation.setdefault("responses", {})
             responses["401"] = _common_response_ref("Unauthorized")
             if require_admin in deps:

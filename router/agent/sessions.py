@@ -21,7 +21,7 @@ from schema.common.responses import CommonResponse
 
 
 # the websocket route does its own token check because browsers cannot attach
-# Authorization headers to ws upgrades, so http auth is added per-route here
+# custom auth headers to native WebSocket upgrades, so http auth is added per-route here
 # rather than at router scope
 router = APIRouter(prefix="/agent-sessions", tags=["agent-sessions"])
 

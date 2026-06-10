@@ -13,7 +13,7 @@ from schema.common.responses import CommonResponse
 from schema.system_user.users import SystemUserRole
 
 
-_AUTH_HEADER_PREFIX = "Bearer "
+ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token"
 _API_PATH_PREFIX = "/api"
 
 
@@ -35,7 +35,7 @@ class AuthUser:
 
 
 class JwtAuthMiddleware(BaseHTTPMiddleware):
-    """decode the Bearer token on /api/* requests if present.
+    """decode the application JWT on /api/* requests if present.
 
     a missing token passes through (public endpoints rely on this); a
     malformed/expired token is rejected up front so dependencies see a clean
@@ -45,13 +45,9 @@ class JwtAuthMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS" or not _is_api_request(request):
             return await call_next(request)
 
-        authorization = request.headers.get("Authorization", "")
-        if not authorization:
+        token = request.headers.get(ACCESS_TOKEN_HEADER, "").strip()
+        if not token:
             return await call_next(request)
-
-        token = _extract_bearer_token(authorization)
-        if token is None:
-            return _error_response(HTTPStatus.UNAUTHORIZED, "invalid bearer token")
 
         try:
             user = decode_access_token(token)
@@ -88,7 +84,7 @@ def decode_access_token(token: str) -> AuthUser | None:
 def require_user(request: Request) -> AuthUser:
     user = getattr(request.state, "system_user", None)
     if not isinstance(user, AuthUser):
-        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="missing bearer token")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="missing access token")
     return user
 
 
@@ -103,13 +99,6 @@ def _error_response(status_code: HTTPStatus, message: str) -> JSONResponse:
         status_code=status_code.value,
         content=CommonResponse(code=status_code.value, message=message).model_dump(),
     )
-
-
-def _extract_bearer_token(authorization: str) -> str | None:
-    if not authorization.lower().startswith(_AUTH_HEADER_PREFIX.lower()):
-        return None
-    token = authorization[len(_AUTH_HEADER_PREFIX):].strip()
-    return token or None
 
 
 def _is_api_request(request: Request) -> bool:

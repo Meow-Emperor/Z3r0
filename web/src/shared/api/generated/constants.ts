@@ -20,4 +20,5 @@ export const SANDBOX_IMAGE_STATUSES = ["pulling", "ready", "failed", "canceled"]
 export const SANDBOX_CONTAINER_STATUSES = ["created", "running", "stopped", "error"] as const;
 export const SESSION_TYPES = ["chat", "project"] as const;
 
+export const ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token";
 export const SANDBOX_CONTAINER_DEFAULT_COMMAND = "trap 'exit 0' TERM INT; while :; do sleep 3600; done";

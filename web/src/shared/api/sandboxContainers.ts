@@ -1,14 +1,4 @@
-import {
-  ApiError,
-  apiDelete,
-  apiGet,
-  apiPost,
-  buildAuthenticatedWebSocketUrl,
-  handleAuthExpired,
-  isCommonResponsePayload,
-  parseJsonResponse,
-  rawApiRequest,
-} from "./client";
+import { apiBlob, apiDelete, apiForm, apiGet, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
 import { buildQuery } from "./query";
 import type {
   ContainerFileCopyRequest,
@@ -132,13 +122,13 @@ export function uploadContainerFiles(
   form.set("path", path);
   form.set("overwrite", String(overwrite));
   files.forEach((file) => form.append("files", file));
-  return apiFormRequest<ContainerFileUploadResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/upload`, form);
+  return apiForm<ContainerFileUploadResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/upload`, form);
 }
 
 export function downloadContainerFiles(id: number, params: DownloadContainerFilesParams) {
   const query = new URLSearchParams();
   params.path.forEach((path) => query.append("path", path));
-  return apiBlobRequest(`${SANDBOX_CONTAINERS_PATH}/${id}/files/download?${query.toString()}`);
+  return apiBlob(`${SANDBOX_CONTAINERS_PATH}/${id}/files/download?${query.toString()}`);
 }
 
 export function copyContainerFiles(id: number, payload: ContainerFileCopyRequest) {
@@ -155,46 +145,4 @@ export function deleteContainerFiles(id: number, payload: ContainerFileDeleteReq
 
 export function createContainerDirectory(id: number, payload: ContainerFileMkdirRequest) {
   return apiPost<ContainerFileMkdirResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/mkdir`, payload);
-}
-
-async function apiFormRequest<ResponsePayload>(path: string, body: FormData) {
-  const response = await rawApiRequest(path, {
-    method: "POST",
-    headers: { Accept: "application/json" },
-    body,
-  });
-
-  const parsed = await parseJsonResponse(response);
-  const payload = isCommonResponsePayload(parsed) ? parsed : undefined;
-  const payloadCode = typeof payload?.code === "number" ? payload.code : response.status;
-  if (!response.ok || payloadCode >= 400) {
-    handleAuthExpired(response.status, payloadCode);
-    throw new ApiError(response.status, payload);
-  }
-  return parsed as ResponsePayload;
-}
-
-async function apiBlobRequest(path: string) {
-  const response = await rawApiRequest(path);
-
-  if (!response.ok) {
-    const parsed = await parseJsonResponse(response);
-    const payload = isCommonResponsePayload(parsed) ? parsed : undefined;
-    const payloadCode = typeof payload?.code === "number" ? payload.code : response.status;
-    handleAuthExpired(response.status, payloadCode);
-    throw new ApiError(response.status, payload);
-  }
-
-  const blob = await response.blob();
-  const filename = parseContentDispositionFilename(response.headers.get("content-disposition"));
-  return { blob, filename };
-}
-
-function parseContentDispositionFilename(header: string | null) {
-  if (!header) return "download";
-  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
-  if (encoded?.[1]) return decodeURIComponent(encoded[1]);
-  const quoted = /filename="([^"]+)"/i.exec(header);
-  if (quoted?.[1]) return quoted[1];
-  return "download";
 }

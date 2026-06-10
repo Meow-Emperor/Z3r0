@@ -1,4 +1,5 @@
 import { clearStoredAccessToken, getStoredAccessToken } from "../auth/session";
+import { ACCESS_TOKEN_HEADER } from "./generated/constants";
 import type { CommonResponsePayload } from "./types";
 
 type RequestOptions = {
@@ -26,16 +27,25 @@ export class ApiError extends Error {
   }
 }
 
-export function isCommonResponsePayload(value: unknown): value is CommonResponsePayload {
+function isCommonResponsePayload(value: unknown): value is CommonResponsePayload {
   return typeof value === "object" && value !== null && "message" in value;
 }
 
-export async function parseJsonResponse(response: Response) {
+async function parseJsonResponse(response: Response) {
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     return undefined;
   }
   return response.json() as Promise<unknown>;
+}
+
+function parseCommonResponseError(response: Response, parsed: unknown) {
+  const payload = isCommonResponsePayload(parsed) ? parsed : undefined;
+  const payloadCode = typeof payload?.code === "number" ? payload.code : response.status;
+  if (!response.ok || payloadCode >= 400) {
+    handleAuthExpired(response.status, payloadCode);
+    throw new ApiError(response.status, payload);
+  }
 }
 
 export async function apiRequest<ResponsePayload>(path: string, options: RequestOptions = {}) {
@@ -44,7 +54,7 @@ export async function apiRequest<ResponsePayload>(path: string, options: Request
     headers.set("Content-Type", "application/json");
   }
 
-  addAuthHeader(headers, options.auth);
+  addAccessTokenHeader(headers, options.auth);
 
   let response: Response;
   try {
@@ -61,14 +71,7 @@ export async function apiRequest<ResponsePayload>(path: string, options: Request
   }
 
   const parsed = await parseJsonResponse(response);
-  const payload = isCommonResponsePayload(parsed) ? parsed : undefined;
-  const payloadCode = typeof payload?.code === "number" ? payload.code : response.status;
-
-  if (!response.ok || payloadCode >= 400) {
-    handleAuthExpired(response.status, payloadCode);
-    throw new ApiError(response.status, payload);
-  }
-
+  parseCommonResponseError(response, parsed);
   return parsed as ResponsePayload;
 }
 
@@ -88,9 +91,9 @@ export function apiDelete<ResponsePayload>(path: string) {
   return apiRequest<ResponsePayload>(path, { method: "DELETE" });
 }
 
-export async function rawApiRequest(path: string, options: RawRequestOptions = {}) {
+async function rawApiRequest(path: string, options: RawRequestOptions = {}) {
   const headers = new Headers(options.headers);
-  addAuthHeader(headers, options.auth);
+  addAccessTokenHeader(headers, options.auth);
 
   try {
     return await fetch(path, {
@@ -106,7 +109,32 @@ export async function rawApiRequest(path: string, options: RawRequestOptions = {
   }
 }
 
-export function handleAuthExpired(status: number, payloadCode: number) {
+export async function apiForm<ResponsePayload>(path: string, body: FormData, auth = true) {
+  const response = await rawApiRequest(path, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    body,
+    auth,
+  });
+  const parsed = await parseJsonResponse(response);
+  parseCommonResponseError(response, parsed);
+  return parsed as ResponsePayload;
+}
+
+export async function apiBlob(path: string, auth = true) {
+  const response = await rawApiRequest(path, { auth });
+  if (!response.ok) {
+    const parsed = await parseJsonResponse(response);
+    parseCommonResponseError(response, parsed);
+    throw new ApiError(response.status);
+  }
+  return {
+    blob: await response.blob(),
+    filename: parseContentDispositionFilename(response.headers.get("content-disposition")),
+  };
+}
+
+function handleAuthExpired(status: number, payloadCode: number) {
   if (status !== 401 && payloadCode !== 401) return;
   clearStoredAccessToken();
   window.dispatchEvent(new Event("z3r0:auth-expired"));
@@ -118,10 +146,19 @@ export function buildAuthenticatedWebSocketUrl(path: string, token = getStoredAc
   return `${wsScheme}://${window.location.host}${path}?token=${encodeURIComponent(token)}`;
 }
 
-function addAuthHeader(headers: Headers, auth = true) {
+function addAccessTokenHeader(headers: Headers, auth = true) {
   if (!auth) return;
   const token = getStoredAccessToken();
   if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+    headers.set(ACCESS_TOKEN_HEADER, token);
   }
+}
+
+function parseContentDispositionFilename(header: string | null) {
+  if (!header) return "download";
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (encoded?.[1]) return decodeURIComponent(encoded[1]);
+  const quoted = /filename="([^"]+)"/i.exec(header);
+  if (quoted?.[1]) return quoted[1];
+  return "download";
 }
