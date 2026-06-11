@@ -19,7 +19,6 @@ type SessionListProps = {
   sessions: AgentSessionSummary[];
   loading: boolean;
   activeSessionId: string | null;
-  canDeleteProjectSession: boolean;
   projectListVersion: number;
   onSelect: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
@@ -61,7 +60,6 @@ type ProjectGroupProps = {
   state?: ProjectSessionState;
   expanded: boolean;
   activeSessionId: string | null;
-  canDeleteProjectSession: boolean;
   onToggle: (projectId: number) => void;
   onShowInfo: (project: WorkProject) => void;
   onCreateSession: (project: WorkProject) => void;
@@ -79,7 +77,6 @@ export function SessionList({
   sessions,
   loading,
   activeSessionId,
-  canDeleteProjectSession,
   projectListVersion,
   onSelect,
   onDelete,
@@ -239,7 +236,6 @@ export function SessionList({
                   state={projectSessions.get(project.id)}
                   expanded={expandedProjectId === project.id}
                   activeSessionId={activeSessionId}
-                  canDeleteProjectSession={canDeleteProjectSession}
                   onToggle={toggleProject}
                   onShowInfo={showProjectInfo}
                   onCreateSession={(targetProject) => void createProjectSession(targetProject)}
@@ -304,7 +300,6 @@ function ProjectGroup({
   state,
   expanded,
   activeSessionId,
-  canDeleteProjectSession,
   onToggle,
   onShowInfo,
   onCreateSession,
@@ -361,7 +356,6 @@ function ProjectGroup({
               session={session}
               projectId={project.id}
               active={session.session_id === activeSessionId}
-              canDelete={canDeleteProjectSession}
               onSelect={onSelectSession}
               onRename={onRenameSession}
               onDelete={onDeleteSession}
@@ -377,7 +371,6 @@ function ProjectSessionRow({
   session,
   projectId,
   active,
-  canDelete,
   onSelect,
   onRename,
   onDelete,
@@ -385,7 +378,6 @@ function ProjectSessionRow({
   session: AgentSessionSummary;
   projectId: number;
   active: boolean;
-  canDelete: boolean;
   onSelect: (sessionId: string) => void;
   onRename: (session: AgentSessionSummary, projectId: number) => void;
   onDelete: (projectId: number, sessionId: string) => void;
@@ -394,11 +386,11 @@ function ProjectSessionRow({
     <SessionRow
       active={active}
       className="session-row-project-session"
-      deleteConfirm={canDelete ? {
+      deleteConfirm={{
         title: "Delete session",
         content: "Permanently delete this project session?",
         onConfirm: () => onDelete(projectId, session.session_id),
-      } : undefined}
+      }}
       icon={<Play size={13} />}
       session={session}
       titleFallback="Project session"

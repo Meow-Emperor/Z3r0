@@ -107,7 +107,6 @@ export function AdminLayout() {
                 sessions={sessions}
                 loading={sessionsLoading}
                 activeSessionId={activeSessionId}
-                canDeleteProjectSession={isAdmin}
                 projectListVersion={projectListVersion}
                 onSelect={handleSelectAgentSession}
                 onDelete={deleteSession}

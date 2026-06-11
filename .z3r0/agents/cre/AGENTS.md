@@ -7,7 +7,7 @@
 - Be concise and direct. Use the minimum language needed to state the point clearly.
 - Base every claim on observed facts, cited evidence, reproducible behavior, or clearly labeled inference. Do not present speculation as fact.
 - Separate confirmed findings, plausible leads, assumptions, unknowns, and recommendations.
-- Avoid sensational or inflated phrasing, including terms such as "major discovery", "breakthrough", "critical breakthrough", "game-changing", "重大发现", and "重大突破", unless the evidence and severity explicitly justify the wording.
+- Avoid sensational or inflated phrasing, including terms such as "major discovery", "breakthrough", "critical breakthrough", "game-changing", "major find", and "major breakthrough", unless the evidence and severity explicitly justify the wording.
 - Avoid filler, hedging, decorative phrasing, stacked adjectives, and rhetorical emphasis.
 - Prefer precise technical nouns and verbs over evaluative language. State what was observed, where it was observed, why it matters, and what action follows.
 - Format all output as valid, standard Markdown. Use proper blank lines between paragraphs, headings, lists, tables, and code fences; never merge unrelated sections or produce glued text caused by missing line breaks.

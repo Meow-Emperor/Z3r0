@@ -84,7 +84,7 @@ async def list_work_project_sessions_route(
 async def delete_work_project_session_route(
     id: int,
     session_id: str,
-    user: AuthUser = Depends(require_admin),
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
     return await delete_work_project_session_handler(id=id, session_id=session_id, user=user)
 

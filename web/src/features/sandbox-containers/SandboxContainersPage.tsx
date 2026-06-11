@@ -3,20 +3,23 @@ import { Box, Boxes, Fingerprint, FolderOpen, Monitor, Play, Square, SquareTermi
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { canOpenContainerNoVNC, createSandboxContainer, deleteSandboxContainer, querySandboxContainers, startSandboxContainer, stopSandboxContainer } from "../../shared/api/sandboxContainers";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
+import { querySystemUsers } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
-import type { CreateSandboxContainerRequest, SandboxContainer, SandboxImage } from "../../shared/api/types";
+import type { CreateSandboxContainerRequest, SandboxContainer, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import { useAuth } from "../../shared/auth/AuthProvider";
 import { formatDateTime } from "../../shared/lib/date";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { SandboxContainerFormModal } from "./SandboxContainerFormModal";
 
 export function SandboxContainersPage() {
+  const { user } = useAuth();
   const {
     items: containers, page, keyword, loading, loadItems: loadContainers, total, rangeStart, rangeEnd,
     setKeyword, search, previous, next, canGoBack, canGoNext,
@@ -24,6 +27,8 @@ export function SandboxContainersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [images, setImages] = useState<SandboxImage[]>([]);
   const [imagesLoading, setImagesLoading] = useState(false);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
 
   const loadReadyImages = useCallback(async () => {
@@ -38,10 +43,23 @@ export function SandboxContainersPage() {
     }
   }, []);
 
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const response = await querySystemUsers({ page: 1, size: 100, keyword: "" });
+      setUsers(response.data?.items || []);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
   const refreshAll = useCallback(async () => {
     await loadContainers();
     await loadReadyImages();
-  }, [loadContainers, loadReadyImages]);
+    await loadUsers();
+  }, [loadContainers, loadReadyImages, loadUsers]);
 
   const { run: startContainer, busyId: startingId } = useResourceAction<SandboxContainer>(
     (container) => startSandboxContainer(container.id), loadContainers,
@@ -55,12 +73,13 @@ export function SandboxContainersPage() {
 
   useEffect(() => {
     void loadReadyImages();
-  }, [loadReadyImages]);
+    void loadUsers();
+  }, [loadReadyImages, loadUsers]);
 
   useAdminResourceHeader({
     createLabel: "Create Container",
     refreshLabel: "Refresh sandbox containers",
-    loading: loading || imagesLoading,
+    loading: loading || imagesLoading || usersLoading,
     onCreate: () => setModalOpen(true),
     onRefresh: refreshAll,
   });
@@ -193,6 +212,9 @@ export function SandboxContainersPage() {
         saving={saving}
         images={images}
         imagesLoading={imagesLoading}
+        users={users}
+        usersLoading={usersLoading}
+        currentUserId={user?.id ?? 0}
         onCancel={() => setModalOpen(false)}
         onSubmit={handleCreate}
       />

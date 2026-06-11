@@ -54,6 +54,7 @@ class SandboxContainerSchema(BaseModel):
 # create sandbox container request schema
 class CreateSandboxContainerRequest(BaseModel):
     image_id: int = Field(gt=0)
+    owner_id: int | None = Field(default=None, description="Assign container owner user ID. Admin only; defaults to the creator.")
     container_command: str = Field(default=DEFAULT_SANDBOX_CONTAINER_COMMAND, max_length=2000)
     port_mappings: list[SandboxContainerPortMapping] = Field(default_factory=list, max_length=32)
     novnc_support: bool = False
@@ -87,8 +88,6 @@ class CreateSandboxContainerRequest(BaseModel):
             return self
         if self.novnc_port <= 0:
             raise ValueError("novnc port is required when novnc support is enabled")
-        if (self.novnc_port, "tcp") not in container_ports:
-            raise ValueError("novnc port must match a mapped tcp container port")
         return self
 
 
@@ -100,11 +99,6 @@ class DeleteSandboxContainerResponse(BaseModel):
 # query sandbox containers response schema
 class QuerySandboxContainersResponse(PaginatedResponse[SandboxContainerSchema]):
     pass
-
-
-# default sandbox container port mappings generated from image metadata
-class SandboxContainerDefaultPortMappingsResponse(BaseModel):
-    port_mappings: list[SandboxContainerPortMapping]
 
 
 # ── container file manager schemas ────────────────────────────────────────────

@@ -125,23 +125,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sandbox-containers/default-port-mappings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Generate Default Sandbox Container Port Mappings Route */
-        get: operations["generate_default_sandbox_container_port_mappings_route_api_sandbox_containers_default_port_mappings_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/sandbox-containers/{id}": {
         parameters: {
             query?: never;
@@ -1272,20 +1255,6 @@ export interface components {
              */
             message: string;
         };
-        /** CommonResponse[SandboxContainerDefaultPortMappingsResponse] */
-        CommonResponse_SandboxContainerDefaultPortMappingsResponse_: {
-            /**
-             * Code
-             * @default 200
-             */
-            code: number;
-            data?: components["schemas"]["SandboxContainerDefaultPortMappingsResponse"] | null;
-            /**
-             * Message
-             * @default success
-             */
-            message: string;
-        };
         /** CommonResponse[SandboxContainerSchema] */
         CommonResponse_SandboxContainerSchema_: {
             /**
@@ -1487,6 +1456,11 @@ export interface components {
              * @default false
              */
             novnc_support: boolean;
+            /**
+             * Owner Id
+             * @description Assign container owner user ID. Admin only; defaults to the creator.
+             */
+            owner_id?: number | null;
             /** Port Mappings */
             port_mappings?: components["schemas"]["SandboxContainerPortMapping"][];
         };
@@ -1788,11 +1762,6 @@ export interface components {
              */
             run_id: string | null;
             status: components["schemas"]["SandboxAsyncJobStatus"];
-        };
-        /** SandboxContainerDefaultPortMappingsResponse */
-        SandboxContainerDefaultPortMappingsResponse: {
-            /** Port Mappings */
-            port_mappings: components["schemas"]["SandboxContainerPortMapping"][];
         };
         /** SandboxContainerPortMapping */
         SandboxContainerPortMapping: {
@@ -3270,73 +3239,6 @@ export interface operations {
             };
         };
     };
-    generate_default_sandbox_container_port_mappings_route_api_sandbox_containers_default_port_mappings_get: {
-        parameters: {
-            query: {
-                image_id: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_SandboxContainerDefaultPortMappingsResponse_"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Sandbox image not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-        };
-    };
     delete_sandbox_container_handler_api_sandbox_containers__id__delete: {
         parameters: {
             query?: never;
@@ -3435,15 +3337,6 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -3508,15 +3401,6 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3595,15 +3479,6 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -3667,15 +3542,6 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3754,15 +3620,6 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -3827,15 +3684,6 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3913,15 +3761,6 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -3986,15 +3825,6 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4075,15 +3905,6 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5472,15 +5293,6 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };

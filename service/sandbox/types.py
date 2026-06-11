@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 from model.sandbox.containers import SandboxContainer
-from schema.sandbox.containers import SandboxContainerPortMapping
 
 
 SandboxContainerProtocol = Literal["tcp", "udp"]
@@ -19,14 +18,6 @@ class SandboxContainerRecord:
 class SandboxContainerMutationResult:
     record: SandboxContainerRecord | None
     changed: bool
-    message: str = ""
-    not_found: bool = False
-
-
-@dataclass(frozen=True)
-class SandboxContainerDefaultPortMappingsResult:
-    port_mappings: list[SandboxContainerPortMapping]
-    ok: bool
     message: str = ""
     not_found: bool = False
 

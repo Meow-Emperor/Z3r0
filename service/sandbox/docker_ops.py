@@ -1,21 +1,13 @@
 from dataclasses import dataclass
-from typing import Any
 
 import docker
 
 from logger import get_logger
 from model.sandbox.images import SandboxImage
 from schema.sandbox.containers import SandboxContainerPortMapping, SandboxContainerStatus
-from service.sandbox.types import SandboxContainerProtocol
 
 
 logger = get_logger(__name__)
-
-
-@dataclass(frozen=True)
-class ExposedPort:
-    container_port: int
-    protocol: SandboxContainerProtocol
 
 
 @dataclass(frozen=True)
@@ -30,49 +22,13 @@ def image_ref(image: SandboxImage) -> str:
     return image.image_name
 
 
-def _to_docker_ports(port_mappings: list[SandboxContainerPortMapping]) -> dict[str, int] | None:
+def _to_docker_ports(port_mappings: list[SandboxContainerPortMapping]) -> dict[str, tuple[str, int]] | None:
     if not port_mappings:
         return None
     return {
-        f"{mapping.container_port}/{mapping.protocol}": mapping.host_port
+        f"{mapping.container_port}/{mapping.protocol}": ("127.0.0.1", mapping.host_port)
         for mapping in port_mappings
     }
-
-
-def _parse_exposed_ports(exposed_ports: Any) -> list[ExposedPort]:
-    if not isinstance(exposed_ports, dict):
-        return []
-
-    parsed: set[tuple[int, SandboxContainerProtocol]] = set()
-    for raw_port in exposed_ports:
-        if not isinstance(raw_port, str) or "/" not in raw_port:
-            continue
-        port_text, protocol = raw_port.rsplit("/", 1)
-        if protocol not in {"tcp", "udp"}:
-            continue
-        try:
-            container_port = int(port_text)
-        except ValueError:
-            continue
-        if 1 <= container_port <= 65535:
-            parsed.add((container_port, protocol))
-
-    return [
-        ExposedPort(container_port=container_port, protocol=protocol)
-        for container_port, protocol in sorted(parsed, key=lambda item: (item[0], item[1]))
-    ]
-
-
-def inspect_image_exposed_ports_sync(image_ref: str) -> list[ExposedPort]:
-    client = docker.from_env()
-    try:
-        attrs = client.api.inspect_image(image_ref)
-        config = attrs.get("Config")
-        if not isinstance(config, dict):
-            return []
-        return _parse_exposed_ports(config.get("ExposedPorts"))
-    finally:
-        client.close()
 
 
 def create_container_sync(
@@ -115,6 +71,23 @@ def inspect_container_state_sync(container_hash: str) -> DockerContainerState:
         return DockerContainerState(exists=True, status=str(container.status or ""))
     except docker.errors.NotFound:
         return DockerContainerState(exists=False)
+    finally:
+        client.close()
+
+
+def inspect_container_ip_sync(container_hash: str) -> str | None:
+    client = docker.from_env()
+    try:
+        container = client.containers.get(container_hash)
+        container.reload()
+        networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
+        for net in networks.values():
+            ip = net.get("IPAddress", "")
+            if ip:
+                return ip
+        return container.attrs.get("NetworkSettings", {}).get("IPAddress") or None
+    except (docker.errors.NotFound, Exception):
+        return None
     finally:
         client.close()
 

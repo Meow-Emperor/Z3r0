@@ -70,8 +70,6 @@ export type QuerySandboxContainersData = NonNullable<QuerySandboxContainersRespo
 export type SandboxContainer = QuerySandboxContainersData["items"][number];
 export type QueryAvailableSandboxContainersParams = QueryParameters<paths["/api/sandbox-containers/available"]["get"]>;
 export type QueryAvailableSandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers/available"]["get"]>;
-export type GenerateDefaultSandboxContainerPortMappingsParams = QueryParameters<paths["/api/sandbox-containers/default-port-mappings"]["get"]>;
-export type GenerateDefaultSandboxContainerPortMappingsResponse = JsonResponse<paths["/api/sandbox-containers/default-port-mappings"]["get"]>;
 export type SandboxContainerStatus = components["schemas"]["SandboxContainerStatus"];
 export type SandboxContainerPortMapping = components["schemas"]["SandboxContainerPortMapping"];
 

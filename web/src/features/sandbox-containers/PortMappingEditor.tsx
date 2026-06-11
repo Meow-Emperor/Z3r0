@@ -1,5 +1,5 @@
-import { Button, InputNumber, Select, Spin } from "@douyinfe/semi-ui";
-import { Plug, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Button, InputNumber, Select } from "@douyinfe/semi-ui";
+import { Plug, Plus, Trash2 } from "lucide-react";
 import type { SandboxContainerPortMapping } from "../../shared/api/types";
 import { createClientId } from "../../shared/lib/id";
 
@@ -10,10 +10,7 @@ export type PortMappingFormValue = SandboxContainerPortMapping & {
 
 type PortMappingEditorProps = {
   mappings: PortMappingFormValue[];
-  loading: boolean;
-  canLoadDefaults: boolean;
   onAdd: () => void;
-  onLoadDefaults: () => void;
   onRemove: (id: string) => void;
   onChange: (id: string, patch: Partial<PortMappingFormValue>) => void;
 };
@@ -34,10 +31,7 @@ export function createEmptyPortMapping(): PortMappingFormValue {
 
 export function PortMappingEditor({
   mappings,
-  loading,
-  canLoadDefaults,
   onAdd,
-  onLoadDefaults,
   onRemove,
   onChange,
 }: PortMappingEditorProps) {
@@ -46,11 +40,7 @@ export function PortMappingEditor({
       <div className="port-mapping-heading">
         <span>Port Mappings</span>
         <div className="port-mapping-actions">
-          {loading ? <Spin size="small" /> : null}
-          <Button icon={<RefreshCw size={14} />} theme="borderless" disabled={!canLoadDefaults || loading} onClick={onLoadDefaults}>
-            Defaults
-          </Button>
-          <Button icon={<Plus size={14} />} theme="borderless" disabled={loading} onClick={onAdd}>
+          <Button icon={<Plus size={14} />} theme="borderless" onClick={onAdd}>
             Add
           </Button>
         </div>

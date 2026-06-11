@@ -1,4 +1,5 @@
 import { apiBlob, apiDelete, apiForm, apiGet, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { getStoredAccessToken } from "../auth/session";
 import { buildQuery } from "./query";
 import type {
   ContainerFileCopyRequest,
@@ -16,8 +17,6 @@ import type {
   CreateSandboxContainerRequest,
   CreateSandboxContainerResponse,
   DeleteSandboxContainerResponse,
-  GenerateDefaultSandboxContainerPortMappingsParams,
-  GenerateDefaultSandboxContainerPortMappingsResponse,
   ListContainerFilesParams,
   ListContainerFilesResponse,
   DownloadContainerFilesParams,
@@ -45,10 +44,6 @@ export function queryAvailableSandboxContainers(params: QueryAvailableSandboxCon
   return apiGet<QueryAvailableSandboxContainersResponse>(`${SANDBOX_CONTAINERS_PATH}/available${buildQuery(params)}`);
 }
 
-export function generateDefaultSandboxContainerPortMappings(params: GenerateDefaultSandboxContainerPortMappingsParams) {
-  return apiGet<GenerateDefaultSandboxContainerPortMappingsResponse>(`${SANDBOX_CONTAINERS_PATH}/default-port-mappings${buildQuery(params)}`);
-}
-
 export function createSandboxContainer(payload: CreateSandboxContainerRequest) {
   return apiPost<CreateSandboxContainerResponse>(SANDBOX_CONTAINERS_PATH, payload);
 }
@@ -69,31 +64,27 @@ export function buildContainerShellUrl(containerHash: string) {
   return buildAuthenticatedWebSocketUrl(`${SANDBOX_CONTAINERS_PATH}/${encodeURIComponent(containerHash)}/shell`);
 }
 
-export function getContainerNoVNCPortMapping(container: SandboxContainer) {
-  if (!container.novnc_support || !container.novnc_port) return undefined;
-  return container.port_mappings.find((item) => (
-    item.protocol === "tcp" && item.container_port === container.novnc_port
-  ));
-}
-
 export function canOpenContainerNoVNC(container: SandboxContainer) {
-  return Boolean(getContainerNoVNCPortMapping(container));
+  return Boolean(container.novnc_support && container.container_hash && container.status === "running");
 }
 
 export function buildContainerNoVNCUrl(container: SandboxContainer) {
-  const mapping = getContainerNoVNCPortMapping(container);
-  if (!mapping) {
-    throw new Error("missing noVNC port mapping");
+  if (!canOpenContainerNoVNC(container)) {
+    throw new Error("container does not support noVNC");
   }
 
-  const url = new URL(window.location.href);
-  url.port = String(mapping.host_port);
-  url.pathname = "/novnc/vnc.html";
-  url.search = "";
-  url.hash = "";
+  const token = getStoredAccessToken();
+  if (!token) throw new Error("missing access token");
+
+  const encodedHash = encodeURIComponent(container.container_hash);
+  const wsPath = `/api/sandbox-containers/${encodedHash}/novnc-ws?token=${encodeURIComponent(token)}`;
+  const base = `${window.location.origin}/api/sandbox-containers/${encodedHash}/novnc/vnc.html`;
+
+  const url = new URL(base);
   url.searchParams.set("autoconnect", "true");
   url.searchParams.set("resize", "remote");
-  url.searchParams.set("path", "websockify");
+  url.searchParams.set("path", wsPath);
+  url.searchParams.set("token", token);
   return url.toString();
 }
 

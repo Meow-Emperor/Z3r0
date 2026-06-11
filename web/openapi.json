@@ -1197,32 +1197,6 @@
         "title": "CommonResponse[QueryWorkProjectsResponse]",
         "type": "object"
       },
-      "CommonResponse_SandboxContainerDefaultPortMappingsResponse_": {
-        "properties": {
-          "code": {
-            "default": 200,
-            "title": "Code",
-            "type": "integer"
-          },
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SandboxContainerDefaultPortMappingsResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "message": {
-            "default": "success",
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "title": "CommonResponse[SandboxContainerDefaultPortMappingsResponse]",
-        "type": "object"
-      },
       "CommonResponse_SandboxContainerSchema_": {
         "properties": {
           "code": {
@@ -1670,6 +1644,18 @@
             "default": false,
             "title": "Novnc Support",
             "type": "boolean"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Assign container owner user ID. Admin only; defaults to the creator.",
+            "title": "Owner Id"
           },
           "port_mappings": {
             "items": {
@@ -2384,22 +2370,6 @@
           "status"
         ],
         "title": "SandboxCommandResultMetadata",
-        "type": "object"
-      },
-      "SandboxContainerDefaultPortMappingsResponse": {
-        "properties": {
-          "port_mappings": {
-            "items": {
-              "$ref": "#/components/schemas/SandboxContainerPortMapping"
-            },
-            "title": "Port Mappings",
-            "type": "array"
-          }
-        },
-        "required": [
-          "port_mappings"
-        ],
-        "title": "SandboxContainerDefaultPortMappingsResponse",
         "type": "object"
       },
       "SandboxContainerPortMapping": {
@@ -4947,94 +4917,6 @@
         ]
       }
     },
-    "/api/sandbox-containers/default-port-mappings": {
-      "get": {
-        "operationId": "generate_default_sandbox_container_port_mappings_route_api_sandbox_containers_default_port_mappings_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "image_id",
-            "required": true,
-            "schema": {
-              "exclusiveMinimum": 0,
-              "title": "Image Id",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerDefaultPortMappingsResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Sandbox image not found"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "AccessTokenAuth": []
-          }
-        ],
-        "summary": "Generate Default Sandbox Container Port Mappings Route",
-        "tags": [
-          "sandbox-containers"
-        ]
-      }
-    },
     "/api/sandbox-containers/{id}": {
       "delete": {
         "operationId": "delete_sandbox_container_handler_api_sandbox_containers__id__delete",
@@ -5167,16 +5049,6 @@
             },
             "description": "Unauthorized"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5274,16 +5146,6 @@
             },
             "description": "Unauthorized"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5380,16 +5242,6 @@
               }
             },
             "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -5498,16 +5350,6 @@
             },
             "description": "Unauthorized"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5605,16 +5447,6 @@
             },
             "description": "Unauthorized"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5711,16 +5543,6 @@
               }
             },
             "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -5829,16 +5651,6 @@
             },
             "description": "Unauthorized"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "404": {
             "content": {
               "application/json": {
@@ -5935,16 +5747,6 @@
               }
             },
             "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -6052,16 +5854,6 @@
               }
             },
             "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -7948,16 +7740,6 @@
               }
             },
             "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
           },
           "404": {
             "content": {

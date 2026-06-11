@@ -4,7 +4,6 @@ from starlette.responses import StreamingResponse
 from handler.sandbox.containers import (
     create_sandbox_container_handler,
     delete_sandbox_container_handler,
-    generate_default_sandbox_container_port_mappings_handler,
     handle_container_shell_stream,
     handle_copy_files,
     handle_delete_files,
@@ -12,6 +11,8 @@ from handler.sandbox.containers import (
     handle_list_files,
     handle_mkdir,
     handle_move_files,
+    handle_novnc_http_proxy,
+    handle_novnc_ws_proxy,
     handle_read_file,
     handle_upload_files,
     handle_write_file,
@@ -35,7 +36,6 @@ from schema.sandbox.containers import (
     DeleteSandboxContainerResponse,
     ListContainerFilesResponse,
     QuerySandboxContainersResponse,
-    SandboxContainerDefaultPortMappingsResponse,
     SandboxContainerSchema,
 )
 
@@ -65,7 +65,8 @@ async def create_sandbox_container_route(
     request: CreateSandboxContainerRequest,
     user: AuthUser = Depends(require_admin),
 ) -> CommonResponse[SandboxContainerSchema]:
-    return await create_sandbox_container_handler(request=request, owner_id=user.id)
+    effective_owner_id = request.owner_id if request.owner_id is not None else user.id
+    return await create_sandbox_container_handler(request=request, owner_id=effective_owner_id)
 
 
 async def query_sandbox_containers_route(
@@ -91,27 +92,11 @@ async def query_available_sandbox_containers_route(
     )
 
 
-async def generate_default_sandbox_container_port_mappings_route(
-    image_id: int = Query(gt=0),
-) -> CommonResponse[SandboxContainerDefaultPortMappingsResponse]:
-    return await generate_default_sandbox_container_port_mappings_handler(image_id=image_id)
-
-
 router.add_api_route(
     "",
     create_sandbox_container_route,
     methods=["POST"],
     response_model=CommonResponse[SandboxContainerSchema],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **CREATE_NOT_FOUND_RESPONSE},
-)
-
-
-router.add_api_route(
-    "/default-port-mappings",
-    generate_default_sandbox_container_port_mappings_route,
-    methods=["GET"],
-    dependencies=ADMIN_ONLY,
-    response_model=CommonResponse[SandboxContainerDefaultPortMappingsResponse],
     responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **CREATE_NOT_FOUND_RESPONSE},
 )
 
@@ -167,23 +152,26 @@ router.add_api_route(
 async def list_container_files_route(
     id: int,
     path: str = Query(default="/"),
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse[ListContainerFilesResponse]:
-    return await handle_list_files(id=id, path=path)
+    return await handle_list_files(id=id, path=path, user=user)
 
 
 async def read_container_file_route(
     id: int,
     path: str = Query(default=""),
     base64: bool = Query(default=False),
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse[ContainerFileReadResponse]:
-    return await handle_read_file(id=id, path=path, base64_mode=base64)
+    return await handle_read_file(id=id, path=path, base64_mode=base64, user=user)
 
 
 async def write_container_file_route(
     id: int,
     body: ContainerFileWriteRequest,
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
-    return await handle_write_file(id=id, body=body)
+    return await handle_write_file(id=id, body=body, user=user)
 
 
 async def upload_container_files_route(
@@ -191,50 +179,55 @@ async def upload_container_files_route(
     path: str = Form(default="/"),
     overwrite: bool = Form(default=True),
     files: list[UploadFile] = File(),
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse[ContainerFileUploadResponse]:
-    return await handle_upload_files(id=id, path=path, files=files, overwrite=overwrite)
+    return await handle_upload_files(id=id, path=path, files=files, overwrite=overwrite, user=user)
 
 
 async def download_container_files_route(
     id: int,
     path: list[str] = Query(min_length=1),
+    user: AuthUser = Depends(require_user),
 ) -> StreamingResponse | CommonResponse:
-    return await handle_download_files(id=id, paths=path)
+    return await handle_download_files(id=id, paths=path, user=user)
 
 
 async def copy_container_files_route(
     id: int,
     body: ContainerFileCopyRequest,
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
-    return await handle_copy_files(id=id, body=body)
+    return await handle_copy_files(id=id, body=body, user=user)
 
 
 async def move_container_files_route(
     id: int,
     body: ContainerFileMoveRequest,
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
-    return await handle_move_files(id=id, body=body)
+    return await handle_move_files(id=id, body=body, user=user)
 
 
 async def delete_container_files_route(
     id: int,
     body: ContainerFileDeleteRequest,
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
-    return await handle_delete_files(id=id, body=body)
+    return await handle_delete_files(id=id, body=body, user=user)
 
 
 async def mkdir_container_files_route(
     id: int,
     body: ContainerFileMkdirRequest,
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
-    return await handle_mkdir(id=id, body=body)
+    return await handle_mkdir(id=id, body=body, user=user)
 
 
 router.add_api_route(
     "/{id}/files",
     list_container_files_route,
     methods=["GET"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[ListContainerFilesResponse],
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -243,7 +236,6 @@ router.add_api_route(
     "/{id}/files/read",
     read_container_file_route,
     methods=["GET"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[ContainerFileReadResponse],
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -252,7 +244,6 @@ router.add_api_route(
     "/{id}/files/write",
     write_container_file_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse,
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -261,7 +252,6 @@ router.add_api_route(
     "/{id}/files/upload",
     upload_container_files_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[ContainerFileUploadResponse],
     responses=FILE_UPLOAD_ERROR_RESPONSES,
 )
@@ -270,7 +260,6 @@ router.add_api_route(
     "/{id}/files/download",
     download_container_files_route,
     methods=["GET"],
-    dependencies=ADMIN_ONLY,
     response_model=None,
     response_class=StreamingResponse,
     responses={
@@ -289,7 +278,6 @@ router.add_api_route(
     "/{id}/files/copy",
     copy_container_files_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse,
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -298,7 +286,6 @@ router.add_api_route(
     "/{id}/files/move",
     move_container_files_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse,
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -307,7 +294,6 @@ router.add_api_route(
     "/{id}/files/delete",
     delete_container_files_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse,
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -316,7 +302,6 @@ router.add_api_route(
     "/{id}/files/mkdir",
     mkdir_container_files_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse,
     responses=FILE_OPERATION_ERROR_RESPONSES,
 )
@@ -331,5 +316,31 @@ async def container_shell_stream(
     await handle_container_shell_stream(
         websocket=websocket,
         container_hash=container_hash,
+        token=token,
+    )
+
+
+@router.websocket("/{container_hash}/novnc-ws")
+async def container_novnc_ws(
+    websocket: WebSocket,
+    container_hash: str,
+    token: str = Query(default=""),
+) -> None:
+    await handle_novnc_ws_proxy(
+        websocket=websocket,
+        container_hash=container_hash,
+        token=token,
+    )
+
+
+@router.api_route("/{container_hash}/novnc/{path:path}", methods=["GET"], include_in_schema=False)
+async def container_novnc_http(
+    container_hash: str,
+    path: str,
+    token: str = Query(default=""),
+):
+    return await handle_novnc_http_proxy(
+        container_hash=container_hash,
+        path=path,
         token=token,
     )
