@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schema.agent.sessions import AgentSessionSummarySchema
 from schema.common.responses import PaginatedResponse
+from schema.sandbox.containers import SandboxContainerSchema
 from schema.system_user.users import SystemUserRole
 from schema.work_project.assets import WorkProjectAssetRequest, WorkProjectAssetSchema
 
@@ -113,7 +114,8 @@ class WorkProjectSchema(BaseModel):
     description: str
     owner_user_ids: list[int]
     owners: list[WorkProjectOwnerSchema]
-    sandbox_container_id: int | None = None
+    sandbox_container_ids: list[int]
+    sandbox_containers: list[SandboxContainerSchema] = Field(default_factory=list)
     assets: list[WorkProjectAssetSchema]
     tasks: list[WorkProjectTaskSchema]
     agent_summaries: list[WorkProjectAgentSummarySchema]
@@ -137,7 +139,7 @@ class WorkProjectMetadataRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str = Field(default="", max_length=2000)
     owner_user_ids: list[int] = Field(default_factory=list, max_length=100)
-    sandbox_container_id: int | None = Field(default=None, gt=0)
+    sandbox_container_ids: list[int] = Field(default_factory=list, max_length=100)
     assets: list[WorkProjectAssetRequest] = Field(min_length=1, max_length=500)
     type: WorkProjectType = WorkProjectType.PENETRATION_TEST
 
@@ -151,6 +153,11 @@ class WorkProjectMetadataRequest(BaseModel):
     @field_validator("owner_user_ids", mode="after")
     @classmethod
     def normalize_owner_user_ids(cls, value: list[int]) -> list[int]:
+        return _unique_positive_ids(value)
+
+    @field_validator("sandbox_container_ids", mode="after")
+    @classmethod
+    def normalize_sandbox_container_ids(cls, value: list[int]) -> list[int]:
         return _unique_positive_ids(value)
 
 

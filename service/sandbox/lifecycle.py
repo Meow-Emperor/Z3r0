@@ -1,5 +1,7 @@
 import asyncio
 import re
+import secrets
+import socket
 from datetime import datetime
 
 import docker
@@ -10,14 +12,12 @@ from logger import get_logger
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
+from model.host.hosts import ManagedHost
 from schema.sandbox.containers import (
-    DEFAULT_SANDBOX_CONTAINER_COMMAND,
     SandboxContainerPortMapping,
     SandboxContainerStatus,
 )
-from schema.sandbox.images import SandboxImageStatus
 from service.sandbox.docker_ops import (
-    image_ref as docker_image_ref,
     create_container_sync,
     start_container_sync,
     stop_container_sync,
@@ -36,6 +36,9 @@ from service.sandbox.types import (
 
 
 logger = get_logger(__name__)
+_PROXY_PORT_MIN = 30000
+_PROXY_PORT_MAX = 60999
+_PROXY_PORT_RETRIES = 32
 
 
 def _container_name_prefix(image_name: str) -> str:
@@ -49,17 +52,21 @@ def _serialize_port_mappings(port_mappings: list[SandboxContainerPortMapping]) -
 
 
 async def create_sandbox_container(
+    host_id: int,
     image_id: int,
     owner_id: int,
     port_mappings: list[SandboxContainerPortMapping],
     novnc_support: bool = False,
-    novnc_port: int = 0,
-    container_command: str = DEFAULT_SANDBOX_CONTAINER_COMMAND,
 ) -> SandboxContainerMutationResult:
-    container_command = container_command.strip()
-    novnc_port = novnc_port if novnc_support else 0
-
     async with get_async_session() as session:
+        host = await session.get(ManagedHost, host_id)
+        if host is None:
+            return SandboxContainerMutationResult(
+                record=None,
+                changed=False,
+                message="managed host not found",
+                not_found=True,
+            )
         sandbox_image = await session.get(SandboxImage, image_id)
         if sandbox_image is None:
             return SandboxContainerMutationResult(
@@ -68,13 +75,6 @@ async def create_sandbox_container(
                 message="sandbox image not found",
                 not_found=True,
             )
-        if sandbox_image.status != SandboxImageStatus.READY:
-            return SandboxContainerMutationResult(
-                record=None,
-                changed=False,
-                message="only ready sandbox images can create containers",
-            )
-
         owner = await session.get(SystemUser, owner_id)
         if owner is None:
             return SandboxContainerMutationResult(
@@ -84,19 +84,51 @@ async def create_sandbox_container(
                 not_found=True,
             )
 
-        image_ref = docker_image_ref(sandbox_image)
         container_name_prefix = _container_name_prefix(sandbox_image.image_name)
 
     try:
+        await asyncio.to_thread(_assert_host_image_exists, host, sandbox_image.image_name)
+        proxy_host_port = await asyncio.to_thread(_allocate_proxy_host_port, host.ip_address)
+        default_port = sandbox_image.default_exposed_port
+        for mapping in port_mappings:
+            if mapping.container_port == default_port and mapping.protocol == "tcp":
+                return SandboxContainerMutationResult(
+                    record=None,
+                    changed=False,
+                    message="default exposed port is reserved for the sandbox proxy",
+                )
+            if mapping.host_port == proxy_host_port and mapping.protocol == "tcp":
+                return SandboxContainerMutationResult(
+                    record=None,
+                    changed=False,
+                    message="proxy host port conflicts with a custom port mapping",
+                )
+        proxy_token = secrets.token_urlsafe(32)
+        effective_port_mappings = [
+            *_serialize_port_mappings(port_mappings),
+            {
+                "container_port": default_port,
+                "host_port": proxy_host_port,
+                "protocol": "tcp",
+            },
+        ]
+        docker_port_mappings = [SandboxContainerPortMapping.model_validate(mapping) for mapping in effective_port_mappings]
         container_hash, container_name = await asyncio.to_thread(
             create_container_sync,
-            image_ref,
+            host,
+            sandbox_image.image_name,
             container_name_prefix,
-            container_command,
-            port_mappings,
+            docker_port_mappings,
+            {"SANDBOX_PROXY_TOKEN": proxy_token},
+        )
+    except docker.errors.ImageNotFound:
+        return SandboxContainerMutationResult(
+            record=None,
+            changed=False,
+            message="image does not exist on selected host",
         )
     except Exception:
-        logger.exception("sandbox container create failed for image: %s", image_id)
+        logger.exception("sandbox container create failed for host=%s image=%s", host_id, image_id)
         return SandboxContainerMutationResult(
             record=None,
             changed=False,
@@ -105,14 +137,15 @@ async def create_sandbox_container(
 
     now = datetime.now()
     sandbox_container = SandboxContainer(
+        host_id=host_id,
         container_name=container_name,
         container_hash=container_hash,
-        container_command=container_command,
         owner_id=owner_id,
         image_id=image_id,
-        port_mappings=_serialize_port_mappings(port_mappings),
+        proxy_host_port=proxy_host_port,
+        proxy_token=proxy_token,
+        port_mappings=effective_port_mappings,
         novnc_support=novnc_support,
-        novnc_port=novnc_port,
         status=SandboxContainerStatus.CREATED,
         created_at=now,
         updated_at=now,
@@ -124,11 +157,11 @@ async def create_sandbox_container(
             await session.commit()
             await session.refresh(sandbox_container)
     except Exception:
-        await asyncio.to_thread(remove_container_sync, container_hash)
+        await asyncio.to_thread(remove_container_sync, host, container_hash)
         raise
 
     if sandbox_container.id is None:
-        await asyncio.to_thread(remove_container_sync, container_hash)
+        await asyncio.to_thread(remove_container_sync, host, container_hash)
         raise RuntimeError("sandbox container id was not generated")
 
     logger.info("sandbox container created: %s", sandbox_container.id)
@@ -156,10 +189,14 @@ async def start_sandbox_container(id: int) -> SandboxContainerMutationResult:
         )
 
     try:
-        await asyncio.to_thread(start_container_sync, record.container.container_hash)
+        host = await _load_container_host(record.container.host_id)
+        if host is None:
+            return SandboxContainerMutationResult(record=record, changed=False, message="managed host not found")
+        await asyncio.to_thread(start_container_sync, host, record.container.container_hash)
         await asyncio.sleep(1)
         await sync_container_status(ContainerStatusSnapshot(
             id=record.container.id or id,
+            host_id=record.container.host_id,
             container_hash=record.container.container_hash,
             status=record.container.status,
         ))
@@ -211,7 +248,10 @@ async def stop_sandbox_container(id: int) -> SandboxContainerMutationResult:
         )
 
     try:
-        await asyncio.to_thread(stop_container_sync, record.container.container_hash)
+        host = await _load_container_host(record.container.host_id)
+        if host is None:
+            return SandboxContainerMutationResult(record=record, changed=False, message="managed host not found")
+        await asyncio.to_thread(stop_container_sync, host, record.container.container_hash)
     except docker.errors.NotFound:
         logger.debug("sandbox container instance not found while stopping: %s", id)
         return SandboxContainerMutationResult(
@@ -239,11 +279,40 @@ async def delete_sandbox_container(id: int) -> bool:
         sandbox_container = await session.get(SandboxContainer, id)
         if sandbox_container is None:
             return False
+        host = await session.get(ManagedHost, sandbox_container.host_id)
+        container_hash = sandbox_container.container_hash
 
-        await asyncio.to_thread(remove_container_sync, sandbox_container.container_hash)
+    await invalidate_agent_tool_bindings(id)
+    if host is not None:
+        await asyncio.to_thread(remove_container_sync, host, container_hash)
+
+    async with get_async_session() as session:
+        sandbox_container = await session.get(SandboxContainer, id)
+        if sandbox_container is None:
+            return True
         await session.delete(sandbox_container)
         await session.commit()
 
-    await invalidate_agent_tool_bindings(id)
     logger.info("sandbox container deleted: %s", id)
     return True
+
+
+def _assert_host_image_exists(host: ManagedHost, image_name: str) -> None:
+    from service.host.docker import inspect_image_on_host_sync
+
+    inspect_image_on_host_sync(host, image_name)
+
+
+def _allocate_proxy_host_port(host_ip: str) -> int:
+    for _ in range(_PROXY_PORT_RETRIES):
+        port = secrets.randbelow(_PROXY_PORT_MAX - _PROXY_PORT_MIN + 1) + _PROXY_PORT_MIN
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.5)
+            if sock.connect_ex((host_ip, port)) != 0:
+                return port
+    raise RuntimeError("failed to allocate proxy host port")
+
+
+async def _load_container_host(host_id: int) -> ManagedHost | None:
+    async with get_async_session() as session:
+        return await session.get(ManagedHost, host_id)

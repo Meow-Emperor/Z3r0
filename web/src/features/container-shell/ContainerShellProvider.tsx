@@ -18,7 +18,7 @@ import {
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
 import { buildHostShellUrl } from "../../shared/api/hosts";
-import { buildContainerNoVNCUrl, buildContainerShellUrl } from "../../shared/api/sandboxContainers";
+import { buildContainerNoVNCUrl, buildContainerShellUrl, canOpenContainerNoVNC } from "../../shared/api/sandboxContainers";
 import { showApiError } from "../../shared/api/feedback";
 import type { ManagedHost, SandboxContainer } from "../../shared/api/types";
 import {
@@ -72,7 +72,6 @@ type NoVNCWindowState = WindowStateBase & {
 
 type FileManagerWindowState = WindowStateBase & {
   containerId: number;
-  containerHash: string;
   containerName: string;
   isMaximized: boolean;
   restoreRect: Rect | null;
@@ -83,6 +82,7 @@ type ContainerShellContextValue = {
   openHostShell: (host: ManagedHost) => void;
   openNoVNC: (container: SandboxContainer) => void;
   openShell: (container: SandboxContainer) => void;
+  syncContainerWindows: (container: SandboxContainer | null) => void;
 };
 
 type FloatingWindowProps = {
@@ -299,12 +299,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, [disposeShellResources, fitTerminal, shell]);
 
   const openShell = useCallback((container: SandboxContainer) => {
-    if (!container.container_hash) return;
+    if (container.status !== "running" || container.proxy_host_port <= 0) return;
 
     openShellTarget({
-      key: `container:${container.container_hash}`,
+      key: `container:${container.id}`,
       title: container.container_name,
-      url: buildContainerShellUrl(container.container_hash),
+      url: buildContainerShellUrl(container.id),
     });
   }, [openShellTarget]);
 
@@ -402,7 +402,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openFileManager = useCallback((container: SandboxContainer) => {
-    if (!container.container_hash) return;
+    if (container.status !== "running" || container.proxy_host_port <= 0) return;
 
     cancelFlightFrame(fileManagerFlightFrameRef);
     setFileManagerFlight(null);
@@ -413,7 +413,6 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
 
       return {
         containerId: container.id,
-        containerHash: container.container_hash,
         title: container.container_name,
         containerName: container.container_name,
         dockState: "normal",
@@ -423,6 +422,32 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       };
     });
   }, []);
+
+  const syncContainerWindows = useCallback((container: SandboxContainer | null) => {
+    if (shell?.targetKey.startsWith("container:")) {
+      if (container?.status === "running" && container.proxy_host_port > 0) {
+        openShell(container);
+      } else {
+        closeShell();
+      }
+    }
+
+    if (fileManager) {
+      if (container?.status === "running" && container.proxy_host_port > 0) {
+        openFileManager(container);
+      } else {
+        closeFileManager();
+      }
+    }
+
+    if (noVNC) {
+      if (container && canOpenContainerNoVNC(container)) {
+        openNoVNC(container);
+      } else {
+        closeNoVNC();
+      }
+    }
+  }, [closeFileManager, closeNoVNC, closeShell, fileManager, noVNC, openFileManager, openNoVNC, openShell, shell]);
 
   useEffect(() => {
     if (!activeShellUrl || activeConnectionKey === null || terminalRef.current || !terminalHostRef.current) return;
@@ -647,7 +672,10 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     };
   }, [onPointerMove, stopPointerAction]);
 
-  const contextValue = useMemo<ContainerShellContextValue>(() => ({ openFileManager, openHostShell, openNoVNC, openShell }), [openFileManager, openHostShell, openNoVNC, openShell]);
+  const contextValue = useMemo<ContainerShellContextValue>(
+    () => ({ openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows }),
+    [openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows],
+  );
   const shellFlightStyle = shellFlight ? buildWindowFlightStyle(shellFlight) : undefined;
   const noVNCFlightStyle = noVNCFlight ? buildWindowFlightStyle(noVNCFlight) : undefined;
   const fileManagerFlightStyle = fileManagerFlight ? buildWindowFlightStyle(fileManagerFlight) : undefined;
@@ -768,7 +796,6 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
             <Suspense fallback={<div className="file-manager-loading">Loading files...</div>}>
               <ContainerFileManager
                 containerId={fileManager.containerId}
-                containerHash={fileManager.containerHash}
                 containerName={fileManager.containerName}
               />
             </Suspense>

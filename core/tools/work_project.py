@@ -10,6 +10,7 @@ from core.runtime.context import AgentRuntimeContext
 from core.tools.work_project_results import work_project_error, work_project_success
 from database import get_async_session
 from model.work_project.projects import WorkProject
+from model.work_project.projects import WorkProjectSandboxContainer
 from schema.work_project.projects import (
     WorkProjectAgentSummaryContentSchema,
     WorkProjectAgentSummarySchema,
@@ -26,7 +27,7 @@ async def load_work_project_metadata(ctx: RunContextWrapper[AgentRuntimeContext]
         None.
 
     Returns:
-        JSON status with project id, name, description, sandbox id, status, and type.
+        JSON status with project id, name, description, sandbox container ids, status, and type.
     """
     project = await _current_project(ctx.context)
     if project is None:
@@ -188,11 +189,17 @@ async def _current_project(context: AgentRuntimeContext) -> WorkProject | None:
 
 
 async def _metadata_payload(project: WorkProject) -> dict:
+    async with get_async_session() as session:
+        container_ids = list((await session.exec(
+            select(WorkProjectSandboxContainer.sandbox_container_id)
+            .where(WorkProjectSandboxContainer.project_id == project.id)
+            .order_by(WorkProjectSandboxContainer.position)
+        )).all())
     return {
         "project_id": project.id,
         "name": project.name,
         "description": project.description,
-        "sandbox_container_id": project.sandbox_container_id,
+        "sandbox_container_ids": container_ids,
         "status": project.status,
         "type": project.type,
     }

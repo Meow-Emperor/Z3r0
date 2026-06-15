@@ -12,6 +12,7 @@ class SandboxContainerRecord:
     container: SandboxContainer
     image_name: str
     owner_username: str
+    host_ip_address: str
 
 
 @dataclass(frozen=True)
@@ -32,3 +33,4 @@ class SandboxContainerCommandResult:
 class SandboxContainerToolBinding:
     id: int
     generation: int
+

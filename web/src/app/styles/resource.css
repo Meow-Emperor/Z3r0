@@ -1408,6 +1408,35 @@
   flex: 0 0 auto;
 }
 
+.host-images-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.host-images-toolbar .semi-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.host-images-modal .semi-modal-body {
+  padding: 20px 24px 24px;
+}
+
+.host-images-modal .semi-table-thead th {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.host-images-modal .semi-table-tbody td {
+  font-size: 13px;
+}
+
+.host-images-modal .semi-table-empty {
+  padding: 32px 0;
+}
+
 .novnc-toggle-row {
   display: flex;
   min-height: 34px;

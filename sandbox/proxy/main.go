@@ -3,8 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -14,89 +13,86 @@ const (
 	defaultNoVNCTarget = "http://127.0.0.1:8080"
 	noVNCPathPrefix    = "/novnc"
 	websockifyPath     = "/websockify"
+	tokenEnvName       = "SANDBOX_PROXY_TOKEN"
 )
 
-func newPassthroughProxy(target *url.URL) http.Handler {
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	originalDirector := proxy.Director
-	proxy.Director = func(request *http.Request) {
-		originalDirector(request)
-		request.Host = target.Host
-	}
-	return proxy
-}
-
-func newPrefixProxy(prefix string, target *url.URL) http.Handler {
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	originalDirector := proxy.Director
-	proxy.Director = func(request *http.Request) {
-		originalDirector(request)
-		request.URL.Path = trimPrefixPath(request.URL.Path, prefix)
-		request.URL.RawPath = ""
-		request.Host = target.Host
-	}
-	return proxy
-}
-
-func trimPrefixPath(path string, prefix string) string {
-	if path == prefix {
-		return "/"
-	}
-	if strings.HasPrefix(path, prefix+"/") {
-		trimmed := strings.TrimPrefix(path, prefix)
-		if trimmed == "" {
-			return "/"
-		}
-		return trimmed
-	}
-	return path
-}
-
-func mustParseURL(rawURL string) *url.URL {
-	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		log.Fatalf("invalid target url %q: %v", rawURL, err)
-	}
-	return parsedURL
-}
-
 func main() {
-	addr := defaultProxyAddr
+	token := os.Getenv(tokenEnvName)
+	if token == "" {
+		log.Fatalf("%s is required", tokenEnvName)
+	}
+
 	noVNCTarget := mustParseURL(defaultNoVNCTarget)
-	passthroughProxy := newPassthroughProxy(noVNCTarget)
-	noVNCProxy := newPrefixProxy(noVNCPathPrefix, noVNCTarget)
+	passthroughProxy := withAuth(token, newPassthroughProxy(noVNCTarget))
+	noVNCProxy := withAuth(token, newPrefixProxy(noVNCPathPrefix, noVNCTarget))
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Path != "/" {
-			http.NotFound(writer, request)
+	mux.HandleFunc("/", withAuthFunc(token, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(writer, request, noVNCPathPrefix+"/vnc.html?autoconnect=true&resize=remote&path=websockify", http.StatusFound)
+		http.Redirect(w, r, noVNCPathPrefix+"/vnc.html?autoconnect=true&resize=remote&path=websockify", http.StatusFound)
+	}))
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
-		writer.WriteHeader(http.StatusOK)
-		_, _ = writer.Write([]byte("ok"))
-	})
+	mux.HandleFunc("/shell", withAuthFunc(token, handleShell))
+	mux.HandleFunc("/files", withAuthFunc(token, handleListFiles))
+	mux.HandleFunc("/files/info", withAuthFunc(token, handleFileInfo))
+	mux.HandleFunc("/files/read", withAuthFunc(token, handleReadFile))
+	mux.HandleFunc("/files/write", withAuthFunc(token, handleWriteFile))
+	mux.HandleFunc("/files/upload", withAuthFunc(token, handleUploadFiles))
+	mux.HandleFunc("/files/download", withAuthFunc(token, handleDownloadFiles))
+	mux.HandleFunc("/files/copy", withAuthFunc(token, handleCopyFiles))
+	mux.HandleFunc("/files/move", withAuthFunc(token, handleMoveFiles))
+	mux.HandleFunc("/files/delete", withAuthFunc(token, handleDeleteFiles))
+	mux.HandleFunc("/files/mkdir", withAuthFunc(token, handleMkdir))
 	mux.Handle(noVNCPathPrefix+"/", noVNCProxy)
-	mux.HandleFunc(noVNCPathPrefix, func(writer http.ResponseWriter, request *http.Request) {
-		redirectTarget := noVNCPathPrefix + "/"
-		if request.URL.RawQuery != "" {
-			redirectTarget += "?" + request.URL.RawQuery
+	mux.HandleFunc(noVNCPathPrefix, withAuthFunc(token, func(w http.ResponseWriter, r *http.Request) {
+		target := noVNCPathPrefix + "/"
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
 		}
-		http.Redirect(writer, request, redirectTarget, http.StatusPermanentRedirect)
-	})
+		http.Redirect(w, r, target, http.StatusPermanentRedirect)
+	}))
 	mux.Handle(websockifyPath, passthroughProxy)
 
 	server := &http.Server{
-		Addr:              addr,
+		Addr:              defaultProxyAddr,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	log.Printf("sandbox proxy listening on %s", addr)
+	log.Printf("sandbox proxy listening on %s", defaultProxyAddr)
 	log.Printf("sandbox proxy novnc target=%s", noVNCTarget)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("sandbox proxy failed: %v", err)
 	}
+}
+
+func withAuth(token string, next http.Handler) http.Handler {
+	return withAuthFunc(token, next.ServeHTTP)
+}
+
+func withAuthFunc(token string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !authorized(r, token) {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func authorized(r *http.Request, token string) bool {
+	if r.URL.Query().Get("token") == token {
+		return true
+	}
+	if r.Header.Get("X-Sandbox-Token") == token {
+		return true
+	}
+	auth := r.Header.Get("Authorization")
+	return strings.TrimSpace(strings.TrimPrefix(auth, "Bearer ")) == token
 }

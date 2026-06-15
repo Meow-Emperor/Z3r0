@@ -17,7 +17,7 @@ from service.sandbox.status import (
     resolve_project_sandbox_container_tool_binding,
     resolve_sandbox_container_tool_binding,
 )
-from service.work_project.projects import can_run_work_project_session, work_project_sandbox_container_id_for_user
+from service.work_project.projects import can_run_work_project_session, work_project_allows_sandbox_container
 
 
 logger = get_logger(__name__)
@@ -88,21 +88,30 @@ async def build_runtime_context(
     agent_code: str = "",
 ) -> AgentRuntimeContext:
     work_project_id = await agent_sessions.project_id_for_session(session_id)
+    meta = await agent_sessions.get_session_meta(session_id)
     effective_sandbox_container_id = sandbox_container_id
-    project_bound_sandbox = False
+    if effective_sandbox_container_id is None and meta is not None:
+        if meta.runtime_sandbox_container_id is not None and meta.is_running:
+            effective_sandbox_container_id = meta.runtime_sandbox_container_id
+        else:
+            effective_sandbox_container_id = meta.selected_sandbox_container_id
+
     if work_project_id is not None:
-        effective_sandbox_container_id = await work_project_sandbox_container_id_for_user(
-            project_id=work_project_id,
-            user_id=user.id,
-            user_role=user.role,
-        )
-        project_bound_sandbox = effective_sandbox_container_id is not None
+        if effective_sandbox_container_id is not None:
+            allowed = await work_project_allows_sandbox_container(
+                project_id=work_project_id,
+                sandbox_container_id=effective_sandbox_container_id,
+                user_id=user.id,
+                user_role=user.role,
+            )
+            if not allowed:
+                effective_sandbox_container_id = None
 
     selected_container_id = None
     selected_container_generation = 0
     sandbox_skill_metadata: tuple[str, ...] = ()
     if effective_sandbox_container_id is not None:
-        if project_bound_sandbox:
+        if work_project_id is not None:
             binding = await resolve_project_sandbox_container_tool_binding(effective_sandbox_container_id)
         else:
             binding = await resolve_sandbox_container_tool_binding(

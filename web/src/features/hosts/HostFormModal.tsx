@@ -33,7 +33,7 @@ type HostFormModalProps =
 const EMPTY: HostFormValues = {
   ip_address: "",
   ssh_port: 22,
-  host_account: "",
+  host_account: "root",
   host_password: "",
   docker_management_port: 2375,
 };
@@ -90,6 +90,7 @@ export function HostFormModal({ open, mode, host, saving, onCancel, onSubmit }: 
       <label>
         <span>IP Address</span>
         <Input prefix={<Server size={16} />} value={values.ip_address} maxLength={255} required
+          autoComplete="off"
           onChange={(ip_address) => setValues((v) => ({ ...v, ip_address }))}
         />
       </label>
@@ -102,12 +103,14 @@ export function HostFormModal({ open, mode, host, saving, onCancel, onSubmit }: 
       <label>
         <span>Host Account</span>
         <Input prefix={<User size={16} />} value={values.host_account} maxLength={128} required
+          autoComplete="off"
           onChange={(host_account) => setValues((v) => ({ ...v, host_account }))}
         />
       </label>
       <label>
         <span>Host Password</span>
         <Input mode="password" prefix={<KeyRound size={16} />} value={values.host_password} maxLength={512} required
+          autoComplete="new-password"
           onChange={(host_password) => setValues((v) => ({ ...v, host_password }))}
         />
       </label>

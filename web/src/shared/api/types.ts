@@ -53,6 +53,8 @@ export type UpdateManagedHostRequest = JsonRequestBody<paths["/api/hosts/{id}"][
 export type UpdateManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["patch"]>;
 export type DeleteManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["delete"]>;
 
+export type DeleteManagedHostImageRequest = JsonRequestBody<paths["/api/hosts/{id}/images/remove"]["post"]>;
+
 export type InstanceConfig = components["schemas"]["InstanceConfigSchema"];
 export type AgentConfig = components["schemas"]["AgentConfig"];
 export type AgentPoolConfig = components["schemas"]["AgentPoolConfig"];
@@ -65,17 +67,17 @@ export type QuerySandboxImagesParams = QueryParameters<paths["/api/sandbox-image
 export type QuerySandboxImagesResponse = JsonResponse<paths["/api/sandbox-images"]["get"]>;
 export type QuerySandboxImagesData = NonNullable<QuerySandboxImagesResponse["data"]>;
 export type SandboxImage = QuerySandboxImagesData["items"][number];
-export type SandboxImageStatus = components["schemas"]["SandboxImageStatus"];
 
 export type CreateSandboxImageRequest = JsonRequestBody<paths["/api/sandbox-images"]["post"]>;
 export type CreateSandboxImageResponse = JsonResponse<paths["/api/sandbox-images"]["post"]>;
 
 export type SandboxImagePathParams = PathParameters<paths["/api/sandbox-images/{id}"]["delete"]>;
 export type DeleteSandboxImageResponse = JsonResponse<paths["/api/sandbox-images/{id}"]["delete"]>;
-export type CancelSandboxImagePathParams = PathParameters<paths["/api/sandbox-images/{id}/cancel"]["post"]>;
-export type CancelSandboxImageResponse = JsonResponse<paths["/api/sandbox-images/{id}/cancel"]["post"]>;
-export type RetrySandboxImagePathParams = PathParameters<paths["/api/sandbox-images/{id}/retry"]["post"]>;
-export type RetrySandboxImageResponse = JsonResponse<paths["/api/sandbox-images/{id}/retry"]["post"]>;
+
+export type ListManagedHostImagesResponse = JsonResponse<paths["/api/hosts/{id}/images"]["get"]>;
+export type ManagedHostImage = NonNullable<ListManagedHostImagesResponse["data"]>["items"][number];
+export type PullManagedHostImagesRequest = JsonRequestBody<paths["/api/hosts/{id}/images/pull"]["post"]>;
+export type PullManagedHostImagesResponse = JsonResponse<paths["/api/hosts/{id}/images/pull"]["post"]>;
 
 export type QuerySandboxContainersParams = QueryParameters<paths["/api/sandbox-containers"]["get"]>;
 export type QuerySandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers"]["get"]>;
@@ -176,6 +178,8 @@ export type ListAgentEventsResponse = JsonResponse<paths["/api/agent-sessions/{s
 export type ListAgentEventsData = NonNullable<ListAgentEventsResponse["data"]>;
 export type UpdateAgentSessionTitleRequest = JsonRequestBody<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;
 export type UpdateAgentSessionTitleResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;
+export type UpdateAgentSessionSandboxContainerRequest = JsonRequestBody<paths["/api/agent-sessions/{session_id}/sandbox-container"]["patch"]>;
+export type UpdateAgentSessionSandboxContainerResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/sandbox-container"]["patch"]>;
 export type DeleteAgentSessionResponse = JsonResponse<paths["/api/agent-sessions/{session_id}"]["delete"]>;
 
 export type UserMessageEvent = components["schemas"]["UserMessageEvent"];

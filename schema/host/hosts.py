@@ -89,3 +89,49 @@ class DeleteManagedHostResponse(BaseModel):
 
 class QueryManagedHostsResponse(PaginatedResponse[ManagedHostSchema]):
     pass
+
+
+class ManagedHostImageSchema(BaseModel):
+    image_name: str
+    image_id: str = ""
+    image_hash: str = ""
+    image_size: int = Field(default=0, json_schema_extra={"format": "int64"})
+    created_at: datetime | None = None
+
+
+class PullManagedHostImagesRequest(BaseModel):
+    image_names: list[str] = Field(min_length=1, max_length=100)
+
+    @field_validator("image_names", mode="after")
+    @classmethod
+    def normalize_image_names(cls, value: list[str]) -> list[str]:
+        result: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            image_name = item.strip() if isinstance(item, str) else ""
+            if not image_name or image_name in seen:
+                continue
+            result.append(image_name)
+            seen.add(image_name)
+        if not result:
+            raise ValueError("at least one image name is required")
+        return result
+
+
+class PullManagedHostImageResultSchema(BaseModel):
+    image_name: str
+    success: bool
+    message: str = ""
+
+
+class PullManagedHostImagesResponse(BaseModel):
+    items: list[PullManagedHostImageResultSchema]
+
+
+class DeleteManagedHostImageRequest(BaseModel):
+    image_id: str = Field(min_length=1, max_length=255)
+    force: bool = False
+
+
+class ListManagedHostImagesResponse(BaseModel):
+    items: list[ManagedHostImageSchema]

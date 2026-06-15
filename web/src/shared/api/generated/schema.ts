@@ -56,6 +56,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-sessions/{session_id}/sandbox-container": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Agent Session Sandbox Container Route */
+        patch: operations["update_agent_session_sandbox_container_route_api_agent_sessions__session_id__sandbox_container_patch"];
+        trace?: never;
+    };
     "/api/agent-sessions/{session_id}/title": {
         parameters: {
             query?: never;
@@ -124,6 +141,57 @@ export interface paths {
         head?: never;
         /** Update Managed Host Handler */
         patch: operations["update_managed_host_handler_api_hosts__id__patch"];
+        trace?: never;
+    };
+    "/api/hosts/{id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Managed Host Images Handler */
+        get: operations["list_managed_host_images_handler_api_hosts__id__images_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hosts/{id}/images/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pull Managed Host Images Handler */
+        post: operations["pull_managed_host_images_handler_api_hosts__id__images_pull_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hosts/{id}/images/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete Managed Host Image Handler */
+        post: operations["delete_managed_host_image_handler_api_hosts__id__images_remove_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/sandbox-containers": {
@@ -395,40 +463,6 @@ export interface paths {
         post?: never;
         /** Delete Sandbox Image Handler */
         delete: operations["delete_sandbox_image_handler_api_sandbox_images__id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sandbox-images/{id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Cancel Sandbox Image Pull Handler */
-        post: operations["cancel_sandbox_image_pull_handler_api_sandbox_images__id__cancel_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sandbox-images/{id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Retry Sandbox Image Handler */
-        post: operations["retry_sandbox_image_handler_api_sandbox_images__id__retry_post"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -857,6 +891,13 @@ export interface components {
             runtime_sandbox_container_generation: number;
             /** Runtime Sandbox Container Id */
             runtime_sandbox_container_id?: number | null;
+            /**
+             * Selected Sandbox Container Generation
+             * @default 0
+             */
+            selected_sandbox_container_generation: number;
+            /** Selected Sandbox Container Id */
+            selected_sandbox_container_id?: number | null;
             /** Session Id */
             session_id: string;
             /** @default chat */
@@ -903,12 +944,6 @@ export interface components {
             agent_code: string | null;
             /** Content */
             content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"])[];
-            /**
-             * Sandbox Container Id
-             * @description Selected running sandbox container. Backend mounts sandbox tools only when this container is still usable by the current user.
-             * @default null
-             */
-            sandbox_container_id: number | null;
         };
         /**
          * AgentSubordinateStatus
@@ -1235,6 +1270,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[ListManagedHostImagesResponse] */
+        CommonResponse_ListManagedHostImagesResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["ListManagedHostImagesResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[ListWorkProjectSessionsResponse] */
         CommonResponse_ListWorkProjectSessionsResponse_: {
             /**
@@ -1257,6 +1306,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["ManagedHostSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[PullManagedHostImagesResponse] */
+        CommonResponse_PullManagedHostImagesResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["PullManagedHostImagesResponse"] | null;
             /**
              * Message
              * @default success
@@ -1536,18 +1599,10 @@ export interface components {
         };
         /** CreateSandboxContainerRequest */
         CreateSandboxContainerRequest: {
-            /**
-             * Container Command
-             * @default trap 'exit 0' TERM INT; while :; do sleep 3600; done
-             */
-            container_command: string;
+            /** Host Id */
+            host_id: number;
             /** Image Id */
             image_id: number;
-            /**
-             * Novnc Port
-             * @default 0
-             */
-            novnc_port: number;
             /**
              * Novnc Support
              * @default false
@@ -1563,6 +1618,11 @@ export interface components {
         };
         /** CreateSandboxImageRequest */
         CreateSandboxImageRequest: {
+            /**
+             * Default Exposed Port
+             * @default 8000
+             */
+            default_exposed_port: number;
             /** Image Name */
             image_name: string;
         };
@@ -1593,8 +1653,8 @@ export interface components {
             name: string;
             /** Owner User Ids */
             owner_user_ids?: number[];
-            /** Sandbox Container Id */
-            sandbox_container_id?: number | null;
+            /** Sandbox Container Ids */
+            sandbox_container_ids?: number[];
             /** @default penetration_test */
             type: components["schemas"]["WorkProjectType"];
         };
@@ -1602,6 +1662,16 @@ export interface components {
         CreateWorkProjectSessionResponse: {
             /** Session Id */
             session_id: string;
+        };
+        /** DeleteManagedHostImageRequest */
+        DeleteManagedHostImageRequest: {
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /** Image Id */
+            image_id: string;
         };
         /** DeleteManagedHostResponse */
         DeleteManagedHostResponse: {
@@ -1743,10 +1813,38 @@ export interface components {
             /** Path */
             path: string;
         };
+        /** ListManagedHostImagesResponse */
+        ListManagedHostImagesResponse: {
+            /** Items */
+            items: components["schemas"]["ManagedHostImageSchema"][];
+        };
         /** ListWorkProjectSessionsResponse */
         ListWorkProjectSessionsResponse: {
             /** Items */
             items: components["schemas"]["AgentSessionSummarySchema"][];
+        };
+        /** ManagedHostImageSchema */
+        ManagedHostImageSchema: {
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Image Hash
+             * @default
+             */
+            image_hash: string;
+            /**
+             * Image Id
+             * @default
+             */
+            image_id: string;
+            /** Image Name */
+            image_name: string;
+            /**
+             * Image Size
+             * Format: int64
+             * @default 0
+             */
+            image_size: number;
         };
         /** ManagedHostSchema */
         ManagedHostSchema: {
@@ -1772,6 +1870,28 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** PullManagedHostImageResultSchema */
+        PullManagedHostImageResultSchema: {
+            /** Image Name */
+            image_name: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /** Success */
+            success: boolean;
+        };
+        /** PullManagedHostImagesRequest */
+        PullManagedHostImagesRequest: {
+            /** Image Names */
+            image_names: string[];
+        };
+        /** PullManagedHostImagesResponse */
+        PullManagedHostImagesResponse: {
+            /** Items */
+            items: components["schemas"]["PullManagedHostImageResultSchema"][];
         };
         /** QueryManagedHostsResponse */
         QueryManagedHostsResponse: {
@@ -1916,8 +2036,6 @@ export interface components {
         };
         /** SandboxContainerSchema */
         SandboxContainerSchema: {
-            /** Container Command */
-            container_command: string;
             /** Container Hash */
             container_hash: string;
             /** Container Name */
@@ -1927,14 +2045,16 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Host Id */
+            host_id: number;
+            /** Host Ip Address */
+            host_ip_address: string;
             /** Id */
             id: number;
             /** Image Id */
             image_id: number;
             /** Image Name */
             image_name: string;
-            /** Novnc Port */
-            novnc_port: number;
             /** Novnc Support */
             novnc_support: boolean;
             /** Owner Id */
@@ -1943,6 +2063,8 @@ export interface components {
             owner_username: string;
             /** Port Mappings */
             port_mappings: components["schemas"]["SandboxContainerPortMapping"][];
+            /** Proxy Host Port */
+            proxy_host_port: number;
             status: components["schemas"]["SandboxContainerStatus"];
             /**
              * Updated At
@@ -1962,29 +2084,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Default Exposed Port */
+            default_exposed_port: number;
             /** Id */
             id: number;
-            /** Image Hash */
-            image_hash: string;
             /** Image Name */
             image_name: string;
-            /**
-             * Image Size
-             * Format: int64
-             */
-            image_size: number;
-            status: components["schemas"]["SandboxImageStatus"];
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
         };
-        /**
-         * SandboxImageStatus
-         * @enum {string}
-         */
-        SandboxImageStatus: "pulling" | "ready" | "failed" | "canceled";
         /**
          * SessionType
          * @enum {string}
@@ -2413,6 +2524,11 @@ export interface components {
             /** Use Responses */
             use_responses: boolean;
         };
+        /** UpdateAgentSessionSandboxContainerRequest */
+        UpdateAgentSessionSandboxContainerRequest: {
+            /** Sandbox Container Id */
+            sandbox_container_id?: number | null;
+        };
         /** UpdateAgentSessionTitleRequest */
         UpdateAgentSessionTitleRequest: {
             /** Title */
@@ -2469,8 +2585,8 @@ export interface components {
             name: string;
             /** Owner User Ids */
             owner_user_ids?: number[];
-            /** Sandbox Container Id */
-            sandbox_container_id?: number | null;
+            /** Sandbox Container Ids */
+            sandbox_container_ids?: number[];
             /** @default penetration_test */
             type: components["schemas"]["WorkProjectType"];
         };
@@ -2890,8 +3006,10 @@ export interface components {
              * @default 0
              */
             progress: number;
-            /** Sandbox Container Id */
-            sandbox_container_id?: number | null;
+            /** Sandbox Container Ids */
+            sandbox_container_ids: number[];
+            /** Sandbox Containers */
+            sandbox_containers?: components["schemas"]["SandboxContainerSchema"][];
             /**
              * Session Count
              * @default 0
@@ -3119,6 +3237,59 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    update_agent_session_sandbox_container_route_api_agent_sessions__session_id__sandbox_container_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAgentSessionSandboxContainerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentSessionSummarySchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Agent session not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3428,6 +3599,197 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_ManagedHostSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    list_managed_host_images_handler_api_hosts__id__images_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ListManagedHostImagesResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    pull_managed_host_images_handler_api_hosts__id__images_pull_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullManagedHostImagesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_PullManagedHostImagesResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_managed_host_image_handler_api_hosts__id__images_remove_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteManagedHostImageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
             /** @description Unauthorized */
@@ -4586,140 +4948,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_DeleteSandboxImageResponse_"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Sandbox image not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-        };
-    };
-    cancel_sandbox_image_pull_handler_api_sandbox_images__id__cancel_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_SandboxImageSchema_"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Sandbox image not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-        };
-    };
-    retry_sandbox_image_handler_api_sandbox_images__id__retry_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_SandboxImageSchema_"];
                 };
             };
             /** @description Bad Request */

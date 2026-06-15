@@ -3,8 +3,12 @@ import { buildQuery } from "./query";
 import type {
   CreateManagedHostRequest,
   CreateManagedHostResponse,
+  DeleteManagedHostImageRequest,
   DeleteManagedHostResponse,
+  ListManagedHostImagesResponse,
   ManagedHostPathParams,
+  PullManagedHostImagesRequest,
+  PullManagedHostImagesResponse,
   QueryManagedHostsParams,
   QueryManagedHostsResponse,
   UpdateManagedHostRequest,
@@ -27,6 +31,18 @@ export function updateManagedHost(id: ManagedHostPathParams["id"], payload: Upda
 
 export function deleteManagedHost(id: ManagedHostPathParams["id"]) {
   return apiDelete<DeleteManagedHostResponse>(`${HOSTS_PATH}/${id}`);
+}
+
+export function listManagedHostImages(id: ManagedHostPathParams["id"]) {
+  return apiGet<ListManagedHostImagesResponse>(`${HOSTS_PATH}/${id}/images`);
+}
+
+export function pullManagedHostImages(id: ManagedHostPathParams["id"], payload: PullManagedHostImagesRequest) {
+  return apiPost<PullManagedHostImagesResponse>(`${HOSTS_PATH}/${id}/images/pull`, payload);
+}
+
+export function removeManagedHostImage(id: ManagedHostPathParams["id"], payload: DeleteManagedHostImageRequest) {
+  return apiPost(`${HOSTS_PATH}/${id}/images/remove`, payload);
 }
 
 export function buildHostShellUrl(id: ManagedHostPathParams["id"]) {

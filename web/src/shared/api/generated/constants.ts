@@ -16,9 +16,7 @@ export const WORK_PROJECT_GRAPH_EDGE_TYPES = ["related", "resolves_to", "hosts",
 export const WORK_PROJECT_GRAPH_EDGE_CATEGORIES = ["structural", "offensive"] as const;
 export const WORK_PROJECT_GRAPH_EDGE_CATEGORY = {"related": "structural", "resolves_to": "structural", "hosts": "structural", "connects_to": "structural", "trusts": "structural", "exploits": "offensive", "pivots_to": "offensive", "leads_to": "offensive"} as const;
 export const WORK_PROJECT_ATTACK_PATH_STATUSES = ["suspected", "validated", "blocked", "closed"] as const;
-export const SANDBOX_IMAGE_STATUSES = ["pulling", "ready", "failed", "canceled"] as const;
 export const SANDBOX_CONTAINER_STATUSES = ["created", "running", "stopped", "error"] as const;
 export const SESSION_TYPES = ["chat", "project"] as const;
 
 export const ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token";
-export const SANDBOX_CONTAINER_DEFAULT_COMMAND = "trap 'exit 0' TERM INT; while :; do sleep 3600; done";

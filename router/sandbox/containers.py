@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, WebSocket
+from fastapi import APIRouter, Cookie, Depends, File, Form, Query, UploadFile, WebSocket
 from starlette.responses import StreamingResponse
 
 from handler.sandbox.containers import (
@@ -307,40 +307,42 @@ router.add_api_route(
 )
 
 
-@router.websocket("/{container_hash}/shell")
+@router.websocket("/{id}/shell")
 async def container_shell_stream(
     websocket: WebSocket,
-    container_hash: str,
+    id: int,
     token: str = Query(default=""),
 ) -> None:
     await handle_container_shell_stream(
         websocket=websocket,
-        container_hash=container_hash,
+        id=id,
         token=token,
     )
 
 
-@router.websocket("/{container_hash}/novnc-ws")
+@router.websocket("/{id}/novnc-ws")
 async def container_novnc_ws(
     websocket: WebSocket,
-    container_hash: str,
+    id: int,
     token: str = Query(default=""),
 ) -> None:
     await handle_novnc_ws_proxy(
         websocket=websocket,
-        container_hash=container_hash,
+        id=id,
         token=token,
     )
 
 
-@router.api_route("/{container_hash}/novnc/{path:path}", methods=["GET"], include_in_schema=False)
+@router.api_route("/{id}/novnc/{path:path}", methods=["GET"], include_in_schema=False)
 async def container_novnc_http(
-    container_hash: str,
+    id: int,
     path: str,
     token: str = Query(default=""),
+    z3r0_novnc_access: str = Cookie(default=""),
 ):
     return await handle_novnc_http_proxy(
-        container_hash=container_hash,
+        id=id,
         path=path,
         token=token,
+        cookie_token=z3r0_novnc_access,
     )

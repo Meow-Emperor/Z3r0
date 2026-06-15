@@ -7,12 +7,16 @@ from urllib.parse import quote
 from fastapi import UploadFile, WebSocket, WebSocketDisconnect, status as ws_status
 from fastapi.responses import JSONResponse, Response as FastAPIResponse, StreamingResponse
 from fastapi.websockets import WebSocketState
-from sqlmodel import select as _select
 
 from database import get_async_session
-from handler import cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
+from handler import (
+    authenticate_ws_token,
+    bounded_int,
+    cancel_ws_task as _cancel_task,
+    close_ws_silently as _close_silently,
+    finish_ws_reader_task,
+)
 from logger import get_logger
-from middleware.auth import decode_access_token
 from model.sandbox.containers import SandboxContainer
 from schema.common.responses import CommonResponse
 from schema.sandbox.containers import (
@@ -43,7 +47,7 @@ from service.sandbox.files import (
     list_container_files,
     move_container_files,
     read_container_file,
-    resolve_file_container,
+    resolve_file_container_status,
     upload_container_files,
     write_container_file,
 )
@@ -77,20 +81,22 @@ from service.sandbox.types import (
 
 
 logger = get_logger(__name__)
+_NOVNC_ACCESS_COOKIE = "z3r0_novnc_access"
 
 
 def _sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContainerSchema:
     container = record.container
     return SandboxContainerSchema(
         id=container.id or 0,
+        host_id=container.host_id,
+        host_ip_address=record.host_ip_address,
         container_name=container.container_name,
         container_hash=container.container_hash,
         image_id=container.image_id,
         image_name=record.image_name,
-        container_command=container.container_command,
+        proxy_host_port=container.proxy_host_port,
         port_mappings=container.port_mappings,
         novnc_support=container.novnc_support,
-        novnc_port=container.novnc_port,
         status=container.status,
         owner_id=container.owner_id,
         owner_username=record.owner_username,
@@ -120,12 +126,11 @@ async def create_sandbox_container_handler(
     owner_id: int,
 ) -> CommonResponse:
     result = await create_sandbox_container(
+        host_id=request.host_id,
         image_id=request.image_id,
         owner_id=owner_id,
-        container_command=request.container_command,
         port_mappings=request.port_mappings,
         novnc_support=request.novnc_support,
-        novnc_port=request.novnc_port,
     )
     return _mutation_response(result)
 
@@ -176,17 +181,17 @@ async def query_available_sandbox_containers_handler(
     ))
 
 
-async def handle_container_shell_stream(websocket: WebSocket, container_hash: str, token: str) -> None:
-    user = _authenticate_ws_token(token)
+async def handle_container_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
+    user = authenticate_ws_token(token)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
 
-    if not await _can_access_container_by_hash(user, container_hash):
+    if not await _can_access_container_by_id(user, id):
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
 
-    sandbox_container = await resolve_shell_container(container_hash)
+    sandbox_container = await resolve_shell_container(id)
     if sandbox_container is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -197,7 +202,7 @@ async def handle_container_shell_stream(websocket: WebSocket, container_hash: st
     receiver: asyncio.Task | None = None
 
     try:
-        shell = await open_container_shell(container_hash)
+        shell = await open_container_shell(id)
         reader = asyncio.create_task(_forward_shell_output(websocket, shell))
 
         while True:
@@ -225,23 +230,23 @@ async def handle_container_shell_stream(websocket: WebSocket, container_hash: st
             if message_type == "input":
                 await write_container_shell(shell, str(payload.get("data", "")))
             elif message_type == "resize":
-                rows = _bounded_int(payload.get("rows"), default=24, minimum=1, maximum=300)
-                cols = _bounded_int(payload.get("cols"), default=80, minimum=1, maximum=500)
+                rows = bounded_int(payload.get("rows"), default=24, minimum=1, maximum=300)
+                cols = bounded_int(payload.get("cols"), default=80, minimum=1, maximum=500)
                 await resize_container_shell(shell, rows=rows, cols=cols)
     except WebSocketDisconnect:
         pass
     except Exception:
-        logger.exception("container shell stream failed: %s", container_hash)
+        logger.exception("container shell stream failed: %s", id)
         await _close_silently(websocket)
     finally:
         try:
             if shell is not None:
                 shell.shutdown()
             await _cancel_task(receiver)
-            await _finish_reader_task(reader)
+            await finish_ws_reader_task(reader)
         finally:
             if shell is not None:
-                await asyncio.to_thread(shell.close)
+                await shell.close()
 
 
 async def _forward_shell_output(websocket: WebSocket, shell: ContainerShellSession) -> None:
@@ -254,53 +259,12 @@ async def _forward_shell_output(websocket: WebSocket, shell: ContainerShellSessi
         await websocket.send_bytes(data)
 
 
-async def _finish_reader_task(task: asyncio.Task | None) -> None:
-    if task is None:
-        return
-    try:
-        await asyncio.wait_for(asyncio.shield(task), timeout=1)
-    except asyncio.TimeoutError:
-        await _cancel_task(task)
-    except asyncio.CancelledError:
-        raise
-    except Exception:
-        logger.debug("container shell reader stopped with error", exc_info=True)
-
-
-def _authenticate_ws_token(token: str):
-    try:
-        return decode_access_token(token)
-    except Exception:
-        return None
-
-
-async def _can_access_container_by_hash(user, container_hash: str) -> bool:
-    """Admin can access any container; regular users can only access their own."""
-    if user.role == SystemUserRole.ADMIN:
-        return True
-    async with get_async_session() as session:
-        result = await session.exec(
-            _select(SandboxContainer.owner_id).where(SandboxContainer.container_hash == container_hash)
-        )
-        owner_id = result.first()
-        return owner_id == user.id if owner_id is not None else False
-
-
 async def _can_access_container_by_id(user, container_id: int) -> bool:
-    """Admin can access any container; regular users can only access their own."""
     if user.role == SystemUserRole.ADMIN:
         return True
     async with get_async_session() as session:
         container = await session.get(SandboxContainer, container_id)
         return container is not None and container.owner_id == user.id
-
-
-def _bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        return default
-    return max(minimum, min(number, maximum))
 
 
 # ── container file manager handlers ───────────────────────────────────────────
@@ -321,25 +285,23 @@ def _file_container_json_error(code: int, message: str) -> JSONResponse:
     )
 
 
-async def _resolve_running_container(id: int, action: str, user=None) -> tuple[str, CommonResponse | None]:
-    """Resolve container, check ownership, and verify it is running. Returns (hash, error_or_none)."""
+async def _validate_running_container_access(id: int, action: str, user=None) -> CommonResponse | None:
     if user is not None and not await _can_access_container_by_id(user, id):
-        return "", _file_container_error(HTTPStatus.FORBIDDEN.value, "no permission to access this sandbox container")
-    resolved = await resolve_file_container(id)
-    if resolved is None:
-        return "", _file_container_error(HTTPStatus.NOT_FOUND.value, "sandbox container not found")
-    container_hash, status = resolved
+        return _file_container_error(HTTPStatus.FORBIDDEN.value, "no permission to access this sandbox container")
+    status = await resolve_file_container_status(id)
+    if status is None:
+        return _file_container_error(HTTPStatus.NOT_FOUND.value, "sandbox container not found")
     if status != SandboxContainerStatus.RUNNING:
-        return "", _file_container_error(HTTPStatus.BAD_REQUEST.value, f"only running sandbox containers can {action}")
-    return container_hash, None
+        return _file_container_error(HTTPStatus.BAD_REQUEST.value, f"only running sandbox containers can {action}")
+    return None
 
 
 async def handle_list_files(id: int, path: str, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "browse files", user=user)
+    error = await _validate_running_container_access(id, "browse files", user=user)
     if error:
         return error
     try:
-        files = await list_container_files(container_hash, path)
+        files = await list_container_files(id, path)
     except Exception:
         logger.exception("failed to list container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to list container files")
@@ -347,11 +309,11 @@ async def handle_list_files(id: int, path: str, user=None) -> CommonResponse:
 
 
 async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "read files", user=user)
+    error = await _validate_running_container_access(id, "read files", user=user)
     if error:
         return error
     try:
-        info = await get_container_file_info(container_hash, path)
+        info = await get_container_file_info(id, path)
         if info is None:
             return _file_container_error(HTTPStatus.NOT_FOUND.value, "file not found")
         if info.type == ContainerFileType.DIRECTORY:
@@ -360,7 +322,7 @@ async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=N
         logger.exception("failed to get container file info: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to get container file info")
     try:
-        content = await read_container_file(container_hash, path, base64_mode=base64_mode)
+        content = await read_container_file(id, path, base64_mode=base64_mode)
     except Exception:
         logger.exception("failed to read container file: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to read container file")
@@ -368,11 +330,11 @@ async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=N
 
 
 async def handle_write_file(id: int, body: ContainerFileWriteRequest, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "write files", user=user)
+    error = await _validate_running_container_access(id, "write files", user=user)
     if error:
         return error
     try:
-        ok = await write_container_file(container_hash, body.path, body.content)
+        ok = await write_container_file(id, body.path, body.content)
     except Exception:
         logger.exception("failed to write container file: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to write container file")
@@ -388,7 +350,7 @@ async def handle_upload_files(
     overwrite: bool,
     user=None,
 ) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "upload files", user=user)
+    error = await _validate_running_container_access(id, "upload files", user=user)
     if error:
         return error
     if not files:
@@ -396,7 +358,7 @@ async def handle_upload_files(
 
     try:
         sources = [ContainerUploadSource(filename=file.filename or "", stream=file.file) for file in files]
-        uploaded = await upload_container_files(container_hash, path, sources, overwrite)
+        uploaded = await upload_container_files(id, path, sources, overwrite)
     except ValueError as exc:
         return _file_container_error(HTTPStatus.BAD_REQUEST.value, str(exc))
     except FileExistsError as exc:
@@ -414,14 +376,14 @@ async def handle_upload_files(
 
 
 async def handle_download_files(id: int, paths: list[str], user=None) -> StreamingResponse | JSONResponse:
-    container_hash, error = await _resolve_running_container(id, "download files", user=user)
+    error = await _validate_running_container_access(id, "download files", user=user)
     if error:
         return JSONResponse(status_code=error.code, content=error.model_dump())
     if not paths:
         return _file_container_json_error(HTTPStatus.BAD_REQUEST.value, "download path is required")
 
     try:
-        download = await download_container_paths(container_hash, paths)
+        download = await download_container_paths(id, paths)
     except ValueError as exc:
         return _file_container_json_error(HTTPStatus.BAD_REQUEST.value, str(exc))
     except FileNotFoundError as exc:
@@ -443,11 +405,11 @@ async def handle_download_files(id: int, paths: list[str], user=None) -> Streami
 
 
 async def handle_copy_files(id: int, body: ContainerFileCopyRequest, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "copy files", user=user)
+    error = await _validate_running_container_access(id, "copy files", user=user)
     if error:
         return error
     try:
-        ok = await copy_container_files(container_hash, body.sources, body.destination)
+        ok = await copy_container_files(id, body.sources, body.destination)
     except Exception:
         logger.exception("failed to copy container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to copy container files")
@@ -457,11 +419,11 @@ async def handle_copy_files(id: int, body: ContainerFileCopyRequest, user=None) 
 
 
 async def handle_move_files(id: int, body: ContainerFileMoveRequest, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "move files", user=user)
+    error = await _validate_running_container_access(id, "move files", user=user)
     if error:
         return error
     try:
-        ok = await move_container_files(container_hash, body.sources, body.destination)
+        ok = await move_container_files(id, body.sources, body.destination)
     except Exception:
         logger.exception("failed to move container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to move container files")
@@ -471,11 +433,11 @@ async def handle_move_files(id: int, body: ContainerFileMoveRequest, user=None) 
 
 
 async def handle_delete_files(id: int, body: ContainerFileDeleteRequest, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "delete files", user=user)
+    error = await _validate_running_container_access(id, "delete files", user=user)
     if error:
         return error
     try:
-        ok = await delete_container_files(container_hash, body.paths)
+        ok = await delete_container_files(id, body.paths)
     except Exception:
         logger.exception("failed to delete container files: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to delete container files")
@@ -485,11 +447,11 @@ async def handle_delete_files(id: int, body: ContainerFileDeleteRequest, user=No
 
 
 async def handle_mkdir(id: int, body: ContainerFileMkdirRequest, user=None) -> CommonResponse:
-    container_hash, error = await _resolve_running_container(id, "create directories", user=user)
+    error = await _validate_running_container_access(id, "create directories", user=user)
     if error:
         return error
     try:
-        ok = await create_container_directory(container_hash, body.path)
+        ok = await create_container_directory(id, body.path)
     except Exception:
         logger.exception("failed to create container directory: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to create container directory")
@@ -501,11 +463,13 @@ async def handle_mkdir(id: int, body: ContainerFileMkdirRequest, user=None) -> C
 # ── noVNC proxy handlers ───────────────────────────────────────────────────────
 
 
-async def handle_novnc_http_proxy(container_hash: str, path: str, token: str) -> FastAPIResponse:
-    if not _is_valid_novnc_http_request(container_hash, token):
+async def handle_novnc_http_proxy(id: int, path: str, token: str, cookie_token: str = "") -> FastAPIResponse:
+    effective_token = token or cookie_token
+    user = authenticate_ws_token(effective_token)
+    if user is None or not await _can_access_container_by_id(user, id):
         return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not Found")
 
-    target = await resolve_novnc_target(container_hash)
+    target = await resolve_novnc_target(id)
     if target is None:
         return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not Found")
 
@@ -514,18 +478,21 @@ async def handle_novnc_http_proxy(container_hash: str, path: str, token: str) ->
         return FastAPIResponse(status_code=HTTPStatus.BAD_GATEWAY.value, content="Bad Gateway")
 
     content_type = response.headers.get("content-type", "application/octet-stream")
-    return FastAPIResponse(
+    proxied = FastAPIResponse(
         content=response.content,
         status_code=response.status_code,
         media_type=content_type.split(";")[0].strip(),
         headers=_filter_proxy_headers(response.headers),
     )
-
-
-def _is_valid_novnc_http_request(container_hash: str, token: str) -> bool:
-    if token and _authenticate_ws_token(token) is not None:
-        return True
-    return len(container_hash) >= 32 and container_hash.isalnum()
+    if token:
+        proxied.set_cookie(
+            key=_NOVNC_ACCESS_COOKIE,
+            value=token,
+            path=f"/api/sandbox-containers/{id}/novnc",
+            httponly=True,
+            samesite="strict",
+        )
+    return proxied
 
 
 def _filter_proxy_headers(headers) -> dict[str, str]:
@@ -536,17 +503,17 @@ def _filter_proxy_headers(headers) -> dict[str, str]:
     }
 
 
-async def handle_novnc_ws_proxy(websocket: WebSocket, container_hash: str, token: str) -> None:
-    user = _authenticate_ws_token(token)
+async def handle_novnc_ws_proxy(websocket: WebSocket, id: int, token: str) -> None:
+    user = authenticate_ws_token(token)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
 
-    if not await _can_access_container_by_hash(user, container_hash):
+    if not await _can_access_container_by_id(user, id):
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
 
-    target = await resolve_novnc_target(container_hash)
+    target = await resolve_novnc_target(id)
     if target is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -592,6 +559,6 @@ async def handle_novnc_ws_proxy(websocket: WebSocket, container_hash: str, token
             subprotocols=requested_protocols or None,
         )
     except Exception:
-        logger.debug("novnc ws proxy handler error: %s", container_hash, exc_info=True)
+        logger.debug("novnc ws proxy handler error: %s", id, exc_info=True)
     finally:
         await _close_silently(websocket, ws_status.WS_1000_NORMAL_CLOSURE)

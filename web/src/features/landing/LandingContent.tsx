@@ -326,7 +326,7 @@ const highlights = [
   ["Sandbox Tool Invalidation", "Sandbox state changes invalidate tool bindings and clean up active subagent work or async commands."],
 ];
 
-const sandboxTools = ["Commands", "Skills", "Shell", "Files", "noVNC", "Ghidra", "jadx", "sqlmap", "nmap"];
+const sandboxTools = ["Commands", "Skills", "Shell", "Files", "noVNC", "Browser", "Ghidra", "jadx", "nmap", "httpx", "sqlmap", "Observer Ward"];
 
 export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) {
   const [activeNode, setActiveNode] = useState(architectureNodes[3]);

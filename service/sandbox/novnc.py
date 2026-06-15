@@ -3,18 +3,9 @@ from dataclasses import dataclass
 
 import httpx
 import websockets
-from sqlmodel import select
 
-from database import get_async_session
 from logger import get_logger
-from model.sandbox.containers import SandboxContainer
-from schema.sandbox.containers import SandboxContainerStatus
-from service.sandbox.docker_ops import (
-    docker_status_to_sandbox_status,
-    inspect_container_ip_sync,
-    inspect_container_state_sync,
-)
-from service.sandbox.status import save_sandbox_container_status
+from service.sandbox.proxy import SandboxProxyTarget, resolve_sandbox_proxy_target, sandbox_proxy_token_headers
 
 
 logger = get_logger(__name__)
@@ -41,47 +32,20 @@ async def close_novnc_http_client() -> None:
 
 @dataclass(frozen=True)
 class NoVNCTarget:
-    addr: str
-    port: int
-    container_hash: str
+    proxy: SandboxProxyTarget
 
 
-async def resolve_novnc_target(container_hash: str) -> NoVNCTarget | None:
-    async with get_async_session() as session:
-        result = await session.exec(
-            select(SandboxContainer).where(SandboxContainer.container_hash == container_hash)
-        )
-        container = result.first()
-        if container is None:
-            return None
-        if container.status != SandboxContainerStatus.RUNNING:
-            return None
-        if not container.novnc_support or container.novnc_port <= 0:
-            return None
-
-        novnc_port = container.novnc_port
-        container_id = container.id
-
-    state = await asyncio.to_thread(inspect_container_state_sync, container_hash)
-    status = SandboxContainerStatus.ERROR if not state.exists else docker_status_to_sandbox_status(state.status)
-    if status != SandboxContainerStatus.RUNNING:
-        await save_sandbox_container_status(container_id, status)
-        return None
-
-    ip = await asyncio.to_thread(inspect_container_ip_sync, container_hash)
-    if not ip:
-        return None
-
-    return NoVNCTarget(addr=ip, port=novnc_port, container_hash=container_hash)
+async def resolve_novnc_target(container_id: int) -> NoVNCTarget | None:
+    target = await resolve_sandbox_proxy_target(container_id, require_running=True, require_novnc=True)
+    return NoVNCTarget(proxy=target) if target is not None else None
 
 
 async def proxy_novnc_http(target: NoVNCTarget, path: str) -> httpx.Response | None:
-    url = f"http://{target.addr}:{target.port}/novnc/{path}"
+    url = f"{target.proxy.base_url}/novnc/{path}"
     try:
-        response = await _get_http_client().get(url)
-        return response
+        return await _get_http_client().get(url, headers=sandbox_proxy_token_headers(target.proxy))
     except (httpx.HTTPError, OSError):
-        logger.debug("novnc http proxy failed: %s -> %s", target.container_hash, url, exc_info=True)
+        logger.debug("novnc http proxy failed: %s -> %s", target.proxy.container_id, url, exc_info=True)
         return None
 
 
@@ -92,20 +56,19 @@ async def proxy_novnc_websocket(
     client_connected,
     subprotocols: list[str] | None = None,
 ) -> None:
-    url = f"ws://{target.addr}:{target.port}/websockify"
+    url = f"{target.proxy.ws_base_url}/websockify?token={target.proxy.token}"
     try:
         async with websockets.connect(
             url,
+            additional_headers=sandbox_proxy_token_headers(target.proxy),
             subprotocols=subprotocols or [],
             max_size=2**20,
             open_timeout=10,
             close_timeout=5,
         ) as upstream:
-            await _bidirectional_ws_forward(
-                upstream, receive_from_client, send_to_client, client_connected
-            )
+            await _bidirectional_ws_forward(upstream, receive_from_client, send_to_client, client_connected)
     except (websockets.exceptions.WebSocketException, OSError, asyncio.CancelledError):
-        logger.debug("novnc ws proxy ended: %s", target.container_hash, exc_info=True)
+        logger.debug("novnc ws proxy ended: %s", target.proxy.container_id, exc_info=True)
 
 
 async def _bidirectional_ws_forward(upstream, receive_from_client, send_to_client, client_connected):
@@ -131,10 +94,7 @@ async def _bidirectional_ws_forward(upstream, receive_from_client, send_to_clien
     upstream_task = asyncio.create_task(forward_upstream_to_client())
     client_task = asyncio.create_task(forward_client_to_upstream())
     try:
-        await asyncio.wait(
-            {upstream_task, client_task},
-            return_when=asyncio.FIRST_COMPLETED,
-        )
+        await asyncio.wait({upstream_task, client_task}, return_when=asyncio.FIRST_COMPLETED)
     finally:
         for task in (upstream_task, client_task):
             if not task.done():

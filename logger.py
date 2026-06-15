@@ -30,37 +30,26 @@ _LIBRARY_LOGGERS = (
 
 _is_configured = False
 
+
 def _coerce_level(level: str | int) -> int:
-    """coerce level to int"""
-    
     if isinstance(level, int):
         return level
-
     normalized = level.strip().upper()
     resolved = getattr(logging, normalized, logging.INFO)
-    if not isinstance(resolved, int):
-        return logging.INFO
-
-    return resolved
+    return resolved if isinstance(resolved, int) else logging.INFO
 
 
 def _build_formatter() -> logging.Formatter:
-    """build formatter"""
-
     return logging.Formatter(fmt=_DEFAULT_FORMAT, datefmt=_DATE_FORMAT)
 
 
 def _clear_handlers(logger: logging.Logger) -> None:
-    """clear handlers"""
-
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
         handler.close()
 
 
 def configure_library_loggers(level: str | int | None = None) -> None:
-    """configure library loggers"""
-
     for logger_name in _UVICORN_LOGGERS:
         uvicorn_logger = logging.getLogger(logger_name)
         _clear_handlers(uvicorn_logger)
@@ -83,15 +72,11 @@ def setup_logging(
     console_stream: TextIO | None = None,
     force: bool = False,
 ) -> None:
-    """setup logging"""
-
     global _is_configured
-
     if _is_configured and not force:
         return
 
     resolved_level = _coerce_level(level)
-
     formatter = _build_formatter()
     root_logger = logging.getLogger()
     _clear_handlers(root_logger)
@@ -120,6 +105,4 @@ def setup_logging(
 
 
 def get_logger(name: str | None = None) -> logging.Logger:
-    """get logger instance"""
-
     return logging.getLogger(name)

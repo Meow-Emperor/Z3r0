@@ -33,14 +33,6 @@ def export_openapi_schema() -> Path:
 def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
     from schema.work_project.graph import EDGE_TYPE_CATEGORY, WorkProjectGraphEdgeCategory
 
-    default_command = _get_schema_property_default(
-        schema,
-        "CreateSandboxContainerRequest",
-        "container_command",
-    )
-    if not isinstance(default_command, str):
-        raise RuntimeError("CreateSandboxContainerRequest.container_command default must be a string")
-
     # Edge category is derived from edge type in Python, so it is serialized from that single source.
     edge_categories = [category.value for category in WorkProjectGraphEdgeCategory]
     edge_type_category = {edge_type.value: category.value for edge_type, category in EDGE_TYPE_CATEGORY.items()}
@@ -64,11 +56,9 @@ def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
         f"export const WORK_PROJECT_GRAPH_EDGE_CATEGORIES = {json.dumps(edge_categories)} as const;\n"
         f"export const WORK_PROJECT_GRAPH_EDGE_CATEGORY = {json.dumps(edge_type_category)} as const;\n"
         f"export const WORK_PROJECT_ATTACK_PATH_STATUSES = {_enum_values_ts(schema, 'WorkProjectAttackPathStatus')} as const;\n"
-        f"export const SANDBOX_IMAGE_STATUSES = {_enum_values_ts(schema, 'SandboxImageStatus')} as const;\n"
         f"export const SANDBOX_CONTAINER_STATUSES = {_enum_values_ts(schema, 'SandboxContainerStatus')} as const;\n"
         f"export const SESSION_TYPES = {_enum_values_ts(schema, 'SessionType')} as const;\n\n"
-        f"export const ACCESS_TOKEN_HEADER = {json.dumps(_get_access_token_header())};\n"
-        f"export const SANDBOX_CONTAINER_DEFAULT_COMMAND = {json.dumps(default_command)};\n",
+        f"export const ACCESS_TOKEN_HEADER = {json.dumps(_get_access_token_header())};\n",
         encoding="utf-8",
     )
     return FRONTEND_CONTRACT_CONSTANTS_PATH
@@ -90,13 +80,6 @@ def _enum_object_ts(schema: dict[str, Any], schema_name: str) -> str:
 
 def _enum_member_name(value: str) -> str:
     return value.upper().replace("-", "_")
-
-
-def _get_schema_property_default(schema: dict[str, Any], schema_name: str, property_name: str) -> Any:
-    try:
-        return schema["components"]["schemas"][schema_name]["properties"][property_name]["default"]
-    except KeyError as exc:
-        raise RuntimeError(f"OpenAPI schema is missing {schema_name}.{property_name}.default") from exc
 
 
 def _get_access_token_header() -> str:

@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
 import { showApiError } from "../../shared/api/feedback";
 import { canOpenContainerNoVNC, queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
+import { getWorkProjectRecordSnapshot } from "../../shared/api/workProjects";
 import type { AgentInputPart, SandboxContainer } from "../../shared/api/types";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
@@ -39,15 +40,17 @@ export function PlaygroundPage() {
     activeSessionId, activeSessionSummary, selectSession,
     chatState, status, historyLoading, historyHasMore, historyPrepending, historyVersion,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
-    send, interrupt, cancelAll, loadPreviousHistory,
+    send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   } = useAgentSessionContext();
   const location = useLocation();
   const navigate = useNavigate();
   const [sandboxContainers, setSandboxContainers] = useState<SandboxContainer[]>([]);
   const [sandboxLoading, setSandboxLoading] = useState(false);
   const [sandboxContainerId, setSandboxContainerId] = useState<number | null>(null);
+  const [projectSandboxContainerIds, setProjectSandboxContainerIds] = useState<number[]>([]);
+  const [projectSandboxScopeLoaded, setProjectSandboxScopeLoaded] = useState(false);
   const [projectRecordsOpen, setProjectRecordsOpen] = useState(false);
-  const { openFileManager, openNoVNC, openShell } = useContainerShell();
+  const { openFileManager, openNoVNC, openShell, syncContainerWindows } = useContainerShell();
   const { selectedSubagent, setSelectedSubagent, subagentTabs, closeSubagentPanel } = useSubagentPanel(chatState, activeSessionId);
   const hasRunningSubagents = subagentTabs.some((tab) => tab.status === "running");
   const agentSwitchDisabled = activeAgentCode === defaultAgentCode && hasRunningSubagents;
@@ -56,10 +59,15 @@ export function PlaygroundPage() {
     () => sandboxContainers.find((container) => container.id === sandboxContainerId) ?? null,
     [sandboxContainerId, sandboxContainers],
   );
-  const shellUnavailableReason = getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresHash: true });
+  const shellUnavailableReason = getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresProxy: true });
   const screenUnavailableReason = getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresNoVNC: true });
   const selectedSandboxName = selectedSandboxContainer?.container_name ?? "selected sandbox";
   const activeProjectId = activeSessionSummary?.session_type === "project" ? activeSessionSummary.project_id ?? null : null;
+  const selectableSandboxContainers = useMemo(() => {
+    if (activeSessionSummary?.session_type !== "project") return sandboxContainers;
+    const allowed = new Set(projectSandboxContainerIds);
+    return sandboxContainers.filter((container) => allowed.has(container.id));
+  }, [activeSessionSummary?.session_type, projectSandboxContainerIds, sandboxContainers]);
   const openProjectRecords = useCallback(() => {
     setProjectRecordsOpen(true);
   }, []);
@@ -102,14 +110,71 @@ export function PlaygroundPage() {
     void loadSandboxes();
   }, [loadSandboxes]);
 
+  useEffect(() => {
+    setSandboxContainerId(activeSessionSummary?.selected_sandbox_container_id ?? null);
+  }, [activeSessionSummary?.selected_sandbox_container_id]);
+
+  useEffect(() => {
+    syncContainerWindows(selectedSandboxContainer);
+  }, [
+    activeSessionId,
+    selectedSandboxContainer?.id,
+    selectedSandboxContainer?.novnc_support,
+    selectedSandboxContainer?.proxy_host_port,
+    selectedSandboxContainer?.status,
+  ]);
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setProjectSandboxContainerIds([]);
+      setProjectSandboxScopeLoaded(false);
+      return;
+    }
+    setProjectSandboxScopeLoaded(false);
+    getWorkProjectRecordSnapshot(activeProjectId)
+      .then((response) => {
+        setProjectSandboxContainerIds(response.data?.project.sandbox_container_ids ?? []);
+        setProjectSandboxScopeLoaded(true);
+      })
+      .catch((error) => {
+        setProjectSandboxContainerIds([]);
+        setProjectSandboxScopeLoaded(true);
+        showApiError(error);
+      });
+  }, [activeProjectId]);
+
+  const changeSandboxContainer = useCallback(async (nextContainerId: number | null) => {
+    const nextContainer = sandboxContainers.find((container) => container.id === nextContainerId) ?? null;
+    if (!activeSessionId) {
+      setSandboxContainerId(nextContainerId);
+      syncContainerWindows(nextContainer);
+      return;
+    }
+    try {
+      const summary = await updateSelectedSandboxContainer(activeSessionId, nextContainerId);
+      const selectedId = summary?.selected_sandbox_container_id ?? null;
+      setSandboxContainerId(selectedId);
+      syncContainerWindows(sandboxContainers.find((container) => container.id === selectedId) ?? null);
+    } catch (error) {
+      showApiError(error);
+    }
+  }, [activeSessionId, sandboxContainers, syncContainerWindows, updateSelectedSandboxContainer]);
+
+  useEffect(() => {
+    if (activeSessionSummary?.session_type !== "project" || !projectSandboxScopeLoaded || sandboxContainerId === null) return;
+    if (!projectSandboxContainerIds.includes(sandboxContainerId)) {
+      void changeSandboxContainer(null);
+    }
+  }, [activeSessionSummary?.session_type, changeSandboxContainer, projectSandboxContainerIds, projectSandboxScopeLoaded, sandboxContainerId]);
+
   const headerNode = useMemo(() => (
     <>
       <SandboxSelector
-        containers={sandboxContainers}
+        containers={selectableSandboxContainers}
         loading={sandboxLoading}
         value={sandboxContainerId}
         className="sandbox-selector-topbar"
-        onChange={setSandboxContainerId}
+        onChange={(id) => void changeSandboxContainer(id)}
       />
       <div className="sandbox-container-actions" aria-label="Selected sandbox actions">
         {activeProjectId ? (
@@ -151,7 +216,7 @@ export function PlaygroundPage() {
         <span>{STATUS_LABEL[status] ?? "Idle"}</span>
       </span>
     </>
-  ), [activeProjectId, openProjectRecords, openSelectedFileManager, openSelectedNoVNC, openSelectedShell, sandboxContainerId, sandboxContainers, sandboxLoading, screenUnavailableReason, selectSession, selectedSandboxName, shellUnavailableReason, status]);
+  ), [activeProjectId, changeSandboxContainer, openProjectRecords, openSelectedFileManager, openSelectedNoVNC, openSelectedShell, sandboxContainerId, selectableSandboxContainers, sandboxLoading, screenUnavailableReason, selectSession, selectedSandboxName, shellUnavailableReason, status]);
 
   useLayoutEffect(() => {
     setHeaderActions(headerNode);
@@ -160,7 +225,7 @@ export function PlaygroundPage() {
 
   const handleSend = async (content: AgentInputPart[]) => {
     try {
-      await send(content, sandboxContainerId);
+      await send(content, activeSessionId, { sandboxContainerId });
     } catch (error) {
       showApiError(error);
     }
@@ -248,11 +313,11 @@ function SandboxActionButton({ ariaLabel, disabled, icon, onClick, tooltip }: Sa
 
 function getSandboxActionUnavailableReason(
   container: SandboxContainer | null,
-  options: { requiresHash?: boolean; requiresNoVNC?: boolean },
+  options: { requiresProxy?: boolean; requiresNoVNC?: boolean },
 ) {
   if (!container) return "Select a sandbox first";
   if (container.status !== "running") return "Selected sandbox is not running";
-  if (options.requiresHash && !container.container_hash) return "Selected sandbox is not ready";
+  if (options.requiresProxy && container.proxy_host_port <= 0) return "Selected sandbox proxy is not ready";
   if (options.requiresNoVNC && !canOpenContainerNoVNC(container)) return "Selected sandbox has no noVNC screen";
   return null;
 }

@@ -15,6 +15,7 @@ import {
   deleteAgentSession,
   listAgentEvents,
   listAgentSessions,
+  updateAgentSessionSandboxContainer,
 } from "../../shared/api/agentSessions";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import { getStoredAccessToken } from "../../shared/auth/session";
@@ -95,7 +96,8 @@ type AgentSessionContextValue = {
   setActiveAgentCode: (code: string) => void;
   getSessionAgentCode: (sessionId: string | null) => string;
 
-  send: (content: AgentInputPart[], sandboxContainerId?: number | null, sessionId?: string | null) => Promise<void>;
+  send: (content: AgentInputPart[], sessionId?: string | null, options?: { sandboxContainerId?: number | null }) => Promise<void>;
+  updateSelectedSandboxContainer: (sessionId: string, sandboxContainerId: number | null) => Promise<AgentSessionSummary | null>;
   interrupt: (sessionId?: string | null) => Promise<void>;
   cancelAll: (sessionId?: string | null) => Promise<void>;
   loadPreviousHistory: (sessionId?: string | null) => Promise<void>;
@@ -132,7 +134,6 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   const pendingSendRef = useRef<{
     sessionId: string;
     content: AgentInputPart[];
-    sandboxContainerId: number | null;
     agentCode: string;
   } | null>(null);
   const manualBlankSessionRef = useRef(false);
@@ -201,6 +202,18 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       const next = new Map(prev);
       for (const session of items) next.set(session.session_id, session);
       return next;
+    });
+  }, []);
+
+  const syncSession = useCallback((item: AgentSessionSummary) => {
+    setKnownSessions((prev) => {
+      const next = new Map(prev);
+      next.set(item.session_id, item);
+      return next;
+    });
+    setSessions((prev) => {
+      if (!prev.some((session) => session.session_id === item.session_id)) return prev;
+      return prev.map((session) => session.session_id === item.session_id ? item : session);
     });
   }, []);
 
@@ -541,6 +554,13 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   }, [defaultAgentCode, pendingAgentCode, runtimes, sessionAgentCode]);
 
   // ------------------------------------------------------------- commands
+  const updateSelectedSandboxContainer = useCallback(async (sessionId: string, sandboxContainerId: number | null) => {
+    const response = await updateAgentSessionSandboxContainer(sessionId, { sandbox_container_id: sandboxContainerId });
+    const summary = response.data ?? null;
+    if (summary) syncSession(summary);
+    return summary;
+  }, [syncSession]);
+
   // drain a queued send once the lazy-created session has loaded its history
   useEffect(() => {
     const queued = pendingSendRef.current;
@@ -552,18 +572,27 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     sendCommand(activeSessionId, {
       action: "send",
       content: queued.content,
-      sandbox_container_id: queued.sandboxContainerId,
       agent_code: queued.agentCode || null,
     }).catch(showApiError);
   }, [activeSessionId, runtimes, sendCommand]);
 
-  const send = useCallback(async (content: AgentInputPart[], sandboxContainerId: number | null = null, sessionId: string | null = activeSessionId) => {
+  const send = useCallback(async (
+    content: AgentInputPart[],
+    sessionId: string | null = activeSessionId,
+    options: { sandboxContainerId?: number | null } = {},
+  ) => {
     const agentCode = getSessionAgentCode(sessionId);
     if (sessionId) {
+      if ("sandboxContainerId" in options) {
+        const requestedSandboxContainerId = options.sandboxContainerId ?? null;
+        const currentSandboxContainerId = knownSessions.get(sessionId)?.selected_sandbox_container_id ?? null;
+        if (requestedSandboxContainerId !== currentSandboxContainerId) {
+          await updateSelectedSandboxContainer(sessionId, requestedSandboxContainerId);
+        }
+      }
       await sendCommand(sessionId, {
         action: "send",
         content,
-        sandbox_container_id: sandboxContainerId,
         agent_code: agentCode || null,
       });
       return;
@@ -574,13 +603,17 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       const id = response.data?.session_id ?? null;
       if (!id) return;
       initRuntime(id);
-      pendingSendRef.current = { sessionId: id, content, sandboxContainerId, agentCode };
+      const sandboxContainerId = "sandboxContainerId" in options ? options.sandboxContainerId ?? null : null;
+      if (sandboxContainerId !== null) {
+        await updateSelectedSandboxContainer(id, sandboxContainerId);
+      }
+      pendingSendRef.current = { sessionId: id, content, agentCode };
       manualBlankSessionRef.current = false;
       setActiveSessionId(id);
     } catch (error) {
       showApiError(error);
     }
-  }, [activeSessionId, getSessionAgentCode, initRuntime, sendCommand]);
+  }, [activeSessionId, getSessionAgentCode, initRuntime, knownSessions, sendCommand, updateSelectedSandboxContainer]);
 
   const interrupt = useCallback(async (sessionId: string | null = activeSessionId) => {
     const targetSessionId = sessionId ?? activeSessionId;
@@ -650,7 +683,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     historyVersion: activeRuntime.historyVersion,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
     getSessionAgentCode,
-    send, interrupt, cancelAll, loadPreviousHistory,
+    send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   }), [
     sessions, sessionsLoading, refreshSessions, syncSessions, deleteSession,
     dropSessionRuntime,
@@ -658,7 +691,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     activeRuntime,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
     getSessionAgentCode,
-    send, interrupt, cancelAll, loadPreviousHistory,
+    send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   ]);
 
   return <AgentSessionContext.Provider value={value}>{children}</AgentSessionContext.Provider>;

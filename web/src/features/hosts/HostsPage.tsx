@@ -1,8 +1,10 @@
-import { Button, Popconfirm, Tooltip } from "@douyinfe/semi-ui";
-import { Eye, EyeOff, Pencil, Server, SquareTerminal, Trash2, User } from "lucide-react";
+import { Button, Modal, Popconfirm, Select, Table, Tooltip } from "@douyinfe/semi-ui";
+import { Boxes, Download, Eye, EyeOff, Pencil, Server, SquareTerminal, Trash2, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { createManagedHost, deleteManagedHost, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
-import type { CreateManagedHostRequest, ManagedHost, UpdateManagedHostRequest } from "../../shared/api/types";
+import { createManagedHost, deleteManagedHost, listManagedHostImages, pullManagedHostImages, removeManagedHostImage, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
+import { querySandboxImages } from "../../shared/api/sandboxImages";
+import { showApiError, showApiSuccess } from "../../shared/api/feedback";
+import type { CreateManagedHostRequest, ManagedHost, ManagedHostImage, SandboxImage, UpdateManagedHostRequest } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
@@ -21,6 +23,7 @@ export function HostsPage() {
     setKeyword, search, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<ManagedHost>({ query: queryManagedHosts });
   const [modal, setModal] = useState<ModalState>(null);
+  const [imageModalHost, setImageModalHost] = useState<ManagedHost | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Set<number>>(() => new Set());
   const { openHostShell } = useContainerShell();
   const { run: deleteHost, busyId: deletingHostId } = useResourceAction<ManagedHost>(
@@ -73,7 +76,7 @@ export function HostsPage() {
 
   const columns: ResourceColumn<ManagedHost>[] = [
     {
-      key: "host", header: "Host", width: "minmax(160px, 0.5fr)",
+      key: "host", header: "Host", width: "minmax(0, 0.7fr)",
       render: (host) => (
         <div className="container-identity">
           <div className="resource-avatar"><Server size={18} /></div>
@@ -85,16 +88,16 @@ export function HostsPage() {
       ),
     },
     {
-      key: "account", header: "Account", width: "minmax(100px, 0.32fr)",
+      key: "account", header: "Account", width: "minmax(0, 0.5fr)",
       render: (host) => <span className="owner-cell"><User size={13} />{host.host_account}</span>,
     },
     {
-      key: "password", header: "Password", width: "minmax(130px, 0.36fr)",
+      key: "password", header: "Password", width: "minmax(0, 0.6fr)",
       render: (host) => {
         const visible = visiblePasswords.has(host.id);
         return (
           <div className="host-password-cell">
-            <code>{visible ? host.host_password : maskPassword(host.host_password)}</code>
+            <code>{visible ? (host.host_password || "-") : maskPassword(host.host_password)}</code>
             <Tooltip content={visible ? "Hide password" : "Show password"}>
               <Button icon={visible ? <EyeOff size={14} /> : <Eye size={14} />} theme="borderless"
                 aria-label={visible ? `Hide password for ${host.ip_address}` : `Show password for ${host.ip_address}`}
@@ -109,13 +112,16 @@ export function HostsPage() {
       key: "docker", header: "Docker Port", width: "120px",
       render: (host) => host.docker_management_port,
     },
-    { key: "updated", header: "Updated", width: "minmax(210px, 0.62fr)", render: (host) => formatDateTime(host.updated_at) },
+    { key: "updated", header: "Updated", width: "minmax(0, 0.7fr)", render: (host) => formatDateTime(host.updated_at) },
     {
-      key: "actions", header: "Actions", width: "112px",
+      key: "actions", header: "Actions", width: "140px",
       render: (host) => (
         <div className="row-actions">
           <Button icon={<SquareTerminal size={15} />} theme="borderless"
             aria-label={`Connect shell for ${host.ip_address}`} onClick={() => openHostShell(host)}
+          />
+          <Button icon={<Boxes size={15} />} theme="borderless"
+            aria-label={`Manage images for ${host.ip_address}`} onClick={() => setImageModalHost(host)}
           />
           <Button icon={<Pencil size={15} />} theme="borderless"
             aria-label={`Edit ${host.ip_address}`} onClick={() => setModal({ mode: "edit", host })}
@@ -176,10 +182,124 @@ export function HostsPage() {
           onSubmit={(payload: CreateManagedHostRequest) => submit(() => createManagedHost(payload))}
         />
       )}
+      <HostImagesModal host={imageModalHost} onClose={() => setImageModalHost(null)} />
     </>
   );
 }
 
-function maskPassword(password: string) {
-  return password ? "*".repeat(Math.min(Math.max(password.length, 6), 16)) : "-";
+function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose: () => void }) {
+  const [hostImages, setHostImages] = useState<ManagedHostImage[]>([]);
+  const [systemImages, setSystemImages] = useState<SandboxImage[]>([]);
+  const [selectedImageNames, setSelectedImageNames] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pulling, setPulling] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!host) return;
+    setSelectedImageNames([]);
+    setLoading(true);
+    Promise.all([
+      listManagedHostImages(host.id),
+      querySandboxImages({ page: 1, size: 100, keyword: "" }),
+    ])
+      .then(([hostResponse, imageResponse]) => {
+        setHostImages(hostResponse.data?.items ?? []);
+        setSystemImages(imageResponse.data?.items ?? []);
+      })
+      .catch(showApiError)
+      .finally(() => setLoading(false));
+  }, [host]);
+
+  const pullSelected = async () => {
+    if (!host || selectedImageNames.length === 0) return;
+    setPulling(true);
+    try {
+      const response = await pullManagedHostImages(host.id, { image_names: selectedImageNames });
+      showApiSuccess(response);
+      const refreshed = await listManagedHostImages(host.id);
+      setHostImages(refreshed.data?.items ?? []);
+      setSelectedImageNames([]);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setPulling(false);
+    }
+  };
+
+  const removeImage = async (image: ManagedHostImage) => {
+    if (!host) return;
+    setRemovingId(image.image_id);
+    try {
+      await removeManagedHostImage(host.id, { image_id: image.image_id, force: false });
+      setHostImages((current) => current.filter((i) => i.image_id !== image.image_id));
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  return (
+    <Modal
+      title={host ? `Images on ${host.ip_address}` : "Host Images"}
+      visible={Boolean(host)}
+      width={680}
+      footer={null}
+      onCancel={onClose}
+      className="host-images-modal"
+    >
+      <div className="host-images-toolbar">
+        <Select
+          multiple
+          value={selectedImageNames}
+          placeholder="Select images to pull"
+          optionList={systemImages.map((image) => ({ label: image.image_name, value: image.image_name }))}
+          onChange={(value) => setSelectedImageNames(Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [])}
+        />
+        <Button icon={<Download size={15} />} theme="solid" type="danger" loading={pulling} disabled={selectedImageNames.length === 0} onClick={() => void pullSelected()}>
+          Pull
+        </Button>
+      </div>
+      <Table
+        loading={loading}
+        dataSource={hostImages}
+        pagination={false}
+        size="small"
+        rowKey={(record?: ManagedHostImage) => record?.image_id || record?.image_name || ""}
+        columns={[
+          { title: "Image", dataIndex: "image_name" },
+          { title: "Hash", dataIndex: "image_hash", width: 120, render: (value) => String(value || "").slice(0, 12) || "-" },
+          { title: "Size", dataIndex: "image_size", width: 100, render: (value) => formatBytes(Number(value || 0)) },
+          {
+            title: "", dataIndex: "image_id", width: 50,
+            render: (_value, record) => (
+              <Popconfirm title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`} okType="danger" onConfirm={() => void removeImage(record as ManagedHostImage)}>
+                <Button icon={<Trash2 size={14} />} theme="borderless" type="danger" size="small"
+                  loading={removingId === (record as ManagedHostImage).image_id}
+                  aria-label="Remove image"
+                />
+              </Popconfirm>
+            ),
+          },
+        ]}
+      />
+    </Modal>
+  );
+}
+
+function maskPassword(_password: string) {
+  return "••••••••••••••";
+}
+
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "-";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size >= 10 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
 }

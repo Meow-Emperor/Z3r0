@@ -7,9 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from schema.common.responses import PaginatedResponse
 
 
-DEFAULT_SANDBOX_CONTAINER_COMMAND = "trap 'exit 0' TERM INT; while :; do sleep 3600; done"
-
-
 class SandboxContainerStatus(StrEnum):
     CREATED = "created"
     RUNNING = "running"
@@ -36,14 +33,15 @@ class SandboxContainerSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    host_id: int
+    host_ip_address: str
     container_name: str
     container_hash: str
     image_id: int
     image_name: str
-    container_command: str
+    proxy_host_port: int
     port_mappings: list[SandboxContainerPortMapping]
     novnc_support: bool
-    novnc_port: int
     status: SandboxContainerStatus
     owner_id: int
     owner_username: str
@@ -53,21 +51,11 @@ class SandboxContainerSchema(BaseModel):
 
 # create sandbox container request schema
 class CreateSandboxContainerRequest(BaseModel):
+    host_id: int = Field(gt=0)
     image_id: int = Field(gt=0)
     owner_id: int | None = Field(default=None, description="Assign container owner user ID. Admin only; defaults to the creator.")
-    container_command: str = Field(default=DEFAULT_SANDBOX_CONTAINER_COMMAND, max_length=2000)
     port_mappings: list[SandboxContainerPortMapping] = Field(default_factory=list, max_length=32)
     novnc_support: bool = False
-    novnc_port: int = Field(default=0, ge=0, le=65535)
-
-    @field_validator("container_command", mode="before")
-    @classmethod
-    def normalize_container_command(cls, value: Any) -> Any:
-        if value is None:
-            return DEFAULT_SANDBOX_CONTAINER_COMMAND
-        if isinstance(value, str):
-            return value.strip()
-        return value
 
     @model_validator(mode="after")
     def validate_container_contract(self):
@@ -83,11 +71,6 @@ class CreateSandboxContainerRequest(BaseModel):
             container_ports.add(container_key)
             host_ports.add(host_key)
 
-        if not self.novnc_support:
-            self.novnc_port = 0
-            return self
-        if self.novnc_port <= 0:
-            raise ValueError("novnc port is required when novnc support is enabled")
         return self
 
 

@@ -21,9 +21,6 @@ export function SandboxSelector({ containers, loading, value, className = "", on
   );
 
   useEffect(() => {
-    if (runningContainers.length === 1 && value == null) {
-      onChange(runningContainers[0].id);
-    }
     if (value != null && !runningContainers.some((container) => container.id === value)) {
       onChange(null);
     }

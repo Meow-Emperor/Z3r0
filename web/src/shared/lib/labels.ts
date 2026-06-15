@@ -1,7 +1,6 @@
 import type { WorkProjectGraphEdgeCategory } from "../api/contract";
 import {
   SANDBOX_CONTAINER_STATUSES,
-  SANDBOX_IMAGE_STATUSES,
   SYSTEM_USER_ROLES,
   WORK_PROJECT_ASSET_ORIGINS,
   WORK_PROJECT_ASSET_TYPES,
@@ -16,7 +15,6 @@ import {
 } from "../api/generated/constants";
 import type {
   SandboxContainerStatus,
-  SandboxImageStatus,
   SystemUserRole,
   WorkProjectAssetOrigin,
   WorkProjectAssetType,
@@ -42,7 +40,6 @@ export const WORK_PROJECT_FINDING_STATUS_LABEL = labelsFromEnum<WorkProjectFindi
 export const WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL = labelsFromEnum<WorkProjectGraphEdgeType>(WORK_PROJECT_GRAPH_EDGE_TYPES);
 export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL = labelsFromEnum<WorkProjectGraphEdgeCategory>(WORK_PROJECT_GRAPH_EDGE_CATEGORIES);
 export const WORK_PROJECT_ATTACK_PATH_STATUS_LABEL = labelsFromEnum<WorkProjectAttackPathStatus>(WORK_PROJECT_ATTACK_PATH_STATUSES);
-export const SANDBOX_IMAGE_STATUS_LABEL = labelsFromEnum<SandboxImageStatus>(SANDBOX_IMAGE_STATUSES);
 export const SANDBOX_CONTAINER_STATUS_LABEL = labelsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUSES);
 
 export const SYSTEM_USER_ROLE_COLOR = colorsFromEnum<SystemUserRole>(SYSTEM_USER_ROLES, {
@@ -97,13 +94,6 @@ export const WORK_PROJECT_ASSET_ORIGIN_COLOR = colorsFromEnum<WorkProjectAssetOr
 export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_COLOR = colorsFromEnum<WorkProjectGraphEdgeCategory>(WORK_PROJECT_GRAPH_EDGE_CATEGORIES, {
   structural: "blue",
   offensive: "red",
-});
-
-export const SANDBOX_IMAGE_STATUS_COLOR = colorsFromEnum<SandboxImageStatus>(SANDBOX_IMAGE_STATUSES, {
-  pulling: "amber",
-  ready: "green",
-  failed: "red",
-  canceled: "grey",
 });
 
 export const SANDBOX_CONTAINER_STATUS_COLOR = colorsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUSES, {

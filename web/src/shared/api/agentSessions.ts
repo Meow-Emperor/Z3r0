@@ -4,6 +4,8 @@ import type {
   DeleteAgentSessionResponse,
   ListAgentEventsResponse,
   ListAgentSessionsResponse,
+  UpdateAgentSessionSandboxContainerRequest,
+  UpdateAgentSessionSandboxContainerResponse,
   UpdateAgentSessionTitleRequest,
   UpdateAgentSessionTitleResponse,
 } from "./types";
@@ -34,6 +36,16 @@ export function listAgentEvents(
 export function updateAgentSessionTitle(sessionId: string, payload: UpdateAgentSessionTitleRequest) {
   return apiPatch<UpdateAgentSessionTitleResponse>(
     `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/title`,
+    payload,
+  );
+}
+
+export function updateAgentSessionSandboxContainer(
+  sessionId: string,
+  payload: UpdateAgentSessionSandboxContainerRequest,
+) {
+  return apiPatch<UpdateAgentSessionSandboxContainerResponse>(
+    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/sandbox-container`,
     payload,
   );
 }

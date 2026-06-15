@@ -7,9 +7,9 @@ from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
 from pydantic import ValidationError
 
 from core.runtime.session import get_agent_pool
-from handler import cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
+from handler import authenticate_ws_token, cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
 from logger import get_logger
-from middleware.auth import AuthUser, decode_access_token
+from middleware.auth import AuthUser
 from schema.agent.events import (
     AgentEventSchema,
     AgentInputPart,
@@ -21,6 +21,7 @@ from schema.agent.sessions import (
     CreateAgentSessionResponse,
     ListAgentEventsResponse,
     ListAgentSessionsResponse,
+    UpdateAgentSessionSandboxContainerRequest,
     UpdateAgentSessionTitleRequest,
 )
 from schema.common.responses import CommonResponse
@@ -63,6 +64,54 @@ async def update_agent_session_title_handler(
     return CommonResponse(message="agent session title updated", data=session)
 
 
+async def update_agent_session_sandbox_container_handler(
+    session_id: str,
+    request: UpdateAgentSessionSandboxContainerRequest,
+    user: AuthUser,
+) -> CommonResponse:
+    if not await agent_sessions.can_access_session(session_id, user.id, user.role):
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
+    meta = await agent_sessions.get_session_meta(session_id)
+    if (meta is not None and meta.is_running) or await agent_sessions.has_active_session_runtime(session_id):
+        return CommonResponse(code=HTTPStatus.CONFLICT.value, message="stop running tasks before switching sandbox container")
+
+    from service.sandbox.status import resolve_sandbox_container_tool_binding
+    from service.work_project.projects import work_project_allows_sandbox_container
+
+    container_id = request.sandbox_container_id
+    generation = 0
+    if container_id is not None:
+        if meta is not None and meta.project_id is not None:
+            allowed = await work_project_allows_sandbox_container(
+                project_id=meta.project_id,
+                sandbox_container_id=container_id,
+                user_id=user.id,
+                user_role=user.role,
+            )
+            if not allowed:
+                return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message="sandbox container is not available for this project")
+        binding = await resolve_sandbox_container_tool_binding(
+            id=container_id,
+            user_id=user.id,
+            user_role=user.role,
+        )
+        if binding is None:
+            return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message="sandbox container is not available")
+        generation = binding.generation
+
+    session = await agent_sessions.update_session_sandbox_container(
+        session_id=session_id,
+        sandbox_container_id=container_id,
+        sandbox_container_generation=generation,
+        user_id=user.id,
+        user_role=user.role,
+    )
+    if session is None:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
+    await get_agent_pool().discard(session_id)
+    return CommonResponse(message="sandbox container updated", data=session)
+
+
 async def list_agent_sessions_handler(limit: int, user: AuthUser) -> CommonResponse:
     sessions = await agent_sessions.list_sessions(
         limit=limit,
@@ -97,7 +146,7 @@ async def list_agent_events_handler(
 
 
 async def handle_agent_stream(websocket: WebSocket, session_id: str, token: str) -> None:
-    user = _decode_ws_token(token)
+    user = authenticate_ws_token(token)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -164,7 +213,7 @@ async def handle_agent_stream(websocket: WebSocket, session_id: str, token: str)
                 session_id=session_id,
                 content=command.content,
                 user=user,
-                sandbox_container_id=command.sandbox_container_id,
+                sandbox_container_id=None,
                 requested_agent_code=command.agent_code,
                 send_lock=send_lock,
             )
@@ -285,12 +334,6 @@ async def _forward_events(
     except Exception:
         logger.debug("agent event forwarding stopped", exc_info=True)
 
-
-def _decode_ws_token(token: str) -> AuthUser | None:
-    try:
-        return decode_access_token(token)
-    except Exception:
-        return None
 
 
 def _validation_error_message(exc: ValidationError) -> str:

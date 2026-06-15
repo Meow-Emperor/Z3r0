@@ -1,8 +1,7 @@
-import { InputNumber, Select, Switch, TextArea } from "@douyinfe/semi-ui";
-import { Boxes, User } from "lucide-react";
+import { Select, Switch } from "@douyinfe/semi-ui";
+import { Boxes, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { CreateSandboxContainerRequest, SandboxImage, SystemUser } from "../../shared/api/types";
-import { SANDBOX_CONTAINER_DEFAULT_COMMAND } from "../../shared/api/generated/constants";
+import type { CreateSandboxContainerRequest, ManagedHost, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import {
   createEmptyPortMapping,
@@ -15,6 +14,8 @@ type SandboxContainerFormModalProps = {
   saving: boolean;
   images: SandboxImage[];
   imagesLoading: boolean;
+  hosts: ManagedHost[];
+  hostsLoading: boolean;
   users: SystemUser[];
   usersLoading: boolean;
   currentUserId: number;
@@ -22,43 +23,40 @@ type SandboxContainerFormModalProps = {
   onSubmit: (payload: CreateSandboxContainerRequest) => Promise<void>;
 };
 
-const DEFAULT_NOVNC_PORT = 8000;
-
 export function SandboxContainerFormModal({
   open,
   saving,
   images,
   imagesLoading,
+  hosts,
+  hostsLoading,
   users,
   usersLoading,
   currentUserId,
   onCancel,
   onSubmit,
 }: SandboxContainerFormModalProps) {
-  const readyImages = useMemo(() => images.filter((image) => image.status === "ready"), [images]);
+  const availableImages = useMemo(() => images, [images]);
+  const [hostId, setHostId] = useState<number | undefined>();
   const [imageId, setImageId] = useState<number | undefined>();
   const [ownerId, setOwnerId] = useState<number | undefined>();
-  const [containerCommand, setContainerCommand] = useState(SANDBOX_CONTAINER_DEFAULT_COMMAND);
   const [portMappings, setPortMappings] = useState<PortMappingFormValue[]>([]);
   const [novncSupport, setNoVNCSupport] = useState(false);
-  const [novncPort, setNoVNCPort] = useState(DEFAULT_NOVNC_PORT);
 
   useEffect(() => {
     if (!open) return;
-    setImageId(readyImages[0]?.id);
+    setHostId(undefined);
+    setImageId(undefined);
     setOwnerId(currentUserId);
-    setContainerCommand(SANDBOX_CONTAINER_DEFAULT_COMMAND);
     setPortMappings([]);
     setNoVNCSupport(false);
-    setNoVNCPort(DEFAULT_NOVNC_PORT);
-  }, [open, readyImages, currentUserId]);
+  }, [open, currentUserId]);
 
   const submit = () => onSubmit({
+    host_id: hostId || 0,
     image_id: imageId || 0,
     owner_id: ownerId !== currentUserId ? ownerId : undefined,
-    container_command: containerCommand.trim(),
     novnc_support: novncSupport,
-    novnc_port: novncSupport ? novncPort : 0,
     port_mappings: portMappings.map(({ container_port, host_port, protocol }) => ({
       container_port,
       host_port,
@@ -84,8 +82,7 @@ export function SandboxContainerFormModal({
     if (typeof value === "number") setImageId(value);
   };
 
-  const novncPortValid = !novncSupport || (novncPort >= 1 && novncPort <= 65535);
-  const submitDisabled = !imageId || !novncPortValid;
+  const submitDisabled = !hostId || !imageId;
 
   return (
     <ResourceModal
@@ -99,15 +96,28 @@ export function SandboxContainerFormModal({
       onSubmit={submit}
     >
       <label>
+        <span>Host</span>
+        <Select
+          prefix={<Server size={16} />}
+          value={hostId}
+          loading={hostsLoading}
+          disabled={hosts.length === 0}
+          placeholder="Select managed host"
+          onChange={(value) => typeof value === "number" && setHostId(value)}
+          optionList={hosts.map((host) => ({ label: `${host.ip_address}:${host.docker_management_port}`, value: host.id }))}
+        />
+      </label>
+
+      <label>
         <span>Image</span>
         <Select
           prefix={<Boxes size={16} />}
           value={imageId}
           loading={imagesLoading}
-          disabled={readyImages.length === 0}
-          placeholder="Select a ready sandbox image"
+          disabled={availableImages.length === 0}
+          placeholder="Select a sandbox image"
           onChange={selectImage}
-          optionList={readyImages.map((image) => ({ label: image.image_name, value: image.id }))}
+          optionList={availableImages.map((image) => ({ label: `${image.image_name} :${image.default_exposed_port}`, value: image.id }))}
         />
       </label>
 
@@ -123,31 +133,10 @@ export function SandboxContainerFormModal({
         />
       </label>
 
-      <label>
-        <span>Command</span>
-        <TextArea
-          value={containerCommand}
-          maxLength={2000}
-          autosize={{ minRows: 3, maxRows: 6 }}
-          onChange={setContainerCommand}
-        />
-      </label>
-
       <div className="novnc-toggle-row">
         <span>noVNC</span>
         <div className="novnc-controls">
           <Switch checked={novncSupport} onChange={setNoVNCSupport} aria-label="Enable noVNC" />
-          {novncSupport ? (
-            <label className="novnc-port-field">
-              <span>Container Port</span>
-              <InputNumber
-                value={novncPort}
-                min={1}
-                max={65535}
-                onChange={(value) => typeof value === "number" && setNoVNCPort(value)}
-              />
-            </label>
-          ) : null}
         </div>
       </div>
 

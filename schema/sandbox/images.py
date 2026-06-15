@@ -1,18 +1,9 @@
 from datetime import datetime
-from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from schema.common.responses import PaginatedResponse
-
-
-# canonical sandbox image status; reused by the model and by the public schema
-class SandboxImageStatus(StrEnum):
-    PULLING = "pulling"
-    READY = "ready"
-    FAILED = "failed"
-    CANCELED = "canceled"
 
 
 # sandbox image public data schema
@@ -21,9 +12,7 @@ class SandboxImageSchema(BaseModel):
 
     id: int
     image_name: str
-    image_size: int = Field(json_schema_extra={"format": "int64"})
-    image_hash: str
-    status: SandboxImageStatus
+    default_exposed_port: int
     created_at: datetime
     updated_at: datetime
 
@@ -31,6 +20,7 @@ class SandboxImageSchema(BaseModel):
 # create sandbox image request schema
 class CreateSandboxImageRequest(BaseModel):
     image_name: str = Field(min_length=1, max_length=255)
+    default_exposed_port: int = Field(default=8000, ge=1, le=65535)
 
     @field_validator("image_name", mode="before")
     @classmethod

@@ -2,10 +2,11 @@ import { Button, Popconfirm, Tag, Tooltip } from "@douyinfe/semi-ui";
 import { Box, Boxes, Fingerprint, FolderOpen, Monitor, Play, Square, SquareTerminal, Trash2, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { canOpenContainerNoVNC, createSandboxContainer, deleteSandboxContainer, querySandboxContainers, startSandboxContainer, stopSandboxContainer } from "../../shared/api/sandboxContainers";
+import { queryManagedHosts } from "../../shared/api/hosts";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { querySystemUsers } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
-import type { CreateSandboxContainerRequest, SandboxContainer, SandboxImage, SystemUser } from "../../shared/api/types";
+import type { CreateSandboxContainerRequest, ManagedHost, SandboxContainer, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
@@ -27,6 +28,8 @@ export function SandboxContainersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [images, setImages] = useState<SandboxImage[]>([]);
   const [imagesLoading, setImagesLoading] = useState(false);
+  const [hosts, setHosts] = useState<ManagedHost[]>([]);
+  const [hostsLoading, setHostsLoading] = useState(false);
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
@@ -55,11 +58,24 @@ export function SandboxContainersPage() {
     }
   }, []);
 
+  const loadHosts = useCallback(async () => {
+    setHostsLoading(true);
+    try {
+      const response = await queryManagedHosts({ page: 1, size: 100, keyword: "" });
+      setHosts(response.data?.items || []);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setHostsLoading(false);
+    }
+  }, []);
+
   const refreshAll = useCallback(async () => {
     await loadContainers();
     await loadReadyImages();
+    await loadHosts();
     await loadUsers();
-  }, [loadContainers, loadReadyImages, loadUsers]);
+  }, [loadContainers, loadReadyImages, loadHosts, loadUsers]);
 
   const { run: startContainer, busyId: startingId } = useResourceAction<SandboxContainer>(
     (container) => startSandboxContainer(container.id), loadContainers,
@@ -73,13 +89,14 @@ export function SandboxContainersPage() {
 
   useEffect(() => {
     void loadReadyImages();
+    void loadHosts();
     void loadUsers();
-  }, [loadReadyImages, loadUsers]);
+  }, [loadReadyImages, loadHosts, loadUsers]);
 
   useAdminResourceHeader({
     createLabel: "Create Container",
     refreshLabel: "Refresh sandbox containers",
-    loading: loading || imagesLoading || usersLoading,
+    loading: loading || imagesLoading || hostsLoading || usersLoading,
     onCreate: () => setModalOpen(true),
     onRefresh: refreshAll,
   });
@@ -125,12 +142,20 @@ export function SandboxContainersPage() {
       ),
     },
     {
+      key: "host", header: "Host", width: "minmax(0, 0.48fr)",
+      render: (container) => <div className="resource-description" title={container.host_ip_address}>{container.host_ip_address}</div>,
+    },
+    {
       key: "image", header: "Image", width: "minmax(0, 0.62fr)",
       render: (container) => <div className="resource-description" title={container.image_name}>{container.image_name}</div>,
     },
     {
       key: "owner", header: "Owner", width: "minmax(0, 0.48fr)",
       render: (container) => <span className="owner-cell"><User size={13} />{container.owner_username}</span>,
+    },
+    {
+      key: "proxy", header: "Proxy", width: "96px",
+      render: (container) => container.proxy_host_port || "-",
     },
     {
       key: "ports", header: "Ports", width: "minmax(0, 0.56fr)",
@@ -142,11 +167,11 @@ export function SandboxContainersPage() {
       render: (container) => (
         <div className="row-actions">
           <Button icon={<FolderOpen size={15} />} theme="borderless"
-            disabled={container.status !== "running" || !container.container_hash}
+            disabled={container.status !== "running" || container.proxy_host_port <= 0}
             aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
           />
           <Button icon={<SquareTerminal size={15} />} theme="borderless"
-            disabled={container.status !== "running" || !container.container_hash}
+            disabled={container.status !== "running" || container.proxy_host_port <= 0}
             aria-label={`Connect shell for ${container.container_name}`} onClick={() => openShell(container)}
           />
           <Button icon={<Monitor size={15} />} theme="borderless"
@@ -212,6 +237,8 @@ export function SandboxContainersPage() {
         saving={saving}
         images={images}
         imagesLoading={imagesLoading}
+        hosts={hosts}
+        hostsLoading={hostsLoading}
         users={users}
         usersLoading={usersLoading}
         currentUserId={user?.id ?? 0}

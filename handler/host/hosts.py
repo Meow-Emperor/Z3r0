@@ -1,19 +1,27 @@
 import asyncio
 import json
 from http import HTTPStatus
-from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
 from fastapi.websockets import WebSocketState
 
-from handler import cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
+from handler import (
+    authenticate_ws_token,
+    bounded_int,
+    cancel_ws_task as _cancel_task,
+    close_ws_silently as _close_silently,
+    finish_ws_reader_task,
+)
 from logger import get_logger
-from middleware.auth import decode_access_token
 from schema.common.responses import CommonResponse
 from schema.host.hosts import (
     CreateManagedHostRequest,
+    DeleteManagedHostImageRequest,
     DeleteManagedHostResponse,
+    ListManagedHostImagesResponse,
     ManagedHostSchema,
+    PullManagedHostImagesRequest,
+    PullManagedHostImagesResponse,
     QueryManagedHostsResponse,
     UpdateManagedHostRequest,
 )
@@ -22,11 +30,14 @@ from service.common.pagination import paginated_payload
 from service.host.hosts import (
     create_managed_host,
     delete_managed_host,
+    delete_managed_host_image,
+    list_managed_host_images,
+    pull_managed_host_images,
     query_managed_hosts,
     update_managed_host,
 )
 from service.host.shell import (
-    HostShellSession,
+    ShellSession,
     open_host_shell,
     read_host_shell,
     resize_host_shell,
@@ -50,7 +61,7 @@ async def create_managed_host_handler(request: CreateManagedHostRequest) -> Comm
 
 
 async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest) -> CommonResponse:
-    host = await update_managed_host(
+    result = await update_managed_host(
         id=id,
         ip_address=request.ip_address,
         ssh_port=request.ssh_port,
@@ -58,9 +69,11 @@ async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest
         host_password=request.host_password,
         docker_management_port=request.docker_management_port,
     )
-    if host is None:
+    if result.not_found:
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
-    return CommonResponse(data=ManagedHostSchema.model_validate(host))
+    if result.host is None or result.message:
+        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
+    return CommonResponse(data=ManagedHostSchema.model_validate(result.host))
 
 
 async def delete_managed_host_handler(id: int) -> CommonResponse:
@@ -82,8 +95,38 @@ async def query_managed_hosts_handler(page: int, size: int, keyword: str) -> Com
     ))
 
 
+async def list_managed_host_images_handler(id: int) -> CommonResponse:
+    try:
+        images = await list_managed_host_images(id)
+    except Exception as exc:
+        logger.warning("list host images failed: id=%s error=%s", id, exc)
+        return CommonResponse(code=HTTPStatus.BAD_GATEWAY.value, message="failed to connect to docker host")
+    if images is None:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+    return CommonResponse(data=ListManagedHostImagesResponse(items=images))
+
+
+async def pull_managed_host_images_handler(id: int, request: PullManagedHostImagesRequest) -> CommonResponse:
+    try:
+        results = await pull_managed_host_images(id, request.image_names)
+    except Exception as exc:
+        logger.warning("pull host images failed: id=%s error=%s", id, exc)
+        return CommonResponse(code=HTTPStatus.BAD_GATEWAY.value, message="failed to connect to docker host")
+    if results is None:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+    return CommonResponse(data=PullManagedHostImagesResponse(items=results))
+
+
+async def delete_managed_host_image_handler(id: int, request: DeleteManagedHostImageRequest) -> CommonResponse:
+    error = await delete_managed_host_image(id, request.image_id, force=request.force)
+    if error:
+        code = HTTPStatus.NOT_FOUND.value if "not found" in error.lower() else HTTPStatus.BAD_REQUEST.value
+        return CommonResponse(code=code, message=error)
+    return CommonResponse(message="image removed")
+
+
 async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
-    user = _authenticate_ws_token(token)
+    user = authenticate_ws_token(token)
     if user is None or user.role != SystemUserRole.ADMIN:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -94,7 +137,7 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
         return
 
     await websocket.accept()
-    shell: HostShellSession | None = None
+    shell: ShellSession | None = None
     reader: asyncio.Task | None = None
     receiver: asyncio.Task | None = None
 
@@ -103,10 +146,9 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
             shell = await open_host_shell(host)
         except Exception as exc:
             logger.warning(
-                "host shell connection failed: id=%s target=%s:%s error=%s",
+                "host shell connection failed: id=%s host=%s error=%s",
                 id,
                 host.ip_address,
-                host.ssh_port,
                 str(exc).strip() or exc.__class__.__name__,
             )
             await _send_shell_error(websocket, exc)
@@ -140,8 +182,8 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
             if message_type == "input":
                 await write_host_shell(shell, str(payload.get("data", "")))
             elif message_type == "resize":
-                rows = _bounded_int(payload.get("rows"), default=24, minimum=1, maximum=300)
-                cols = _bounded_int(payload.get("cols"), default=80, minimum=1, maximum=500)
+                rows = bounded_int(payload.get("rows"), default=24, minimum=1, maximum=300)
+                cols = bounded_int(payload.get("cols"), default=80, minimum=1, maximum=500)
                 await resize_host_shell(shell, rows=rows, cols=cols)
     except WebSocketDisconnect:
         pass
@@ -153,13 +195,13 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
             if shell is not None:
                 shell.shutdown()
             await _cancel_task(receiver)
-            await _finish_reader_task(reader)
+            await finish_ws_reader_task(reader)
         finally:
             if shell is not None:
                 await shell.close()
 
 
-async def _forward_shell_output(websocket: WebSocket, shell: HostShellSession) -> None:
+async def _forward_shell_output(websocket: WebSocket, shell: ShellSession) -> None:
     while True:
         data = await read_host_shell(shell)
         if not data:
@@ -173,32 +215,4 @@ async def _send_shell_error(websocket: WebSocket, error: Exception) -> None:
     if websocket.client_state != WebSocketState.CONNECTED or websocket.application_state != WebSocketState.CONNECTED:
         return
     message = str(error).strip() or error.__class__.__name__
-    await websocket.send_bytes(f"\r\nSSH connection failed: {message}\r\n".encode())
-
-
-async def _finish_reader_task(task: asyncio.Task | None) -> None:
-    if task is None:
-        return
-    try:
-        await asyncio.wait_for(asyncio.shield(task), timeout=1)
-    except asyncio.TimeoutError:
-        await _cancel_task(task)
-    except asyncio.CancelledError:
-        raise
-    except Exception:
-        logger.debug("host shell reader stopped with error", exc_info=True)
-
-
-def _authenticate_ws_token(token: str):
-    try:
-        return decode_access_token(token)
-    except Exception:
-        return None
-
-
-def _bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:
-    try:
-        number = int(value)
-    except (TypeError, ValueError):
-        return default
-    return max(minimum, min(number, maximum))
+    await websocket.send_bytes(f"\r\nShell connection failed: {message}\r\n".encode())

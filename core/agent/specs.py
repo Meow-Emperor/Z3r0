@@ -85,6 +85,13 @@ SANDBOX_TOOLS = (
 )
 
 
+SPECIALIST_TOOLS = (
+    *SANDBOX_TOOLS,
+    *KNOWLEDGE_TOOLS,
+    *WORK_PROJECT_TOOLS,
+    *WORK_PROJECT_RECORD_TOOLS,
+)
+
 AGENT_SPECS: tuple[AgentSpec, ...] = (
     AgentSpec(
         code="cso",
@@ -102,49 +109,9 @@ AGENT_SPECS: tuple[AgentSpec, ...] = (
             SubagentMount(code="cre"),
         ),
     ),
-    AgentSpec(
-        code="cae",
-        tools=(
-            *SANDBOX_TOOLS,
-            *KNOWLEDGE_TOOLS,
-            *WORK_PROJECT_TOOLS,
-            *WORK_PROJECT_RECORD_TOOLS,
-        ),
-    ),
-    AgentSpec(
-        code="cce",
-        tools=(
-            *SANDBOX_TOOLS,
-            *KNOWLEDGE_TOOLS,
-            *WORK_PROJECT_TOOLS,
-            *WORK_PROJECT_RECORD_TOOLS,
-        ),
-    ),
-    AgentSpec(
-        code="cie",
-        tools=(
-            *SANDBOX_TOOLS,
-            *KNOWLEDGE_TOOLS,
-            *WORK_PROJECT_TOOLS,
-            *WORK_PROJECT_RECORD_TOOLS,
-        ),
-    ),
-    AgentSpec(
-        code="cpe",
-        tools=(
-            *SANDBOX_TOOLS,
-            *KNOWLEDGE_TOOLS,
-            *WORK_PROJECT_TOOLS,
-            *WORK_PROJECT_RECORD_TOOLS,
-        ),
-    ),
-    AgentSpec(
-        code="cre",
-        tools=(
-            *SANDBOX_TOOLS,
-            *KNOWLEDGE_TOOLS,
-            *WORK_PROJECT_TOOLS,
-            *WORK_PROJECT_RECORD_TOOLS,
-        ),
-    ),
+    AgentSpec(code="cae", tools=SPECIALIST_TOOLS),
+    AgentSpec(code="cce", tools=SPECIALIST_TOOLS),
+    AgentSpec(code="cie", tools=SPECIALIST_TOOLS),
+    AgentSpec(code="cpe", tools=SPECIALIST_TOOLS),
+    AgentSpec(code="cre", tools=SPECIALIST_TOOLS),
 )

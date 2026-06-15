@@ -63,7 +63,7 @@ const EMPTY: WorkProjectFormValues = {
   name: "",
   description: "",
   owner_user_ids: [],
-  sandbox_container_id: null,
+  sandbox_container_ids: [],
   assets: [{ ...EMPTY_ASSET }],
   type: projectTypes[0],
 };
@@ -106,7 +106,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       name: project.name,
       description: project.description,
       owner_user_ids: project.owner_user_ids,
-      sandbox_container_id: project.sandbox_container_id ?? null,
+      sandbox_container_ids: project.sandbox_container_ids,
       assets: scopeAssetsFromProject(project),
       type: project.type,
     } : { ...EMPTY, assets: [{ ...EMPTY_ASSET }] });
@@ -123,7 +123,6 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
     label: <SandboxContainerOption container={container} />,
     value: container.id,
   })), [sandboxContainers]);
-  const selectedSandbox = sandboxContainers.find((container) => container.id === values.sandbox_container_id);
   const canSubmit = Boolean(values.name.trim()) && values.assets.length > 0
     && values.assets.every(isAssetComplete);
 
@@ -198,18 +197,25 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
           />
         </label>
         <label>
-          <span>Sandbox Container</span>
+          <span>Sandbox Containers</span>
           <Select
             prefix={<Server size={16} />}
-            value={values.sandbox_container_id ?? undefined}
+            value={values.sandbox_container_ids}
             optionList={sandboxOptionList}
-            placeholder={sandboxLoading ? "Loading sandbox containers" : "Select sandbox container"}
+            placeholder={sandboxLoading ? "Loading sandbox containers" : "Select sandbox containers"}
             emptyContent={sandboxLoading ? <Spin size="small" /> : "No running sandbox containers"}
             loading={sandboxLoading}
+            multiple
             showClear
-            renderSelectedItem={() => selectedSandbox ? selectedSandbox.container_name : ""}
-            onClear={() => setValues((v) => ({ ...v, sandbox_container_id: null }))}
-            onChange={(value) => setValues((v) => ({ ...v, sandbox_container_id: typeof value === "number" ? value : null }))}
+            renderSelectedItem={(option: { value?: number }) => ({
+              isRenderInTag: true,
+              content: sandboxContainers.find((container) => container.id === option.value)?.container_name ?? String(option.value ?? ""),
+            })}
+            onClear={() => setValues((v) => ({ ...v, sandbox_container_ids: [] }))}
+            onChange={(value) => setValues((v) => ({
+              ...v,
+              sandbox_container_ids: Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [],
+            }))}
           />
         </label>
       </div>

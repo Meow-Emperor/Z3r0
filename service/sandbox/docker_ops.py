@@ -3,8 +3,9 @@ from dataclasses import dataclass
 import docker
 
 from logger import get_logger
-from model.sandbox.images import SandboxImage
 from schema.sandbox.containers import SandboxContainerPortMapping, SandboxContainerStatus
+from model.host.hosts import ManagedHost
+from service.host.docker import docker_client_for_host
 
 
 logger = get_logger(__name__)
@@ -16,28 +17,23 @@ class DockerContainerState:
     status: str = ""
 
 
-def image_ref(image: SandboxImage) -> str:
-    if image.image_hash:
-        return f"sha256:{image.image_hash}"
-    return image.image_name
-
-
 def _to_docker_ports(port_mappings: list[SandboxContainerPortMapping]) -> dict[str, tuple[str, int]] | None:
     if not port_mappings:
         return None
     return {
-        f"{mapping.container_port}/{mapping.protocol}": ("127.0.0.1", mapping.host_port)
+        f"{mapping.container_port}/{mapping.protocol}": ("0.0.0.0", mapping.host_port)
         for mapping in port_mappings
     }
 
 
 def create_container_sync(
+    host: ManagedHost,
     image_ref: str,
     container_name_prefix: str,
-    container_command: str,
     port_mappings: list[SandboxContainerPortMapping],
+    environment: dict[str, str] | None = None,
 ) -> tuple[str, str]:
-    client = docker.from_env()
+    client = docker_client_for_host(host)
     try:
         create_kwargs = {
             "image": image_ref,
@@ -45,9 +41,8 @@ def create_container_sync(
             "stdin_open": True,
             "tty": False,
         }
-        if container_command:
-            create_kwargs["entrypoint"] = ["/bin/sh", "-lc"]
-            create_kwargs["command"] = [container_command]
+        if environment:
+            create_kwargs["environment"] = environment
 
         container = client.containers.create(
             **create_kwargs,
@@ -63,8 +58,8 @@ def create_container_sync(
         client.close()
 
 
-def inspect_container_state_sync(container_hash: str) -> DockerContainerState:
-    client = docker.from_env()
+def inspect_container_state_sync(host: ManagedHost, container_hash: str) -> DockerContainerState:
+    client = docker_client_for_host(host)
     try:
         container = client.containers.get(container_hash)
         container.reload()
@@ -75,25 +70,8 @@ def inspect_container_state_sync(container_hash: str) -> DockerContainerState:
         client.close()
 
 
-def inspect_container_ip_sync(container_hash: str) -> str | None:
-    client = docker.from_env()
-    try:
-        container = client.containers.get(container_hash)
-        container.reload()
-        networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
-        for net in networks.values():
-            ip = net.get("IPAddress", "")
-            if ip:
-                return ip
-        return container.attrs.get("NetworkSettings", {}).get("IPAddress") or None
-    except (docker.errors.NotFound, Exception):
-        return None
-    finally:
-        client.close()
-
-
-def start_container_sync(container_hash: str) -> None:
-    client = docker.from_env()
+def start_container_sync(host: ManagedHost, container_hash: str) -> None:
+    client = docker_client_for_host(host)
     try:
         container = client.containers.get(container_hash)
         container.start()
@@ -101,8 +79,8 @@ def start_container_sync(container_hash: str) -> None:
         client.close()
 
 
-def stop_container_sync(container_hash: str) -> None:
-    client = docker.from_env()
+def stop_container_sync(host: ManagedHost, container_hash: str) -> None:
+    client = docker_client_for_host(host)
     try:
         container = client.containers.get(container_hash)
         container.stop()
@@ -110,8 +88,8 @@ def stop_container_sync(container_hash: str) -> None:
         client.close()
 
 
-def remove_container_sync(container_hash: str) -> None:
-    client = docker.from_env()
+def remove_container_sync(host: ManagedHost, container_hash: str) -> None:
+    client = docker_client_for_host(host)
     try:
         container = client.containers.get(container_hash)
         container.remove(force=True)

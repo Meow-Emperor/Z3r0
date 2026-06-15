@@ -11,7 +11,7 @@ FROM golang:1.26-trixie AS proxy-builder
 ENV CGO_ENABLED=0
 
 WORKDIR /src/proxy
-COPY proxy/go.mod proxy/main.go ./
+COPY proxy/ ./
 RUN go build -trimpath -ldflags='-s -w' -o /sandbox-proxy .
 
 FROM ghcr.io/astral-sh/uv:latest AS uv-bin
@@ -174,6 +174,7 @@ RUN set -eux; \
       python3 \
       ripgrep \
       supervisor \
+      util-linux \
       unzip \
       websockify \
       wget \

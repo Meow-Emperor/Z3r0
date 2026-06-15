@@ -39,7 +39,8 @@ from service.sandbox.status import (
     stop_sandbox_container_status_monitor,
 )
 from service.sandbox.novnc import close_novnc_http_client
-from service.sandbox.images import start_sandbox_image_runtime, stop_sandbox_image_runtime
+from service.sandbox.files import close_file_http_client
+from service.host.hosts import ensure_local_managed_host
 from service.system_user.users import create_system_user, query_system_user_by_username
 from utils.urllib3_compat import install_urllib3_closed_file_close_patch
 
@@ -71,6 +72,11 @@ async def _bootstrap_admin_user() -> None:
     logger.info("bootstrap admin user created: %s", bootstrap.username)
 
 
+async def _bootstrap_local_host() -> None:
+    host = await ensure_local_managed_host()
+    logger.debug("default local host ensured: %s", host.id)
+
+
 def _mount_frontend(app: FastAPI) -> None:
     """serve built frontend assets when web/dist-app exists"""
     index_path = WEB_DIST_PATH / "index.html"
@@ -95,9 +101,9 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         init_engine()
         await create_all_tables()
         await _bootstrap_admin_user()
+        await _bootstrap_local_host()
 
         set_tracing_disabled(True)
-        await start_sandbox_image_runtime()
         await start_async_sandbox_runtime()
         await start_subagent_runtime()
         await recover_pending_sessions()
@@ -114,9 +120,9 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         await invalidate_all_agent_tool_bindings()
         await stop_subagent_runtime()
         await stop_async_sandbox_commands()
-        await stop_sandbox_image_runtime()
         await get_agent_pool().stop()
         await close_novnc_http_client()
+        await close_file_http_client()
         await close_engine()
 
 

@@ -9,6 +9,7 @@ from sqlmodel import select
 from database import get_async_session
 from logger import get_logger
 from model.sandbox.containers import SandboxContainer
+from model.host.hosts import ManagedHost
 from schema.sandbox.containers import SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from service.sandbox.docker_ops import (
@@ -32,12 +33,14 @@ _tool_binding_state_cache: dict[int, "DockerStateCacheEntry"] = {}
 @dataclass(frozen=True)
 class ContainerStatusSnapshot:
     id: int
+    host_id: int
     container_hash: str
     status: SandboxContainerStatus
 
 
 @dataclass(frozen=True)
 class DockerStateCacheEntry:
+    host_id: int
     container_hash: str
     generation: int
     state: DockerContainerState
@@ -76,6 +79,7 @@ def _clear_tool_binding_state_cache(container_id: int | None = None) -> None:
 async def inspect_container_state_cached(
     *,
     id: int,
+    host_id: int,
     container_hash: str,
     generation: int,
 ) -> DockerContainerState:
@@ -83,14 +87,19 @@ async def inspect_container_state_cached(
     cached = _tool_binding_state_cache.get(id)
     if (
         cached is not None
+        and cached.host_id == host_id
         and cached.container_hash == container_hash
         and cached.generation == generation
         and cached.expires_at > now
     ):
         return cached.state
 
-    state = await asyncio.to_thread(inspect_container_state_sync, container_hash)
+    host = await _load_host(host_id)
+    if host is None:
+        return DockerContainerState(exists=False)
+    state = await asyncio.to_thread(inspect_container_state_sync, host, container_hash)
     _tool_binding_state_cache[id] = DockerStateCacheEntry(
+        host_id=host_id,
         container_hash=container_hash,
         generation=generation,
         state=state,
@@ -137,19 +146,23 @@ async def _invalidate_all_agent_tool_bindings() -> None:
 
 
 async def _load_container_status_snapshots() -> list[ContainerStatusSnapshot]:
-    statement = select(SandboxContainer.id, SandboxContainer.container_hash, SandboxContainer.status).where(
+    statement = select(SandboxContainer.id, SandboxContainer.host_id, SandboxContainer.container_hash, SandboxContainer.status).where(
         SandboxContainer.container_hash != ""
     )
     async with get_async_session() as session:
         result = await session.exec(statement)
         return [
-            ContainerStatusSnapshot(id=row[0], container_hash=row[1], status=row[2])
+            ContainerStatusSnapshot(id=row[0], host_id=row[1], container_hash=row[2], status=row[3])
             for row in result.all()
         ]
 
 
 async def sync_container_status(snapshot: ContainerStatusSnapshot) -> None:
-    state = await asyncio.to_thread(inspect_container_state_sync, snapshot.container_hash)
+    host = await _load_host(snapshot.host_id)
+    if host is None:
+        await save_sandbox_container_status(snapshot.id, SandboxContainerStatus.ERROR)
+        return
+    state = await asyncio.to_thread(inspect_container_state_sync, host, snapshot.container_hash)
     next_status = SandboxContainerStatus.ERROR if not state.exists else docker_status_to_sandbox_status(state.status)
     if next_status == snapshot.status:
         return
@@ -254,11 +267,13 @@ async def _resolve_sandbox_container_tool_binding(
         if not can_use(sandbox_container):
             return None
         container_hash = sandbox_container.container_hash
+        host_id = sandbox_container.host_id
         generation = status_generation(sandbox_container)
 
     try:
         state = await inspect_container_state_cached(
             id=id,
+            host_id=host_id,
             container_hash=container_hash,
             generation=generation,
         )
@@ -272,3 +287,8 @@ async def _resolve_sandbox_container_tool_binding(
         return None
 
     return SandboxContainerToolBinding(id=id, generation=generation)
+
+
+async def _load_host(host_id: int) -> ManagedHost | None:
+    async with get_async_session() as session:
+        return await session.get(ManagedHost, host_id)

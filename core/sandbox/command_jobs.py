@@ -24,6 +24,7 @@ class _AsyncCommandJob:
     session_id: str
     agent_instance_id: str
     sandbox_container_id: int | None
+    sandbox_container_generation: int
 
 
 _jobs: dict[str, _AsyncCommandJob] = {}
@@ -69,6 +70,7 @@ async def start_async_sandbox_command(
             session_id=context.session_id,
             agent_instance_id=context.agent_instance_id,
             sandbox_container_id=context.sandbox_container_id,
+            sandbox_container_generation=context.sandbox_container_generation,
         )
     task.add_done_callback(lambda completed: _finish_async_sandbox_command(run_id, completed))
 

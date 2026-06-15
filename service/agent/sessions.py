@@ -216,6 +216,8 @@ def _summary_from_row(row, meta: AgentSessionMeta | None) -> AgentSessionSummary
         agent_code=meta.agent_code if meta else "",
         owner_id=meta.owner_id if meta else 0,
         project_id=meta.project_id if meta else None,
+        selected_sandbox_container_id=meta.selected_sandbox_container_id if meta else None,
+        selected_sandbox_container_generation=meta.selected_sandbox_container_generation if meta else 0,
         is_running=meta.is_running if meta else False,
         runtime_agent_code=meta.runtime_agent_code if meta else "",
         runtime_sandbox_container_id=meta.runtime_sandbox_container_id if meta else None,
@@ -256,6 +258,25 @@ async def mark_session_running(
         meta.run_error = ""
         session.add(meta)
         await session.commit()
+
+
+async def update_session_sandbox_container(
+    session_id: str,
+    *,
+    sandbox_container_id: int | None,
+    sandbox_container_generation: int,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> AgentSessionSummarySchema | None:
+    async with get_async_session() as session:
+        meta = await session.get(AgentSessionMeta, session_id)
+        if meta is None or not await _can_access_meta(session, meta, user_id, user_role):
+            return None
+        meta.selected_sandbox_container_id = sandbox_container_id
+        meta.selected_sandbox_container_generation = sandbox_container_generation
+        session.add(meta)
+        await session.commit()
+    return await session_summary(session_id, user_id=user_id, user_role=user_role)
 
 
 async def mark_session_stopped(session_id: str, *, error: str = "") -> None:

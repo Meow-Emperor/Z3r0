@@ -8,6 +8,7 @@ import docker
 from database import get_async_session
 from logger import get_logger
 from model.sandbox.containers import SandboxContainer
+from model.host.hosts import ManagedHost
 from schema.sandbox.containers import SandboxContainerStatus
 from service.sandbox.docker_ops import (
     docker_status_to_sandbox_status,
@@ -59,6 +60,7 @@ class _RunningContainerCommand:
 
 
 async def _execute_container_command(
+    host: ManagedHost,
     container_hash: str,
     command: str,
     timeout_seconds: float,
@@ -69,6 +71,7 @@ async def _execute_container_command(
     command_task = asyncio.create_task(
         asyncio.to_thread(
             _execute_container_command_sync,
+            host,
             container_hash,
             command,
             marker_path,
@@ -82,20 +85,20 @@ async def _execute_container_command(
     except asyncio.TimeoutError as exc:
         cancel_requested.set()
         running_command.close()
-        await _terminate_container_command(container_hash, marker_path)
+        await _terminate_container_command(host, container_hash, marker_path)
         await _drain_cancelled_command_task(command_task, container_hash)
         raise SandboxContainerCommandTimeoutError(timeout_seconds) from exc
     except asyncio.CancelledError:
         cancel_requested.set()
         running_command.close()
-        await _terminate_container_command(container_hash, marker_path)
+        await _terminate_container_command(host, container_hash, marker_path)
         await _drain_cancelled_command_task(command_task, container_hash)
         raise
 
 
-async def _terminate_container_command(container_hash: str, marker_path: str) -> None:
+async def _terminate_container_command(host: ManagedHost, container_hash: str, marker_path: str) -> None:
     terminate_task = asyncio.create_task(
-        asyncio.to_thread(_terminate_container_command_sync, container_hash, marker_path),
+        asyncio.to_thread(_terminate_container_command_sync, host, container_hash, marker_path),
         name="sandbox-container-command-terminate",
     )
     try:
@@ -149,13 +152,16 @@ def _discard_background_task_result(task: asyncio.Task) -> None:
 
 
 def _execute_container_command_sync(
+    host: ManagedHost,
     container_hash: str,
     command: str,
     marker_path: str,
     cancel_requested: threading.Event,
     running_command: _RunningContainerCommand,
 ) -> SandboxContainerCommandResult:
-    client = docker.from_env()
+    from service.host.docker import docker_client_for_host
+
+    client = docker_client_for_host(host)
     stream: object | None = None
     try:
         if cancel_requested.is_set():
@@ -204,8 +210,10 @@ def _execute_container_command_sync(
         client.close()
 
 
-def _terminate_container_command_sync(container_hash: str, marker_path: str) -> None:
-    client = docker.from_env(timeout=_COMMAND_TERMINATE_TIMEOUT_SECONDS)
+def _terminate_container_command_sync(host: ManagedHost, container_hash: str, marker_path: str) -> None:
+    from service.host.docker import docker_client_for_host
+
+    client = docker_client_for_host(host, timeout=_COMMAND_TERMINATE_TIMEOUT_SECONDS)
     try:
         container = client.containers.get(container_hash)
         container.exec_run(
@@ -344,9 +352,14 @@ async def execute_sandbox_container_command(
             raise ValueError("only running sandbox containers can execute commands")
 
         container_hash = sandbox_container.container_hash
+        host_id = sandbox_container.host_id
+
+        host = await session.get(ManagedHost, host_id)
+        if host is None:
+            raise ValueError("managed host not found")
 
     try:
-        state = await asyncio.to_thread(inspect_container_state_sync, container_hash)
+        state = await asyncio.to_thread(inspect_container_state_sync, host, container_hash)
     except Exception:
         logger.exception("sandbox container inspect failed before command execution: %s", id)
         raise RuntimeError("failed to inspect sandbox container")
@@ -357,7 +370,7 @@ async def execute_sandbox_container_command(
         raise RuntimeError("sandbox container is not running")
 
     try:
-        return await _execute_container_command(container_hash, command, normalized_timeout_seconds)
+        return await _execute_container_command(host, container_hash, command, normalized_timeout_seconds)
     except asyncio.CancelledError:
         raise
     except SandboxContainerCommandTimeoutError:

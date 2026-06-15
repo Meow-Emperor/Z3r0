@@ -21,11 +21,10 @@ type ClipboardState = { action: "copy" | "cut"; paths: string[]; sourceDir: stri
 
 type Props = {
   containerId: number;
-  containerHash: string;
   containerName: string;
 };
 
-export function ContainerFileManager({ containerId, containerHash, containerName: _containerName }: Props) {
+export function ContainerFileManager({ containerId, containerName: _containerName }: Props) {
   const [path, setPath] = useState("/");
   const [files, setFiles] = useState<ContainerFileInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,7 +75,7 @@ export function ContainerFileManager({ containerId, containerHash, containerName
     setViewingFile(null);
     setCreateType(null);
     void loadFiles("/");
-  }, [containerId, containerHash, loadFiles]);
+  }, [containerId, loadFiles]);
 
   const navigateTo = useCallback((dir: string) => {
     const newHistory = pathHistory.slice(0, historyIndex + 1);

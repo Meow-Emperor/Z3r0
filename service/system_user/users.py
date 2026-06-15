@@ -67,7 +67,6 @@ async def create_system_user(
     email: str = "",
     role: SystemUserRole = SystemUserRole.USER,
 ) -> SystemUser:
-    """create system user"""
     now = datetime.now()
     system_user = SystemUser(
         role=role,
@@ -88,7 +87,6 @@ async def create_system_user(
 
 
 async def delete_system_user(id: int) -> DeleteSystemUserResult:
-    """delete system user"""
     async with get_async_session() as session:
         system_user = await session.get(SystemUser, id)
         if system_user is None:
@@ -115,7 +113,6 @@ async def update_system_user(
     email: str | None = None,
     role: SystemUserRole | None = None,
 ) -> SystemUser | None:
-    """update system user"""
     async with get_async_session() as session:
         system_user = await session.get(SystemUser, id)
         if system_user is None:
@@ -167,7 +164,6 @@ async def query_system_users(page: int = 1, size: int = 100, keyword: str = "") 
 
 
 async def system_user_login(email: str, password: str) -> str | None:
-    """system user login"""
     cfg = get_config()
 
     async with get_async_session() as session:

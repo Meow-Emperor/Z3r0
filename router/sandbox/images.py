@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 
 from handler.sandbox.images import (
-    cancel_sandbox_image_pull_handler,
     create_sandbox_image_handler,
     delete_sandbox_image_handler,
     query_sandbox_images_handler,
-    retry_sandbox_image_handler,
 )
 from middleware.auth import require_admin
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, not_found_response
@@ -47,22 +45,6 @@ router.add_api_route(
     delete_sandbox_image_handler,
     methods=["DELETE"],
     response_model=CommonResponse[DeleteSandboxImageResponse],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
-)
-
-router.add_api_route(
-    "/{id}/cancel",
-    cancel_sandbox_image_pull_handler,
-    methods=["POST"],
-    response_model=CommonResponse[SandboxImageSchema],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
-)
-
-router.add_api_route(
-    "/{id}/retry",
-    retry_sandbox_image_handler,
-    methods=["POST"],
-    response_model=CommonResponse[SandboxImageSchema],
     responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 

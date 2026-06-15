@@ -60,12 +60,12 @@ export function deleteSandboxContainer(id: SandboxContainerPathParams["id"]) {
   return apiDelete<DeleteSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}`);
 }
 
-export function buildContainerShellUrl(containerHash: string) {
-  return buildAuthenticatedWebSocketUrl(`${SANDBOX_CONTAINERS_PATH}/${encodeURIComponent(containerHash)}/shell`);
+export function buildContainerShellUrl(containerId: number) {
+  return buildAuthenticatedWebSocketUrl(`${SANDBOX_CONTAINERS_PATH}/${containerId}/shell`);
 }
 
 export function canOpenContainerNoVNC(container: SandboxContainer) {
-  return Boolean(container.novnc_support && container.container_hash && container.status === "running");
+  return Boolean(container.novnc_support && container.proxy_host_port > 0 && container.status === "running");
 }
 
 export function buildContainerNoVNCUrl(container: SandboxContainer) {
@@ -76,9 +76,8 @@ export function buildContainerNoVNCUrl(container: SandboxContainer) {
   const token = getStoredAccessToken();
   if (!token) throw new Error("missing access token");
 
-  const encodedHash = encodeURIComponent(container.container_hash);
-  const wsPath = `/api/sandbox-containers/${encodedHash}/novnc-ws?token=${encodeURIComponent(token)}`;
-  const base = `${window.location.origin}/api/sandbox-containers/${encodedHash}/novnc/vnc.html`;
+  const wsPath = `../novnc-ws?token=${encodeURIComponent(token)}`;
+  const base = `${window.location.origin}/api/sandbox-containers/${container.id}/novnc/vnc.html`;
 
   const url = new URL(base);
   url.searchParams.set("autoconnect", "true");
