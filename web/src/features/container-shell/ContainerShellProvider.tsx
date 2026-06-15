@@ -17,9 +17,10 @@ import {
 } from "react";
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
+import { buildHostShellUrl } from "../../shared/api/hosts";
 import { buildContainerNoVNCUrl, buildContainerShellUrl } from "../../shared/api/sandboxContainers";
 import { showApiError } from "../../shared/api/feedback";
-import type { SandboxContainer } from "../../shared/api/types";
+import type { ManagedHost, SandboxContainer } from "../../shared/api/types";
 import {
   animateWindowFlight,
   buildFlight,
@@ -50,26 +51,36 @@ type ShellStatus = "idle" | "connecting" | "open" | "closed";
 
 type ShellWindowState = WindowStateBase & {
   connectionKey: number;
-  containerHash: string;
+  shellUrl: string;
+  targetKey: string;
   status: ShellStatus;
   isMaximized: boolean;
   restoreRect: Rect | null;
 };
 
+type ShellTarget = {
+  key: string;
+  title: string;
+  url: string;
+};
+
 type NoVNCWindowState = WindowStateBase & {
   containerId: number;
+  containerName: string;
   url: string;
 };
 
 type FileManagerWindowState = WindowStateBase & {
   containerId: number;
   containerHash: string;
+  containerName: string;
   isMaximized: boolean;
   restoreRect: Rect | null;
 };
 
 type ContainerShellContextValue = {
   openFileManager: (container: SandboxContainer) => void;
+  openHostShell: (host: ManagedHost) => void;
   openNoVNC: (container: SandboxContainer) => void;
   openShell: (container: SandboxContainer) => void;
 };
@@ -177,7 +188,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   const resizeRef = useRef<ResizeState | null>(null);
   const fitWithoutSnapRef = useRef(false);
   const connectionKeyRef = useRef(0);
-  const activeContainerHash = shell?.containerHash ?? null;
+  const activeShellUrl = shell?.shellUrl ?? null;
   const activeConnectionKey = shell?.connectionKey ?? null;
 
   const disposeShellResources = useCallback(() => {
@@ -246,18 +257,17 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     setShellFlight(buildFlight(shell, "restore", "shell", shell.status));
   }, [shell]);
 
-  const openShell = useCallback((container: SandboxContainer) => {
-    if (!container.container_hash) return;
-
+  const openShellTarget = useCallback((target: ShellTarget) => {
     const currentShell = shell;
-    if (currentShell?.containerHash === container.container_hash && isSocketActive(socketRef.current)) {
+    if (currentShell?.targetKey === target.key && isSocketActive(socketRef.current)) {
       const preserveGeometry = currentShell.dockState === "minimized";
       cancelFlightFrame(shellFlightFrameRef);
       setShellFlight(null);
       fitWithoutSnapRef.current = preserveGeometry;
       setShell((current) => current ? {
         ...current,
-        containerName: container.container_name,
+        title: target.title,
+        shellUrl: target.url,
         dockState: "normal",
       } : current);
       window.setTimeout(() => {
@@ -273,8 +283,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
 
     setShell({
       connectionKey: connectionKeyRef.current + 1,
-      containerHash: container.container_hash,
-      containerName: container.container_name,
+      shellUrl: target.url,
+      targetKey: target.key,
+      title: target.title,
       dockState: "normal",
       status: "connecting",
       isMaximized: false,
@@ -286,6 +297,24 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     });
     connectionKeyRef.current += 1;
   }, [disposeShellResources, fitTerminal, shell]);
+
+  const openShell = useCallback((container: SandboxContainer) => {
+    if (!container.container_hash) return;
+
+    openShellTarget({
+      key: `container:${container.container_hash}`,
+      title: container.container_name,
+      url: buildContainerShellUrl(container.container_hash),
+    });
+  }, [openShellTarget]);
+
+  const openHostShell = useCallback((host: ManagedHost) => {
+    openShellTarget({
+      key: `host:${host.id}`,
+      title: `${host.host_account}@${host.ip_address}`,
+      url: buildHostShellUrl(host.id),
+    });
+  }, [openShellTarget]);
 
   const closeNoVNC = useCallback(() => {
     cancelFlightFrame(noVNCFlightFrameRef);
@@ -314,11 +343,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       setNoVNCFlight(null);
       setNoVNC((current) => {
         if (current?.containerId === container.id && current.url === url) {
-          return { ...current, containerName: container.container_name, dockState: "normal" };
+          return { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
         }
 
         return {
           containerId: container.id,
+          title: container.container_name,
           containerName: container.container_name,
           dockState: "normal",
           url,
@@ -378,12 +408,13 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     setFileManagerFlight(null);
     setFileManager((current) => {
       if (current?.containerId === container.id) {
-        return { ...current, containerName: container.container_name, dockState: "normal" };
+        return { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
       }
 
       return {
         containerId: container.id,
         containerHash: container.container_hash,
+        title: container.container_name,
         containerName: container.container_name,
         dockState: "normal",
         isMaximized: false,
@@ -394,7 +425,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!activeContainerHash || activeConnectionKey === null || terminalRef.current || !terminalHostRef.current) return;
+    if (!activeShellUrl || activeConnectionKey === null || terminalRef.current || !terminalHostRef.current) return;
 
     let canceled = false;
     let terminal: Terminal | null = null;
@@ -447,7 +478,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         window.setTimeout(fitTerminal, 0);
 
         try {
-          socket = new WebSocket(buildContainerShellUrl(activeContainerHash));
+          socket = new WebSocket(activeShellUrl);
         } catch (error) {
           cleanup();
           showApiError(error);
@@ -490,7 +521,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       canceled = true;
       cleanup();
     };
-  }, [activeConnectionKey, activeContainerHash, fitTerminal]);
+  }, [activeConnectionKey, activeShellUrl, fitTerminal]);
 
   useEffect(() => () => closeShell(), [closeShell]);
 
@@ -616,7 +647,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     };
   }, [onPointerMove, stopPointerAction]);
 
-  const contextValue = useMemo<ContainerShellContextValue>(() => ({ openFileManager, openNoVNC, openShell }), [openFileManager, openNoVNC, openShell]);
+  const contextValue = useMemo<ContainerShellContextValue>(() => ({ openFileManager, openHostShell, openNoVNC, openShell }), [openFileManager, openHostShell, openNoVNC, openShell]);
   const shellFlightStyle = shellFlight ? buildWindowFlightStyle(shellFlight) : undefined;
   const noVNCFlightStyle = noVNCFlight ? buildWindowFlightStyle(noVNCFlight) : undefined;
   const fileManagerFlightStyle = fileManagerFlight ? buildWindowFlightStyle(fileManagerFlight) : undefined;
@@ -773,7 +804,7 @@ function FloatingWindowLayer({
         isMaximized={state.isMaximized}
         meta={meta}
         rect={state}
-        title={state.containerName}
+        title={state.title}
         onHeaderPointerDown={onHeaderPointerDown}
         resizeHandle={resizeHandle}
       >
@@ -866,7 +897,7 @@ function FloatingWindowFlight({ flight, frameRef, icon, style }: FloatingWindowF
     <div ref={frameRef} className={`shell-flight shell-flight-${flight.direction}`} style={style}>
       <div className="shell-flight-header">
         {icon}
-        <span>{flight.containerName}</span>
+        <span>{flight.title}</span>
         <em>{flight.meta}</em>
       </div>
       <div className="shell-flight-body" />

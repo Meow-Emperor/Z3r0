@@ -1387,6 +1387,27 @@
   white-space: nowrap;
 }
 
+.host-password-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.host-password-cell code {
+  min-width: 0;
+  overflow: hidden;
+  color: #41506a;
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.host-password-cell .semi-button {
+  flex: 0 0 auto;
+}
+
 .novnc-toggle-row {
   display: flex;
   min-height: 34px;

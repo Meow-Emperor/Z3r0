@@ -22,6 +22,7 @@ _LIBRARY_LOGGERS = (
     "httpcore",
     "httpx",
     "asyncpg",
+    "asyncssh",
     "websockets",
     "sqlalchemy",
 )

@@ -90,6 +90,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/hosts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Managed Hosts Route */
+        get: operations["query_managed_hosts_route_api_hosts_get"];
+        put?: never;
+        /** Create Managed Host Handler */
+        post: operations["create_managed_host_handler_api_hosts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hosts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Managed Host Handler */
+        delete: operations["delete_managed_host_handler_api_hosts__id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Managed Host Handler */
+        patch: operations["update_managed_host_handler_api_hosts__id__patch"];
+        trace?: never;
+    };
     "/api/sandbox-containers": {
         parameters: {
             query?: never;
@@ -1059,6 +1095,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[DeleteManagedHostResponse] */
+        CommonResponse_DeleteManagedHostResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["DeleteManagedHostResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[DeleteSandboxContainerResponse] */
         CommonResponse_DeleteSandboxContainerResponse_: {
             /**
@@ -1193,6 +1243,34 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["ListWorkProjectSessionsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[ManagedHostSchema] */
+        CommonResponse_ManagedHostSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["ManagedHostSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryManagedHostsResponse] */
+        CommonResponse_QueryManagedHostsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryManagedHostsResponse"] | null;
             /**
              * Message
              * @default success
@@ -1437,6 +1515,25 @@ export interface components {
             /** Session Id */
             session_id: string;
         };
+        /** CreateManagedHostRequest */
+        CreateManagedHostRequest: {
+            /**
+             * Docker Management Port
+             * @default 2375
+             */
+            docker_management_port: number;
+            /** Host Account */
+            host_account: string;
+            /** Host Password */
+            host_password: string;
+            /** Ip Address */
+            ip_address: string;
+            /**
+             * Ssh Port
+             * @default 22
+             */
+            ssh_port: number;
+        };
         /** CreateSandboxContainerRequest */
         CreateSandboxContainerRequest: {
             /**
@@ -1505,6 +1602,11 @@ export interface components {
         CreateWorkProjectSessionResponse: {
             /** Session Id */
             session_id: string;
+        };
+        /** DeleteManagedHostResponse */
+        DeleteManagedHostResponse: {
+            /** Id */
+            id: number;
         };
         /** DeleteSandboxContainerResponse */
         DeleteSandboxContainerResponse: {
@@ -1645,6 +1747,42 @@ export interface components {
         ListWorkProjectSessionsResponse: {
             /** Items */
             items: components["schemas"]["AgentSessionSummarySchema"][];
+        };
+        /** ManagedHostSchema */
+        ManagedHostSchema: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Docker Management Port */
+            docker_management_port: number;
+            /** Host Account */
+            host_account: string;
+            /** Host Password */
+            host_password: string;
+            /** Id */
+            id: number;
+            /** Ip Address */
+            ip_address: string;
+            /** Ssh Port */
+            ssh_port: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** QueryManagedHostsResponse */
+        QueryManagedHostsResponse: {
+            /** Items */
+            items: components["schemas"]["ManagedHostSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
         };
         /** QuerySandboxContainersResponse */
         QuerySandboxContainersResponse: {
@@ -2294,6 +2432,19 @@ export interface components {
             config: components["schemas"]["InstanceConfigSchema"];
             /** Restarted */
             restarted: boolean;
+        };
+        /** UpdateManagedHostRequest */
+        UpdateManagedHostRequest: {
+            /** Docker Management Port */
+            docker_management_port?: number | null;
+            /** Host Account */
+            host_account?: string | null;
+            /** Host Password */
+            host_password?: string | null;
+            /** Ip Address */
+            ip_address?: string | null;
+            /** Ssh Port */
+            ssh_port?: number | null;
         };
         /** UpdateSystemUserRequest */
         UpdateSystemUserRequest: {
@@ -3059,6 +3210,246 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_managed_hosts_route_api_hosts_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryManagedHostsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    create_managed_host_handler_api_hosts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateManagedHostRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ManagedHostSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_managed_host_handler_api_hosts__id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_DeleteManagedHostResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    update_managed_host_handler_api_hosts__id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateManagedHostRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_ManagedHostSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Managed host not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

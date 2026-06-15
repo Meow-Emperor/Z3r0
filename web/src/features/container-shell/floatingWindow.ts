@@ -11,7 +11,7 @@ export type Rect = {
 };
 
 export type WindowStateBase = Rect & {
-  containerName: string;
+  title: string;
   dockState: DockState;
 };
 
@@ -19,7 +19,7 @@ export type DockSlot = "shell" | "novnc" | "filemanager";
 
 export type FlightState = {
   direction: "minimize" | "restore";
-  containerName: string;
+  title: string;
   meta: string;
   from: Rect;
   to: Rect;
@@ -134,7 +134,7 @@ export function buildFlight(
   const dockRect = getDockRect(slot);
   return {
     direction,
-    containerName: state.containerName,
+    title: state.title,
     meta,
     from: direction === "minimize" ? rect : dockRect,
     to: direction === "minimize" ? dockRect : rect,

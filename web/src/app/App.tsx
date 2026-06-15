@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useOutletC
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
 import {
   loadLandingPage,
+  loadHostsPage,
   loadLoginPage,
   loadPlaygroundPage,
   loadProtectedAdminShell,
@@ -17,6 +18,7 @@ import {
 const LandingPage = lazy(() => loadLandingPage().then((module) => ({ default: module.LandingPage })));
 const LoginPage = lazy(() => loadLoginPage().then((module) => ({ default: module.LoginPage })));
 const ProtectedAdminShell = lazy(() => loadProtectedAdminShell().then((module) => ({ default: module.ProtectedAdminShell })));
+const HostsPage = lazy(() => loadHostsPage().then((module) => ({ default: module.HostsPage })));
 const PlaygroundPage = lazy(() => loadPlaygroundPage().then((module) => ({ default: module.PlaygroundPage })));
 const WorkProjectWorkspacePage = lazy(() => loadWorkProjectWorkspacePage().then((module) => ({ default: module.WorkProjectWorkspacePage })));
 const SandboxContainersPage = lazy(() => loadSandboxContainersPage().then((module) => ({ default: module.SandboxContainersPage })));
@@ -65,6 +67,7 @@ export function App() {
               <Route element={<ProtectedAdminShell />}>
                 <Route path="/playground" element={<PlaygroundPage />} />
                 <Route element={<AdminOnlyRoute />}>
+                  <Route path="/hosts" element={<HostsPage />} />
                   <Route path="/work-projects" element={<WorkProjectsPage />} />
                   <Route path="/work-projects/:projectId" element={<WorkProjectWorkspacePage />} />
                   <Route path="/sandbox-images" element={<SandboxImagesPage />} />

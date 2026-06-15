@@ -1,5 +1,5 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
-import { Box, Boxes, FolderKanban, LogOut, MessageSquareCode, Settings, Users } from "lucide-react";
+import { Box, Boxes, FolderKanban, LogOut, MessageSquareCode, Server, Settings, Users } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
@@ -24,6 +24,7 @@ export function useRefreshWorkProjects() {
 const navItems = [
   { path: "/playground", label: "Playground", eyebrow: "Agent Workbench", icon: MessageSquareCode },
   { path: "/work-projects", label: "Work Projects", eyebrow: "Project Operations", icon: FolderKanban, adminOnly: true },
+  { path: "/hosts", label: "Host Management", eyebrow: "Infrastructure Access", icon: Server, adminOnly: true },
   { path: "/sandbox-images", label: "Sandbox Images", eyebrow: "Execution Baseline", icon: Boxes, adminOnly: true },
   { path: "/sandbox-containers", label: "Sandbox Containers", eyebrow: "Runtime Instances", icon: Box, adminOnly: true },
   { path: "/system-users", label: "System Users", eyebrow: "Access Control", icon: Users, adminOnly: true },

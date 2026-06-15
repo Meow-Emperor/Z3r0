@@ -40,6 +40,19 @@ export type UpdateSystemUserRequest = JsonRequestBody<paths["/api/system-users/{
 export type UpdateSystemUserResponse = JsonResponse<paths["/api/system-users/{id}"]["patch"]>;
 export type DeleteSystemUserResponse = JsonResponse<paths["/api/system-users/{id}"]["delete"]>;
 
+export type QueryManagedHostsParams = QueryParameters<paths["/api/hosts"]["get"]>;
+export type QueryManagedHostsResponse = JsonResponse<paths["/api/hosts"]["get"]>;
+export type QueryManagedHostsData = NonNullable<QueryManagedHostsResponse["data"]>;
+export type ManagedHost = QueryManagedHostsData["items"][number];
+
+export type CreateManagedHostRequest = JsonRequestBody<paths["/api/hosts"]["post"]>;
+export type CreateManagedHostResponse = JsonResponse<paths["/api/hosts"]["post"]>;
+
+export type ManagedHostPathParams = PathParameters<paths["/api/hosts/{id}"]["patch"]>;
+export type UpdateManagedHostRequest = JsonRequestBody<paths["/api/hosts/{id}"]["patch"]>;
+export type UpdateManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["patch"]>;
+export type DeleteManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["delete"]>;
+
 export type InstanceConfig = components["schemas"]["InstanceConfigSchema"];
 export type AgentConfig = components["schemas"]["AgentConfig"];
 export type AgentPoolConfig = components["schemas"]["AgentPoolConfig"];

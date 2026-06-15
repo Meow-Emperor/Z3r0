@@ -833,6 +833,32 @@
         "title": "CommonResponse[CreateWorkProjectSessionResponse]",
         "type": "object"
       },
+      "CommonResponse_DeleteManagedHostResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteManagedHostResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteManagedHostResponse]",
+        "type": "object"
+      },
       "CommonResponse_DeleteSandboxContainerResponse_": {
         "properties": {
           "code": {
@@ -1091,6 +1117,58 @@
           }
         },
         "title": "CommonResponse[ListWorkProjectSessionsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_ManagedHostSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManagedHostSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[ManagedHostSchema]",
+        "type": "object"
+      },
+      "CommonResponse_QueryManagedHostsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryManagedHostsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryManagedHostsResponse]",
         "type": "object"
       },
       "CommonResponse_QuerySandboxContainersResponse_": {
@@ -1620,6 +1698,49 @@
         "title": "CreateAgentSessionResponse",
         "type": "object"
       },
+      "CreateManagedHostRequest": {
+        "properties": {
+          "docker_management_port": {
+            "default": 2375,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Docker Management Port",
+            "type": "integer"
+          },
+          "host_account": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Host Account",
+            "type": "string"
+          },
+          "host_password": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Host Password",
+            "type": "string"
+          },
+          "ip_address": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Ip Address",
+            "type": "string"
+          },
+          "ssh_port": {
+            "default": 22,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Ssh Port",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ip_address",
+          "host_account",
+          "host_password"
+        ],
+        "title": "CreateManagedHostRequest",
+        "type": "object"
+      },
       "CreateSandboxContainerRequest": {
         "properties": {
           "container_command": {
@@ -1785,6 +1906,19 @@
           "session_id"
         ],
         "title": "CreateWorkProjectSessionResponse",
+        "type": "object"
+      },
+      "DeleteManagedHostResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteManagedHostResponse",
         "type": "object"
       },
       "DeleteSandboxContainerResponse": {
@@ -2104,6 +2238,87 @@
           "items"
         ],
         "title": "ListWorkProjectSessionsResponse",
+        "type": "object"
+      },
+      "ManagedHostSchema": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "docker_management_port": {
+            "title": "Docker Management Port",
+            "type": "integer"
+          },
+          "host_account": {
+            "title": "Host Account",
+            "type": "string"
+          },
+          "host_password": {
+            "title": "Host Password",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip_address": {
+            "title": "Ip Address",
+            "type": "string"
+          },
+          "ssh_port": {
+            "title": "Ssh Port",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ip_address",
+          "ssh_port",
+          "host_account",
+          "host_password",
+          "docker_management_port",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ManagedHostSchema",
+        "type": "object"
+      },
+      "QueryManagedHostsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ManagedHostSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryManagedHostsResponse",
         "type": "object"
       },
       "QuerySandboxContainersResponse": {
@@ -3234,6 +3449,77 @@
           "restarted"
         ],
         "title": "UpdateInstanceConfigResponse",
+        "type": "object"
+      },
+      "UpdateManagedHostRequest": {
+        "properties": {
+          "docker_management_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docker Management Port"
+          },
+          "host_account": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Account"
+          },
+          "host_password": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Password"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "ssh_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ssh Port"
+          }
+        },
+        "title": "UpdateManagedHostRequest",
         "type": "object"
       },
       "UpdateSystemUserRequest": {
@@ -4658,6 +4944,343 @@
         "summary": "List Agents Handler",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/api/hosts": {
+      "get": {
+        "operationId": "query_managed_hosts_route_api_hosts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryManagedHostsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Managed Hosts Route",
+        "tags": [
+          "hosts"
+        ]
+      },
+      "post": {
+        "operationId": "create_managed_host_handler_api_hosts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateManagedHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ManagedHostSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Create Managed Host Handler",
+        "tags": [
+          "hosts"
+        ]
+      }
+    },
+    "/api/hosts/{id}": {
+      "delete": {
+        "operationId": "delete_managed_host_handler_api_hosts__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteManagedHostResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Delete Managed Host Handler",
+        "tags": [
+          "hosts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_managed_host_handler_api_hosts__id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateManagedHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_ManagedHostSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Managed host not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Update Managed Host Handler",
+        "tags": [
+          "hosts"
         ]
       }
     },

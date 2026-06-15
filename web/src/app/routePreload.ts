@@ -2,6 +2,7 @@ const routeLoaders = {
   landing: () => import("../features/landing/LandingPage"),
   login: () => import("../features/auth/LoginPage"),
   protectedAdminShell: () => import("./layouts/ProtectedAdminShell"),
+  hosts: () => import("../features/hosts/HostsPage"),
   playground: () => import("../features/playground/PlaygroundPage"),
   workProjects: () => import("../features/work-projects/WorkProjectsPage"),
   workProjectWorkspace: () => import("../features/work-projects/WorkProjectWorkspacePage"),
@@ -13,6 +14,7 @@ const routeLoaders = {
 
 const adminRouteLoaders: Record<string, () => Promise<unknown>> = {
   "/playground": routeLoaders.playground,
+  "/hosts": routeLoaders.hosts,
   "/work-projects": routeLoaders.workProjects,
   "/work-projects/:projectId": routeLoaders.workProjectWorkspace,
   "/sandbox-images": routeLoaders.sandboxImages,
@@ -26,6 +28,7 @@ const preloadedRoutes = new Set<string>();
 export const loadLandingPage = routeLoaders.landing;
 export const loadLoginPage = routeLoaders.login;
 export const loadProtectedAdminShell = routeLoaders.protectedAdminShell;
+export const loadHostsPage = routeLoaders.hosts;
 export const loadPlaygroundPage = routeLoaders.playground;
 export const loadWorkProjectsPage = routeLoaders.workProjects;
 export const loadWorkProjectWorkspacePage = routeLoaders.workProjectWorkspace;
