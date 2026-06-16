@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"unsafe"
 )
@@ -43,20 +44,21 @@ func handleShell(w http.ResponseWriter, r *http.Request) {
 
 	ptmx, pts, err := openPTY()
 	if err != nil {
-		_ = writeWebSocketFrame(conn, 8, nil)
+		_ = writeWebSocketFrame(conn, websocketOpcodeClose, nil)
 		return
 	}
 	defer ptmx.Close()
 
 	cmd := shellCommand()
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
+	cmd.Env = append(os.Environ(), egressProxyState.RuntimeEnvironmentOverlay()...)
+	cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 	cmd.Stdin = pts
 	cmd.Stdout = pts
 	cmd.Stderr = pts
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}
 	if err := cmd.Start(); err != nil {
 		pts.Close()
-		_ = writeWebSocketFrame(conn, 8, nil)
+		_ = writeWebSocketFrame(conn, websocketOpcodeClose, nil)
 		return
 	}
 	pts.Close()
@@ -66,6 +68,12 @@ func handleShell(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	done := make(chan struct{})
+	var writeMu sync.Mutex
+	writeFrame := func(opcode byte, payload []byte) error {
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		return writeWebSocketFrame(conn, opcode, payload)
+	}
 
 	// PTY reader: forwards shell output to WebSocket client.
 	go func() {
@@ -74,7 +82,7 @@ func handleShell(w http.ResponseWriter, r *http.Request) {
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
-				if writeWebSocketFrame(conn, 2, buf[:n]) != nil {
+				if writeFrame(2, buf[:n]) != nil {
 					return
 				}
 			}
@@ -92,9 +100,16 @@ func handleShell(w http.ResponseWriter, r *http.Request) {
 				_ = cmd.Process.Kill()
 				return
 			}
-			if opcode == 8 {
+			if opcode == websocketOpcodeClose {
 				_ = cmd.Process.Kill()
 				return
+			}
+			if opcode == websocketOpcodePing {
+				_ = writeFrame(websocketOpcodePong, data)
+				continue
+			}
+			if opcode == websocketOpcodePong {
+				continue
 			}
 			if isResizeMessage(data) {
 				applyResize(ptmx, data)

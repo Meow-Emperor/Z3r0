@@ -25,6 +25,7 @@ from middleware.response import (
 from router.agent.agents import router as agent_router
 from router.agent.sessions import router as agent_session_router
 from router.common.fallback import api_not_found_router
+from router.egress_proxy.proxies import router as egress_proxy_router
 from router.host.hosts import router as host_router
 from router.sandbox.containers import router as sandbox_container_router
 from router.sandbox.images import router as sandbox_image_router
@@ -40,6 +41,7 @@ from service.sandbox.status import (
 )
 from service.sandbox.novnc import close_novnc_http_client
 from service.sandbox.files import close_file_http_client
+from service.sandbox.proxy import close_proxy_http_client
 from service.host.hosts import ensure_local_managed_host
 from service.system_user.users import create_system_user, query_system_user_by_username
 from utils.urllib3_compat import install_urllib3_closed_file_close_patch
@@ -123,6 +125,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         await get_agent_pool().stop()
         await close_novnc_http_client()
         await close_file_http_client()
+        await close_proxy_http_client()
         await close_engine()
 
 
@@ -144,6 +147,7 @@ def create_app() -> FastAPI:
 
     app.include_router(system_user_router, prefix=API_PREFIX)
     app.include_router(host_router, prefix=API_PREFIX)
+    app.include_router(egress_proxy_router, prefix=API_PREFIX)
     app.include_router(sandbox_image_router, prefix=API_PREFIX)
     app.include_router(sandbox_container_router, prefix=API_PREFIX)
     app.include_router(work_project_router, prefix=API_PREFIX)

@@ -1,5 +1,5 @@
 import { Input, InputNumber } from "@douyinfe/semi-ui";
-import { Package } from "lucide-react";
+import { Network, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateSandboxImageRequest } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
@@ -11,7 +11,7 @@ type SandboxImageFormModalProps = {
   onSubmit: (payload: CreateSandboxImageRequest) => Promise<void>;
 };
 
-const EMPTY: CreateSandboxImageRequest = { image_name: "", default_exposed_port: 8000 };
+const EMPTY: CreateSandboxImageRequest = { image_name: "security-sandbox:latest", default_exposed_port: 8000 };
 
 export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: SandboxImageFormModalProps) {
   const [values, setValues] = useState<CreateSandboxImageRequest>(EMPTY);
@@ -40,6 +40,7 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
       <label>
         <span>Default Exposed Port</span>
         <InputNumber
+          prefix={<Network size={16} />}
           value={values.default_exposed_port}
           min={1}
           max={65535}

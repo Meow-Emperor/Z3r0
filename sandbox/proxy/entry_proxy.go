@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-func newPassthroughProxy(target *url.URL) http.Handler {
+func newEntryProxy(target *url.URL) http.Handler {
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = directHTTPTransport()
 	orig := proxy.Director
 	proxy.Director = func(r *http.Request) {
 		orig(r)
@@ -18,19 +19,26 @@ func newPassthroughProxy(target *url.URL) http.Handler {
 	return proxy
 }
 
-func newPrefixProxy(prefix string, target *url.URL) http.Handler {
+func newEntryPrefixProxy(prefix string, target *url.URL) http.Handler {
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = directHTTPTransport()
 	orig := proxy.Director
 	proxy.Director = func(r *http.Request) {
 		orig(r)
-		r.URL.Path = trimPrefixPath(r.URL.Path, prefix)
+		r.URL.Path = trimEntryPrefix(r.URL.Path, prefix)
 		r.URL.RawPath = ""
 		r.Host = target.Host
 	}
 	return proxy
 }
 
-func trimPrefixPath(path string, prefix string) string {
+func directHTTPTransport() *http.Transport {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	return transport
+}
+
+func trimEntryPrefix(path string, prefix string) string {
 	if path == prefix {
 		return "/"
 	}

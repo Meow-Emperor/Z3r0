@@ -11,6 +11,7 @@ import {
 } from "../../shared/api/workProjects";
 import type { AgentSessionSummary, WorkProject } from "../../shared/api/types";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import { UI_TEXT } from "../../shared/lib/uiText";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
 
 const PROJECT_REFRESH_INTERVAL_MS = 5000;
@@ -259,7 +260,8 @@ export function SessionList({
       <Modal
         visible={Boolean(renameTarget)}
         title="Edit Session Title"
-        okText="Save"
+        okText={UI_TEXT.save}
+        cancelText={UI_TEXT.cancel}
         confirmLoading={renaming}
         okButtonProps={{ disabled: !renameTitle.trim() }}
         onOk={() => void saveRename()}
@@ -438,7 +440,7 @@ function SessionRow({
         onClick={onRename}
       />
       {deleteConfirm ? (
-        <Popconfirm {...deleteConfirm} okType="danger">
+        <Popconfirm {...deleteConfirm} okType="danger" cancelText={UI_TEXT.cancel}>
           {deleteButton}
         </Popconfirm>
       ) : null}

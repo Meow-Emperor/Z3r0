@@ -1,7 +1,7 @@
 import { Select, Switch } from "@douyinfe/semi-ui";
-import { Boxes, Server, User } from "lucide-react";
+import { Boxes, Network, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { CreateSandboxContainerRequest, ManagedHost, SandboxImage, SystemUser } from "../../shared/api/types";
+import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import {
   createEmptyPortMapping,
@@ -18,6 +18,8 @@ type SandboxContainerFormModalProps = {
   hostsLoading: boolean;
   users: SystemUser[];
   usersLoading: boolean;
+  egressProxies: EgressProxy[];
+  egressProxiesLoading: boolean;
   currentUserId: number;
   onCancel: () => void;
   onSubmit: (payload: CreateSandboxContainerRequest) => Promise<void>;
@@ -32,6 +34,8 @@ export function SandboxContainerFormModal({
   hostsLoading,
   users,
   usersLoading,
+  egressProxies,
+  egressProxiesLoading,
   currentUserId,
   onCancel,
   onSubmit,
@@ -39,6 +43,7 @@ export function SandboxContainerFormModal({
   const availableImages = useMemo(() => images, [images]);
   const [hostId, setHostId] = useState<number | undefined>();
   const [imageId, setImageId] = useState<number | undefined>();
+  const [egressProxyId, setEgressProxyId] = useState<number | undefined>();
   const [ownerId, setOwnerId] = useState<number | undefined>();
   const [portMappings, setPortMappings] = useState<PortMappingFormValue[]>([]);
   const [novncSupport, setNoVNCSupport] = useState(false);
@@ -47,6 +52,7 @@ export function SandboxContainerFormModal({
     if (!open) return;
     setHostId(undefined);
     setImageId(undefined);
+    setEgressProxyId(undefined);
     setOwnerId(currentUserId);
     setPortMappings([]);
     setNoVNCSupport(false);
@@ -55,6 +61,7 @@ export function SandboxContainerFormModal({
   const submit = () => onSubmit({
     host_id: hostId || 0,
     image_id: imageId || 0,
+    egress_proxy_id: egressProxyId,
     owner_id: ownerId !== currentUserId ? ownerId : undefined,
     novnc_support: novncSupport,
     port_mappings: portMappings.map(({ container_port, host_port, protocol }) => ({
@@ -133,6 +140,21 @@ export function SandboxContainerFormModal({
         />
       </label>
 
+      <label>
+        <span>Egress Proxy</span>
+        <Select
+          prefix={<Network size={16} />}
+          value={egressProxyId}
+          loading={egressProxiesLoading}
+          placeholder="No egress proxy"
+          emptyContent="No egress proxies"
+          onClear={() => setEgressProxyId(undefined)}
+          onChange={(value) => setEgressProxyId(typeof value === "number" ? value : undefined)}
+          optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
+          showClear
+        />
+      </label>
+
       <div className="novnc-toggle-row">
         <span>noVNC</span>
         <div className="novnc-controls">
@@ -148,4 +170,8 @@ export function SandboxContainerFormModal({
       />
     </ResourceModal>
   );
+}
+
+function egressProxyOptionLabel(proxy: EgressProxy) {
+  return `${proxy.proxy_type}://${proxy.proxy_host}:${proxy.proxy_port}`;
 }

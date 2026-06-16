@@ -29,7 +29,7 @@ class ContainerDownloadStream:
 def _get_http_client() -> httpx.AsyncClient:
     global _http_client
     if _http_client is None:
-        _http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        _http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0), trust_env=False)
     return _http_client
 
 

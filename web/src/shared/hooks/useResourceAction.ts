@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { showApiError, showApiSuccess } from "../api/feedback";
 import type { CommonResponsePayload } from "../api/types";
 
@@ -7,6 +7,11 @@ export function useResourceAction<Item extends { id: number }>(
   onAfter?: () => void | Promise<void>,
 ) {
   const [busyId, setBusyId] = useState<number | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   const run = useCallback(
     async (item: Item) => {
@@ -14,12 +19,13 @@ export function useResourceAction<Item extends { id: number }>(
       setBusyId(item.id);
       try {
         const response = await action(item);
+        if (!mountedRef.current) return;
         showApiSuccess(response);
         await onAfter?.();
       } catch (error) {
-        showApiError(error);
+        if (mountedRef.current) showApiError(error);
       } finally {
-        setBusyId(null);
+        if (mountedRef.current) setBusyId(null);
       }
     },
     [action, busyId, onAfter],

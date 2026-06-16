@@ -51,6 +51,7 @@ async def open_container_shell(
     websocket = await websockets.connect(
         url,
         additional_headers=sandbox_proxy_token_headers(target),
+        proxy=None,
         open_timeout=10,
         close_timeout=5,
         max_size=2**20,

@@ -221,6 +221,8 @@
 }
 
 .sandbox-containers-table .resource-cell-updated {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

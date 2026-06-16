@@ -12,6 +12,7 @@ import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
+import { UI_TEXT } from "../../shared/lib/uiText";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { HostFormModal } from "./HostFormModal";
 
@@ -126,7 +127,7 @@ export function HostsPage() {
           <Button icon={<Pencil size={15} />} theme="borderless"
             aria-label={`Edit ${host.ip_address}`} onClick={() => setModal({ mode: "edit", host })}
           />
-          <Popconfirm title="Delete host" content={`Delete ${host.ip_address}?`} okType="danger" onConfirm={() => void deleteHost(host)}>
+          <Popconfirm title="Delete host" content={`Delete ${host.ip_address}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteHost(host)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
               loading={deletingHostId === host.id} aria-label={`Delete ${host.ip_address}`}
             />
@@ -274,7 +275,7 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
           {
             title: "", dataIndex: "image_id", width: 50,
             render: (_value, record) => (
-              <Popconfirm title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`} okType="danger" onConfirm={() => void removeImage(record as ManagedHostImage)}>
+              <Popconfirm title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void removeImage(record as ManagedHostImage)}>
                 <Button icon={<Trash2 size={14} />} theme="borderless" type="danger" size="small"
                   loading={removingId === (record as ManagedHostImage).image_id}
                   aria-label="Remove image"

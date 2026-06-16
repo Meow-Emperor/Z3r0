@@ -34,6 +34,7 @@ from schema.sandbox.containers import (
     QuerySandboxContainersResponse,
     SandboxContainerSchema,
     SandboxContainerStatus,
+    UpdateSandboxContainerEgressProxyRequest,
 )
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import paginated_payload
@@ -56,6 +57,7 @@ from service.sandbox.lifecycle import (
     delete_sandbox_container,
     start_sandbox_container,
     stop_sandbox_container,
+    update_sandbox_container_egress_proxy,
 )
 from service.sandbox.novnc import (
     proxy_novnc_http,
@@ -82,6 +84,7 @@ from service.sandbox.types import (
 
 logger = get_logger(__name__)
 _NOVNC_ACCESS_COOKIE = "z3r0_novnc_access"
+_SHELL_KEEPALIVE_INTERVAL_SECONDS = 25
 
 
 def _sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContainerSchema:
@@ -94,6 +97,8 @@ def _sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContaine
         container_hash=container.container_hash,
         image_id=container.image_id,
         image_name=record.image_name,
+        egress_proxy_id=container.egress_proxy_id,
+        egress_proxy_label=record.egress_proxy_label,
         proxy_host_port=container.proxy_host_port,
         port_mappings=container.port_mappings,
         novnc_support=container.novnc_support,
@@ -128,6 +133,7 @@ async def create_sandbox_container_handler(
     result = await create_sandbox_container(
         host_id=request.host_id,
         image_id=request.image_id,
+        egress_proxy_id=request.egress_proxy_id,
         owner_id=owner_id,
         port_mappings=request.port_mappings,
         novnc_support=request.novnc_support,
@@ -141,6 +147,13 @@ async def start_sandbox_container_handler(id: int) -> CommonResponse:
 
 async def stop_sandbox_container_handler(id: int) -> CommonResponse:
     return _mutation_response(await stop_sandbox_container(id))
+
+
+async def update_sandbox_container_egress_proxy_handler(
+    id: int,
+    request: UpdateSandboxContainerEgressProxyRequest,
+) -> CommonResponse:
+    return _mutation_response(await update_sandbox_container_egress_proxy(id, request.egress_proxy_id))
 
 
 async def delete_sandbox_container_handler(id: int) -> CommonResponse:
@@ -200,10 +213,13 @@ async def handle_container_shell_stream(websocket: WebSocket, id: int, token: st
     shell: ContainerShellSession | None = None
     reader: asyncio.Task | None = None
     receiver: asyncio.Task | None = None
+    keepalive: asyncio.Task | None = None
+    send_lock = asyncio.Lock()
 
     try:
         shell = await open_container_shell(id)
-        reader = asyncio.create_task(_forward_shell_output(websocket, shell))
+        reader = asyncio.create_task(_forward_shell_output(websocket, shell, send_lock))
+        keepalive = asyncio.create_task(_send_shell_keepalive(websocket, send_lock))
 
         while True:
             receiver = asyncio.create_task(websocket.receive_text())
@@ -243,20 +259,38 @@ async def handle_container_shell_stream(websocket: WebSocket, id: int, token: st
             if shell is not None:
                 shell.shutdown()
             await _cancel_task(receiver)
+            await _cancel_task(keepalive)
             await finish_ws_reader_task(reader)
         finally:
             if shell is not None:
                 await shell.close()
 
 
-async def _forward_shell_output(websocket: WebSocket, shell: ContainerShellSession) -> None:
+async def _forward_shell_output(
+    websocket: WebSocket,
+    shell: ContainerShellSession,
+    send_lock: asyncio.Lock,
+) -> None:
     while True:
         data = await read_container_shell(shell)
         if not data:
             return
         if websocket.client_state != WebSocketState.CONNECTED or websocket.application_state != WebSocketState.CONNECTED:
             return
-        await websocket.send_bytes(data)
+        async with send_lock:
+            await websocket.send_bytes(data)
+
+
+async def _send_shell_keepalive(websocket: WebSocket, send_lock: asyncio.Lock) -> None:
+    while True:
+        await asyncio.sleep(_SHELL_KEEPALIVE_INTERVAL_SECONDS)
+        if websocket.client_state != WebSocketState.CONNECTED or websocket.application_state != WebSocketState.CONNECTED:
+            return
+        try:
+            async with send_lock:
+                await websocket.send_bytes(b"")
+        except (WebSocketDisconnect, RuntimeError, OSError):
+            return
 
 
 async def _can_access_container_by_id(user, container_id: int) -> bool:

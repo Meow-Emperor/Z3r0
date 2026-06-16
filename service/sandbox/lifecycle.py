@@ -8,6 +8,7 @@ import docker
 from sqlmodel import select
 
 from database import get_async_session
+from model.egress_proxy.proxies import EgressProxy
 from logger import get_logger
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
@@ -24,6 +25,8 @@ from service.sandbox.docker_ops import (
     remove_container_sync,
 )
 from service.sandbox.records import load_sandbox_container_record
+from service.egress_proxy.proxies import egress_proxy_container_environment
+from service.sandbox.proxy import apply_container_egress_proxy
 from service.sandbox.status import (
     ContainerStatusSnapshot,
     save_sandbox_container_status,
@@ -54,6 +57,7 @@ def _serialize_port_mappings(port_mappings: list[SandboxContainerPortMapping]) -
 async def create_sandbox_container(
     host_id: int,
     image_id: int,
+    egress_proxy_id: int | None,
     owner_id: int,
     port_mappings: list[SandboxContainerPortMapping],
     novnc_support: bool = False,
@@ -83,6 +87,16 @@ async def create_sandbox_container(
                 message="system user not found",
                 not_found=True,
             )
+        egress_proxy = None
+        if egress_proxy_id is not None:
+            egress_proxy = await session.get(EgressProxy, egress_proxy_id)
+            if egress_proxy is None:
+                return SandboxContainerMutationResult(
+                    record=None,
+                    changed=False,
+                    message="egress proxy not found",
+                    not_found=True,
+                )
 
         container_name_prefix = _container_name_prefix(sandbox_image.image_name)
 
@@ -119,7 +133,7 @@ async def create_sandbox_container(
             sandbox_image.image_name,
             container_name_prefix,
             docker_port_mappings,
-            {"SANDBOX_PROXY_TOKEN": proxy_token},
+            {"SANDBOX_PROXY_TOKEN": proxy_token, **egress_proxy_container_environment(egress_proxy)},
         )
     except docker.errors.ImageNotFound:
         return SandboxContainerMutationResult(
@@ -142,6 +156,7 @@ async def create_sandbox_container(
         container_hash=container_hash,
         owner_id=owner_id,
         image_id=image_id,
+        egress_proxy_id=egress_proxy_id,
         proxy_host_port=proxy_host_port,
         proxy_token=proxy_token,
         port_mappings=effective_port_mappings,
@@ -200,6 +215,12 @@ async def start_sandbox_container(id: int) -> SandboxContainerMutationResult:
             container_hash=record.container.container_hash,
             status=record.container.status,
         ))
+        next_record = await load_sandbox_container_record(id)
+        if next_record is not None and next_record.container.status == SandboxContainerStatus.RUNNING:
+            try:
+                await apply_container_egress_proxy(id)
+            except Exception:
+                logger.warning("sandbox container started, but egress proxy refresh failed: %s", id, exc_info=True)
     except docker.errors.NotFound:
         logger.debug("sandbox container instance not found while starting: %s", id)
         return SandboxContainerMutationResult(
@@ -230,6 +251,74 @@ async def start_sandbox_container(id: int) -> SandboxContainerMutationResult:
         changed=False,
         message="sandbox container is not running after start",
     )
+
+
+async def update_sandbox_container_egress_proxy(
+    id: int,
+    egress_proxy_id: int | None,
+) -> SandboxContainerMutationResult:
+    record = await load_sandbox_container_record(id)
+    if record is None:
+        return SandboxContainerMutationResult(
+            record=None,
+            changed=False,
+            message="sandbox container not found",
+            not_found=True,
+        )
+
+    async with get_async_session() as session:
+        container = await session.get(SandboxContainer, id)
+        if container is None:
+            return SandboxContainerMutationResult(
+                record=None,
+                changed=False,
+                message="sandbox container not found",
+                not_found=True,
+            )
+        egress_proxy = None
+        if egress_proxy_id is not None:
+            egress_proxy = await session.get(EgressProxy, egress_proxy_id)
+            if egress_proxy is None:
+                return SandboxContainerMutationResult(
+                    record=record,
+                    changed=False,
+                    message="egress proxy not found",
+                    not_found=True,
+                )
+        previous_egress_proxy_id = container.egress_proxy_id
+
+    async with get_async_session() as session:
+        container = await session.get(SandboxContainer, id)
+        if container is None:
+            return SandboxContainerMutationResult(
+                record=None,
+                changed=False,
+                message="sandbox container not found",
+                not_found=True,
+            )
+        container.egress_proxy_id = egress_proxy_id
+        container.updated_at = datetime.now()
+        session.add(container)
+        await session.commit()
+
+    if record.container.status == SandboxContainerStatus.RUNNING:
+        try:
+            await apply_container_egress_proxy(id)
+        except Exception:
+            await _save_container_egress_proxy_id(id, previous_egress_proxy_id)
+            logger.exception("sandbox container egress proxy apply failed: %s", id)
+            return SandboxContainerMutationResult(
+                record=record,
+                changed=False,
+                message="failed to apply egress proxy to running sandbox container",
+            )
+
+    return SandboxContainerMutationResult(
+        record=await load_sandbox_container_record(id),
+        changed=True,
+        message="sandbox container egress proxy updated",
+    )
+
 
 async def stop_sandbox_container(id: int) -> SandboxContainerMutationResult:
     record = await load_sandbox_container_record(id)
@@ -274,6 +363,7 @@ async def stop_sandbox_container(id: int) -> SandboxContainerMutationResult:
         message="sandbox container stopped",
     )
 
+
 async def delete_sandbox_container(id: int) -> bool:
     async with get_async_session() as session:
         sandbox_container = await session.get(SandboxContainer, id)
@@ -316,3 +406,14 @@ def _allocate_proxy_host_port(host_ip: str) -> int:
 async def _load_container_host(host_id: int) -> ManagedHost | None:
     async with get_async_session() as session:
         return await session.get(ManagedHost, host_id)
+
+
+async def _save_container_egress_proxy_id(id: int, egress_proxy_id: int | None) -> None:
+    async with get_async_session() as session:
+        container = await session.get(SandboxContainer, id)
+        if container is None:
+            return
+        container.egress_proxy_id = egress_proxy_id
+        container.updated_at = datetime.now()
+        session.add(container)
+        await session.commit()

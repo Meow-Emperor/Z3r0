@@ -1,5 +1,6 @@
 import { Button, Modal } from "@douyinfe/semi-ui";
 import { FormEvent, ReactNode } from "react";
+import { UI_TEXT } from "../lib/uiText";
 
 type ResourceModalProps = {
   open: boolean;
@@ -34,7 +35,7 @@ export function ResourceModal({
       <form className="resource-form" onSubmit={handleSubmit}>
         {children}
         <div className="modal-actions">
-          <Button onClick={onCancel} disabled={saving}>Cancel</Button>
+          <Button onClick={onCancel} disabled={saving}>{UI_TEXT.cancel}</Button>
           <Button htmlType="submit" theme="solid" type="danger" loading={saving} disabled={submitDisabled}>{submitLabel}</Button>
         </div>
       </form>

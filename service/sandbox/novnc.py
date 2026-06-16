@@ -19,6 +19,7 @@ def _get_http_client() -> httpx.AsyncClient:
         _http_client = httpx.AsyncClient(
             timeout=httpx.Timeout(10.0),
             limits=httpx.Limits(max_connections=50, max_keepalive_connections=20),
+            trust_env=False,
         )
     return _http_client
 
@@ -62,6 +63,7 @@ async def proxy_novnc_websocket(
             url,
             additional_headers=sandbox_proxy_token_headers(target.proxy),
             subprotocols=subprotocols or [],
+            proxy=None,
             max_size=2**20,
             open_timeout=10,
             close_timeout=5,

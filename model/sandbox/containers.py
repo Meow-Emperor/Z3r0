@@ -16,6 +16,7 @@ class SandboxContainer(SQLModel, table=True):
     container_hash: str = Field(default="")
     owner_id: int = Field(default=0, foreign_key="system_users.id", index=True)
     image_id: int = Field(default=0, foreign_key="sandbox_images.id", index=True)
+    egress_proxy_id: int | None = Field(default=None, foreign_key="egress_proxies.id", index=True)
     proxy_host_port: int = Field(default=0)
     proxy_token: str = Field(default="")
     port_mappings: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))

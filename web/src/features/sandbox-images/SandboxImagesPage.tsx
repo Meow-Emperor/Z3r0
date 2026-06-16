@@ -10,6 +10,7 @@ import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
+import { UI_TEXT } from "../../shared/lib/uiText";
 import { SandboxImageFormModal } from "./SandboxImageFormModal";
 
 export function SandboxImagesPage() {
@@ -70,7 +71,7 @@ export function SandboxImagesPage() {
       key: "actions", header: "Actions", width: "104px",
       render: (image) => (
         <div className="row-actions">
-          <Popconfirm title="Delete image" content={`Delete ${image.image_name}?`} okType="danger" onConfirm={() => void deleteImage(image)}>
+          <Popconfirm title="Delete image" content={`Delete ${image.image_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteImage(image)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
               loading={deletingId === image.id} aria-label={`Delete ${image.image_name}`}
             />

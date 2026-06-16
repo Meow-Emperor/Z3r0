@@ -55,6 +55,22 @@ export type DeleteManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["d
 
 export type DeleteManagedHostImageRequest = JsonRequestBody<paths["/api/hosts/{id}/images/remove"]["post"]>;
 
+export type QueryEgressProxiesParams = QueryParameters<paths["/api/egress-proxies"]["get"]>;
+export type QueryEgressProxiesResponse = JsonResponse<paths["/api/egress-proxies"]["get"]>;
+export type QueryEgressProxiesData = NonNullable<QueryEgressProxiesResponse["data"]>;
+export type EgressProxy = QueryEgressProxiesData["items"][number];
+export type EgressProxyType = components["schemas"]["EgressProxyType"];
+
+export type CreateEgressProxyRequest = JsonRequestBody<paths["/api/egress-proxies"]["post"]>;
+export type CreateEgressProxyResponse = JsonResponse<paths["/api/egress-proxies"]["post"]>;
+
+export type EgressProxyPathParams = PathParameters<paths["/api/egress-proxies/{id}"]["patch"]>;
+export type UpdateEgressProxyRequest = JsonRequestBody<paths["/api/egress-proxies/{id}"]["patch"]>;
+export type UpdateEgressProxyResponse = JsonResponse<paths["/api/egress-proxies/{id}"]["patch"]>;
+export type DeleteEgressProxyResponse = JsonResponse<paths["/api/egress-proxies/{id}"]["delete"]>;
+export type TestEgressProxyPathParams = PathParameters<paths["/api/egress-proxies/{id}/test"]["post"]>;
+export type TestEgressProxyResponse = JsonResponse<paths["/api/egress-proxies/{id}/test"]["post"]>;
+
 export type InstanceConfig = components["schemas"]["InstanceConfigSchema"];
 export type AgentConfig = components["schemas"]["AgentConfig"];
 export type AgentPoolConfig = components["schemas"]["AgentPoolConfig"];
@@ -97,6 +113,9 @@ export type StartSandboxContainerPathParams = PathParameters<paths["/api/sandbox
 export type StartSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/start"]["post"]>;
 export type StopSandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}/stop"]["post"]>;
 export type StopSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/stop"]["post"]>;
+export type UpdateSandboxContainerEgressProxyPathParams = PathParameters<paths["/api/sandbox-containers/{id}/egress-proxy"]["patch"]>;
+export type UpdateSandboxContainerEgressProxyRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/egress-proxy"]["patch"]>;
+export type UpdateSandboxContainerEgressProxyResponse = JsonResponse<paths["/api/sandbox-containers/{id}/egress-proxy"]["patch"]>;
 
 export type ListContainerFilesParams = QueryParameters<paths["/api/sandbox-containers/{id}/files"]["get"]>;
 export type ListContainerFilesResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files"]["get"]>;

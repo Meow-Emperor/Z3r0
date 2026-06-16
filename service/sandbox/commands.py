@@ -15,6 +15,7 @@ from service.sandbox.docker_ops import (
     inspect_container_state_sync,
 )
 from service.sandbox import close_docker_response_sync as _close_response_sync
+from service.sandbox.proxy import resolve_container_egress_proxy_runtime_environment
 from service.sandbox.status import save_sandbox_container_status
 from service.sandbox.types import SandboxContainerCommandResult
 
@@ -63,6 +64,7 @@ async def _execute_container_command(
     host: ManagedHost,
     container_hash: str,
     command: str,
+    environment: dict[str, str],
     timeout_seconds: float,
 ) -> SandboxContainerCommandResult:
     marker_path = f"/tmp/z3r0-command-{uuid4().hex}.pid"
@@ -74,6 +76,7 @@ async def _execute_container_command(
             host,
             container_hash,
             command,
+            environment,
             marker_path,
             cancel_requested,
             running_command,
@@ -155,6 +158,7 @@ def _execute_container_command_sync(
     host: ManagedHost,
     container_hash: str,
     command: str,
+    environment: dict[str, str],
     marker_path: str,
     cancel_requested: threading.Event,
     running_command: _RunningContainerCommand,
@@ -170,6 +174,7 @@ def _execute_container_command_sync(
         exec_response = client.api.exec_create(
             container=container.id,
             cmd=["/bin/sh", "-lc", _wrap_cancellable_command(command, marker_path)],
+            environment=environment or None,
             stdout=True,
             stderr=True,
             stdin=False,
@@ -358,6 +363,8 @@ async def execute_sandbox_container_command(
         if host is None:
             raise ValueError("managed host not found")
 
+    environment = await resolve_container_egress_proxy_runtime_environment(id)
+
     try:
         state = await asyncio.to_thread(inspect_container_state_sync, host, container_hash)
     except Exception:
@@ -370,7 +377,7 @@ async def execute_sandbox_container_command(
         raise RuntimeError("sandbox container is not running")
 
     try:
-        return await _execute_container_command(host, container_hash, command, normalized_timeout_seconds)
+        return await _execute_container_command(host, container_hash, command, environment, normalized_timeout_seconds)
     except asyncio.CancelledError:
         raise
     except SandboxContainerCommandTimeoutError:

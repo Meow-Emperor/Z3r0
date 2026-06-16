@@ -32,6 +32,7 @@ import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeade
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
+import { UI_TEXT } from "../../shared/lib/uiText";
 import { WorkProjectFormModal } from "./WorkProjectFormModal";
 import {
   WorkProjectAssets,
@@ -186,7 +187,7 @@ export function WorkProjectsPage() {
             aria-label={`Retry ${project.name}`}
             onClick={() => void handleAdminProjectAction(project, "retry")}
           />
-          <Popconfirm title="Delete project" content={`Delete ${project.name} and all project sessions?`} okType="danger" onConfirm={() => void handleAdminProjectAction(project, "delete")}>
+          <Popconfirm title="Delete project" content={`Delete ${project.name} and all project sessions?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void handleAdminProjectAction(project, "delete")}>
             <Button
               icon={<Trash2 size={15} />}
               theme="borderless"

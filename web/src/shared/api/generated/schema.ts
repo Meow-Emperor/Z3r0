@@ -107,6 +107,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/egress-proxies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Egress Proxies Route */
+        get: operations["query_egress_proxies_route_api_egress_proxies_get"];
+        put?: never;
+        /** Create Egress Proxy Handler */
+        post: operations["create_egress_proxy_handler_api_egress_proxies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/egress-proxies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Egress Proxy Handler */
+        delete: operations["delete_egress_proxy_handler_api_egress_proxies__id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Egress Proxy Handler */
+        patch: operations["update_egress_proxy_handler_api_egress_proxies__id__patch"];
+        trace?: never;
+    };
+    "/api/egress-proxies/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Egress Proxy Handler */
+        post: operations["test_egress_proxy_handler_api_egress_proxies__id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hosts": {
         parameters: {
             query?: never;
@@ -244,6 +297,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox-containers/{id}/egress-proxy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Sandbox Container Egress Proxy Handler */
+        patch: operations["update_sandbox_container_egress_proxy_handler_api_sandbox_containers__id__egress_proxy_patch"];
         trace?: never;
     };
     "/api/sandbox-containers/{id}/files": {
@@ -1130,6 +1200,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[DeleteEgressProxyResponse] */
+        CommonResponse_DeleteEgressProxyResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["DeleteEgressProxyResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[DeleteManagedHostResponse] */
         CommonResponse_DeleteManagedHostResponse_: {
             /**
@@ -1194,6 +1278,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["DeleteWorkProjectResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[EgressProxySchema] */
+        CommonResponse_EgressProxySchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["EgressProxySchema"] | null;
             /**
              * Message
              * @default success
@@ -1326,6 +1424,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QueryEgressProxiesResponse] */
+        CommonResponse_QueryEgressProxiesResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryEgressProxiesResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QueryManagedHostsResponse] */
         CommonResponse_QueryManagedHostsResponse_: {
             /**
@@ -1446,6 +1558,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["SystemUserSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[TestEgressProxyResponse] */
+        CommonResponse_TestEgressProxyResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["TestEgressProxyResponse"] | null;
             /**
              * Message
              * @default success
@@ -1578,6 +1704,25 @@ export interface components {
             /** Session Id */
             session_id: string;
         };
+        /** CreateEgressProxyRequest */
+        CreateEgressProxyRequest: {
+            /**
+             * Proxy Account
+             * @default
+             */
+            proxy_account: string;
+            /** Proxy Host */
+            proxy_host: string;
+            /**
+             * Proxy Password
+             * @default
+             */
+            proxy_password: string;
+            /** Proxy Port */
+            proxy_port: number;
+            /** @default http */
+            proxy_type: components["schemas"]["EgressProxyType"];
+        };
         /** CreateManagedHostRequest */
         CreateManagedHostRequest: {
             /**
@@ -1599,6 +1744,8 @@ export interface components {
         };
         /** CreateSandboxContainerRequest */
         CreateSandboxContainerRequest: {
+            /** Egress Proxy Id */
+            egress_proxy_id?: number | null;
             /** Host Id */
             host_id: number;
             /** Image Id */
@@ -1662,6 +1809,11 @@ export interface components {
         CreateWorkProjectSessionResponse: {
             /** Session Id */
             session_id: string;
+        };
+        /** DeleteEgressProxyResponse */
+        DeleteEgressProxyResponse: {
+            /** Id */
+            id: number;
         };
         /** DeleteManagedHostImageRequest */
         DeleteManagedHostImageRequest: {
@@ -1731,6 +1883,35 @@ export interface components {
              */
             type: "done";
         };
+        /** EgressProxySchema */
+        EgressProxySchema: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Proxy Account */
+            proxy_account: string;
+            /** Proxy Host */
+            proxy_host: string;
+            /** Proxy Password */
+            proxy_password: string;
+            /** Proxy Port */
+            proxy_port: number;
+            proxy_type: components["schemas"]["EgressProxyType"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * EgressProxyType
+         * @enum {string}
+         */
+        EgressProxyType: "http" | "https" | "socks5";
         /** ErrorEvent */
         ErrorEvent: {
             /**
@@ -1893,6 +2074,17 @@ export interface components {
             /** Items */
             items: components["schemas"]["PullManagedHostImageResultSchema"][];
         };
+        /** QueryEgressProxiesResponse */
+        QueryEgressProxiesResponse: {
+            /** Items */
+            items: components["schemas"]["EgressProxySchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
         /** QueryManagedHostsResponse */
         QueryManagedHostsResponse: {
             /** Items */
@@ -2045,6 +2237,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Egress Proxy Id */
+            egress_proxy_id: number | null;
+            /** Egress Proxy Label */
+            egress_proxy_label: string;
             /** Host Id */
             host_id: number;
             /** Host Ip Address */
@@ -2215,6 +2411,19 @@ export interface components {
             updated_at: string;
             /** Username */
             username: string;
+        };
+        /** TestEgressProxyResponse */
+        TestEgressProxyResponse: {
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /** Id */
+            id: number;
+            /** Message */
+            message: string;
+            /** Status Code */
+            status_code?: number | null;
+            /** Success */
+            success: boolean;
         };
         /** TextCompleteEvent */
         TextCompleteEvent: {
@@ -2534,6 +2743,18 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** UpdateEgressProxyRequest */
+        UpdateEgressProxyRequest: {
+            /** Proxy Account */
+            proxy_account?: string | null;
+            /** Proxy Host */
+            proxy_host?: string | null;
+            /** Proxy Password */
+            proxy_password?: string | null;
+            /** Proxy Port */
+            proxy_port?: number | null;
+            proxy_type?: components["schemas"]["EgressProxyType"] | null;
+        };
         /** UpdateInstanceConfigRequest */
         UpdateInstanceConfigRequest: {
             agent_pool: components["schemas"]["AgentPoolConfig"];
@@ -2561,6 +2782,11 @@ export interface components {
             ip_address?: string | null;
             /** Ssh Port */
             ssh_port?: number | null;
+        };
+        /** UpdateSandboxContainerEgressProxyRequest */
+        UpdateSandboxContainerEgressProxyRequest: {
+            /** Egress Proxy Id */
+            egress_proxy_id?: number | null;
         };
         /** UpdateSystemUserRequest */
         UpdateSystemUserRequest: {
@@ -3399,6 +3625,313 @@ export interface operations {
             };
         };
     };
+    query_egress_proxies_route_api_egress_proxies_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryEgressProxiesResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    create_egress_proxy_handler_api_egress_proxies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEgressProxyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_EgressProxySchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_egress_proxy_handler_api_egress_proxies__id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_DeleteEgressProxyResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Egress proxy not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    update_egress_proxy_handler_api_egress_proxies__id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEgressProxyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_EgressProxySchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Egress proxy not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    test_egress_proxy_handler_api_egress_proxies__id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_TestEgressProxyResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Egress proxy not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     query_managed_hosts_route_api_hosts_get: {
         parameters: {
             query?: {
@@ -4010,6 +4543,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_DeleteSandboxContainerResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Sandbox container not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    update_sandbox_container_egress_proxy_handler_api_sandbox_containers__id__egress_proxy_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSandboxContainerEgressProxyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SandboxContainerSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
             /** @description Unauthorized */

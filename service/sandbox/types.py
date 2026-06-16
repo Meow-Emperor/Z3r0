@@ -13,6 +13,7 @@ class SandboxContainerRecord:
     image_name: str
     owner_username: str
     host_ip_address: str
+    egress_proxy_label: str = ""
 
 
 @dataclass(frozen=True)
@@ -33,4 +34,3 @@ class SandboxContainerCommandResult:
 class SandboxContainerToolBinding:
     id: int
     generation: int
-

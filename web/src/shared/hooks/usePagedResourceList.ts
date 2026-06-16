@@ -29,6 +29,12 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    requestIdRef.current += 1;
+  }, []);
 
   const loadItems = useCallback(async () => {
     const requestId = requestIdRef.current + 1;
@@ -36,7 +42,7 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
     setLoading(true);
     try {
       const response = await query({ page, size: pageSize, keyword: activeKeyword });
-      if (requestIdRef.current !== requestId) return;
+      if (!mountedRef.current || requestIdRef.current !== requestId) return;
       const nextItems = response.data?.items || [];
       if (nextItems.length === 0 && page > 1) {
         setPage((current) => Math.max(1, current - 1));
@@ -45,11 +51,11 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
       setItems(nextItems);
       setTotal(response.data?.total ?? 0);
     } catch (error) {
-      if (requestIdRef.current === requestId) {
+      if (mountedRef.current && requestIdRef.current === requestId) {
         showApiError(error);
       }
     } finally {
-      if (requestIdRef.current === requestId) {
+      if (mountedRef.current && requestIdRef.current === requestId) {
         setLoading(false);
       }
     }

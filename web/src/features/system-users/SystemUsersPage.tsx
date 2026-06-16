@@ -11,6 +11,7 @@ import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
 import { SYSTEM_USER_ROLE_COLOR, SYSTEM_USER_ROLE_LABEL } from "../../shared/lib/labels";
+import { UI_TEXT } from "../../shared/lib/uiText";
 import { UserFormModal } from "./UserFormModal";
 
 type ModalState = { mode: "create" } | { mode: "edit"; user: SystemUser } | null;
@@ -78,7 +79,7 @@ export function SystemUsersPage() {
           <Button icon={<Pencil size={15} />} theme="borderless" aria-label={`Edit ${user.username}`}
             onClick={() => setModal({ mode: "edit", user })}
           />
-          <Popconfirm title="Delete user" content={`Delete ${user.username}?`} okType="danger" onConfirm={() => void deleteUser(user)}>
+          <Popconfirm title="Delete user" content={`Delete ${user.username}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteUser(user)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
               loading={deletingUserId === user.id} aria-label={`Delete ${user.username}`}
             />

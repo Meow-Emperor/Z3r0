@@ -20,6 +20,7 @@ from handler.sandbox.containers import (
     query_sandbox_containers_handler,
     start_sandbox_container_handler,
     stop_sandbox_container_handler,
+    update_sandbox_container_egress_proxy_handler,
 )
 from middleware.auth import AuthUser, require_admin, require_user
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, CONFLICT_RESPONSE, INTERNAL_ERROR_RESPONSE, not_found_response
@@ -37,6 +38,7 @@ from schema.sandbox.containers import (
     ListContainerFilesResponse,
     QuerySandboxContainersResponse,
     SandboxContainerSchema,
+    UpdateSandboxContainerEgressProxyRequest,
 )
 
 
@@ -131,6 +133,15 @@ router.add_api_route(
     "/{id}/stop",
     stop_sandbox_container_handler,
     methods=["POST"],
+    dependencies=ADMIN_ONLY,
+    response_model=CommonResponse[SandboxContainerSchema],
+    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/{id}/egress-proxy",
+    update_sandbox_container_egress_proxy_handler,
+    methods=["PATCH"],
     dependencies=ADMIN_ONLY,
     response_model=CommonResponse[SandboxContainerSchema],
     responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},

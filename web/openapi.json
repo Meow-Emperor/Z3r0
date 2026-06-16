@@ -835,6 +835,32 @@
         "title": "CommonResponse[CreateWorkProjectSessionResponse]",
         "type": "object"
       },
+      "CommonResponse_DeleteEgressProxyResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteEgressProxyResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteEgressProxyResponse]",
+        "type": "object"
+      },
       "CommonResponse_DeleteManagedHostResponse_": {
         "properties": {
           "code": {
@@ -963,6 +989,32 @@
           }
         },
         "title": "CommonResponse[DeleteWorkProjectResponse]",
+        "type": "object"
+      },
+      "CommonResponse_EgressProxySchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EgressProxySchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[EgressProxySchema]",
         "type": "object"
       },
       "CommonResponse_InstanceConfigSchema_": {
@@ -1199,6 +1251,32 @@
         "title": "CommonResponse[PullManagedHostImagesResponse]",
         "type": "object"
       },
+      "CommonResponse_QueryEgressProxiesResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryEgressProxiesResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryEgressProxiesResponse]",
+        "type": "object"
+      },
       "CommonResponse_QueryManagedHostsResponse_": {
         "properties": {
           "code": {
@@ -1431,6 +1509,32 @@
           }
         },
         "title": "CommonResponse[SystemUserSchema]",
+        "type": "object"
+      },
+      "CommonResponse_TestEgressProxyResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TestEgressProxyResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[TestEgressProxyResponse]",
         "type": "object"
       },
       "CommonResponse_UpdateInstanceConfigResponse_": {
@@ -1752,6 +1856,44 @@
         "title": "CreateAgentSessionResponse",
         "type": "object"
       },
+      "CreateEgressProxyRequest": {
+        "properties": {
+          "proxy_account": {
+            "default": "",
+            "maxLength": 255,
+            "title": "Proxy Account",
+            "type": "string"
+          },
+          "proxy_host": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Proxy Host",
+            "type": "string"
+          },
+          "proxy_password": {
+            "default": "",
+            "maxLength": 512,
+            "title": "Proxy Password",
+            "type": "string"
+          },
+          "proxy_port": {
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Proxy Port",
+            "type": "integer"
+          },
+          "proxy_type": {
+            "$ref": "#/components/schemas/EgressProxyType",
+            "default": "http"
+          }
+        },
+        "required": [
+          "proxy_host",
+          "proxy_port"
+        ],
+        "title": "CreateEgressProxyRequest",
+        "type": "object"
+      },
       "CreateManagedHostRequest": {
         "properties": {
           "docker_management_port": {
@@ -1797,6 +1939,18 @@
       },
       "CreateSandboxContainerRequest": {
         "properties": {
+          "egress_proxy_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Proxy Id"
+          },
           "host_id": {
             "exclusiveMinimum": 0.0,
             "title": "Host Id",
@@ -1958,6 +2112,19 @@
         "title": "CreateWorkProjectSessionResponse",
         "type": "object"
       },
+      "DeleteEgressProxyResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteEgressProxyResponse",
+        "type": "object"
+      },
       "DeleteManagedHostImageRequest": {
         "properties": {
           "force": {
@@ -2082,6 +2249,64 @@
         ],
         "title": "DoneEvent",
         "type": "object"
+      },
+      "EgressProxySchema": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "proxy_account": {
+            "title": "Proxy Account",
+            "type": "string"
+          },
+          "proxy_host": {
+            "title": "Proxy Host",
+            "type": "string"
+          },
+          "proxy_password": {
+            "title": "Proxy Password",
+            "type": "string"
+          },
+          "proxy_port": {
+            "title": "Proxy Port",
+            "type": "integer"
+          },
+          "proxy_type": {
+            "$ref": "#/components/schemas/EgressProxyType"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "proxy_type",
+          "proxy_host",
+          "proxy_port",
+          "proxy_account",
+          "proxy_password",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "EgressProxySchema",
+        "type": "object"
+      },
+      "EgressProxyType": {
+        "enum": [
+          "http",
+          "https",
+          "socks5"
+        ],
+        "title": "EgressProxyType",
+        "type": "string"
       },
       "ErrorEvent": {
         "properties": {
@@ -2474,6 +2699,37 @@
         "title": "PullManagedHostImagesResponse",
         "type": "object"
       },
+      "QueryEgressProxiesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EgressProxySchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryEgressProxiesResponse",
+        "type": "object"
+      },
       "QueryManagedHostsResponse": {
         "properties": {
           "items": {
@@ -2817,6 +3073,21 @@
             "title": "Created At",
             "type": "string"
           },
+          "egress_proxy_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Proxy Id"
+          },
+          "egress_proxy_label": {
+            "title": "Egress Proxy Label",
+            "type": "string"
+          },
           "host_id": {
             "title": "Host Id",
             "type": "integer"
@@ -2877,6 +3148,8 @@
           "container_hash",
           "image_id",
           "image_name",
+          "egress_proxy_id",
+          "egress_proxy_label",
           "proxy_host_port",
           "port_mappings",
           "novnc_support",
@@ -3116,6 +3389,45 @@
           "updated_at"
         ],
         "title": "SystemUserSchema",
+        "type": "object"
+      },
+      "TestEgressProxyResponse": {
+        "properties": {
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Code"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "success",
+          "elapsed_ms",
+          "message"
+        ],
+        "title": "TestEgressProxyResponse",
         "type": "object"
       },
       "TextCompleteEvent": {
@@ -3596,6 +3908,72 @@
         "title": "UpdateAgentSessionTitleRequest",
         "type": "object"
       },
+      "UpdateEgressProxyRequest": {
+        "properties": {
+          "proxy_account": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Account"
+          },
+          "proxy_host": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Host"
+          },
+          "proxy_password": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Password"
+          },
+          "proxy_port": {
+            "anyOf": [
+              {
+                "maximum": 65535.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Port"
+          },
+          "proxy_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EgressProxyType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "UpdateEgressProxyRequest",
+        "type": "object"
+      },
       "UpdateInstanceConfigRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3707,6 +4085,24 @@
           }
         },
         "title": "UpdateManagedHostRequest",
+        "type": "object"
+      },
+      "UpdateSandboxContainerEgressProxyRequest": {
+        "properties": {
+          "egress_proxy_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Egress Proxy Id"
+          }
+        },
+        "title": "UpdateSandboxContainerEgressProxyRequest",
         "type": "object"
       },
       "UpdateSystemUserRequest": {
@@ -5211,6 +5607,430 @@
         ]
       }
     },
+    "/api/egress-proxies": {
+      "get": {
+        "operationId": "query_egress_proxies_route_api_egress_proxies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryEgressProxiesResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Egress Proxies Route",
+        "tags": [
+          "egress-proxies"
+        ]
+      },
+      "post": {
+        "operationId": "create_egress_proxy_handler_api_egress_proxies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEgressProxyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_EgressProxySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Create Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      }
+    },
+    "/api/egress-proxies/{id}": {
+      "delete": {
+        "operationId": "delete_egress_proxy_handler_api_egress_proxies__id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteEgressProxyResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Egress proxy not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Delete Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      },
+      "patch": {
+        "operationId": "update_egress_proxy_handler_api_egress_proxies__id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEgressProxyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_EgressProxySchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Egress proxy not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Update Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      }
+    },
+    "/api/egress-proxies/{id}/test": {
+      "post": {
+        "operationId": "test_egress_proxy_handler_api_egress_proxies__id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_TestEgressProxyResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Egress proxy not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Test Egress Proxy Handler",
+        "tags": [
+          "egress-proxies"
+        ]
+      }
+    },
     "/api/hosts": {
       "get": {
         "operationId": "query_managed_hosts_route_api_hosts_get",
@@ -6137,6 +6957,103 @@
           }
         ],
         "summary": "Delete Sandbox Container Handler",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/egress-proxy": {
+      "patch": {
+        "operationId": "update_sandbox_container_egress_proxy_handler_api_sandbox_containers__id__egress_proxy_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSandboxContainerEgressProxyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Update Sandbox Container Egress Proxy Handler",
         "tags": [
           "sandbox-containers"
         ]

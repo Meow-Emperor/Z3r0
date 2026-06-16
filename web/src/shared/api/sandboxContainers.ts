@@ -1,4 +1,4 @@
-import { apiBlob, apiDelete, apiForm, apiGet, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { apiBlob, apiDelete, apiForm, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
 import { getStoredAccessToken } from "../auth/session";
 import { buildQuery } from "./query";
 import type {
@@ -32,6 +32,9 @@ import type {
   StartSandboxContainerResponse,
   StopSandboxContainerPathParams,
   StopSandboxContainerResponse,
+  UpdateSandboxContainerEgressProxyPathParams,
+  UpdateSandboxContainerEgressProxyRequest,
+  UpdateSandboxContainerEgressProxyResponse,
 } from "./types";
 
 const SANDBOX_CONTAINERS_PATH = "/api/sandbox-containers";
@@ -54,6 +57,13 @@ export function startSandboxContainer(id: StartSandboxContainerPathParams["id"])
 
 export function stopSandboxContainer(id: StopSandboxContainerPathParams["id"]) {
   return apiPost<StopSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/stop`);
+}
+
+export function updateSandboxContainerEgressProxy(
+  id: UpdateSandboxContainerEgressProxyPathParams["id"],
+  payload: UpdateSandboxContainerEgressProxyRequest,
+) {
+  return apiPatch<UpdateSandboxContainerEgressProxyResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/egress-proxy`, payload);
 }
 
 export function deleteSandboxContainer(id: SandboxContainerPathParams["id"]) {

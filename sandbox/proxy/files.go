@@ -33,8 +33,7 @@ type uploadItem struct {
 }
 
 func handleListFiles(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	if !requireMethod(w, r, http.MethodGet) {
 		return
 	}
 	path := normalizePath(r.URL.Query().Get("path"))
@@ -55,6 +54,9 @@ func handleListFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleFileInfo(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
 	path := normalizePath(r.URL.Query().Get("path"))
 	info, err := os.Lstat(path)
 	if err != nil {
@@ -65,6 +67,9 @@ func handleFileInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleReadFile(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
 	path := normalizePath(r.URL.Query().Get("path"))
 	maxBytes := parseInt(r.URL.Query().Get("max_bytes"), 1048576)
 	base64Mode := r.URL.Query().Get("base64") == "true"
@@ -89,6 +94,9 @@ func handleReadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleWriteFile(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	var body struct {
 		Path    string `json:"path"`
 		Content string `json:"content"`
@@ -105,6 +113,9 @@ func handleWriteFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUploadFiles(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	if err := r.ParseMultipartForm(64 << 20); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -126,6 +137,9 @@ func handleUploadFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDownloadFiles(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
 	paths := r.URL.Query()["path"]
 	if len(paths) == 0 {
 		http.Error(w, "download path is required", http.StatusBadRequest)
@@ -184,6 +198,9 @@ func handleDownloadFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCopyFiles(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	var body struct {
 		Sources     []string `json:"sources"`
 		Destination string   `json:"destination"`
@@ -201,6 +218,9 @@ func handleCopyFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleMoveFiles(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	var body struct {
 		Sources     []string `json:"sources"`
 		Destination string   `json:"destination"`
@@ -220,6 +240,9 @@ func handleMoveFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteFiles(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	var body struct {
 		Paths []string `json:"paths"`
 	}
@@ -236,6 +259,9 @@ func handleDeleteFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleMkdir(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
 	var body struct {
 		Path string `json:"path"`
 	}
@@ -383,4 +409,12 @@ func parseInt(value string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+func requireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method == method {
+		return true
+	}
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	return false
 }

@@ -23,9 +23,32 @@ func main() {
 	}
 
 	noVNCTarget := mustParseURL(defaultNoVNCTarget)
-	passthroughProxy := withAuth(token, newPassthroughProxy(noVNCTarget))
-	noVNCProxy := withAuth(token, newPrefixProxy(noVNCPathPrefix, noVNCTarget))
+	passthroughProxy := withAuth(token, newEntryProxy(noVNCTarget))
+	noVNCProxy := withAuth(token, newEntryPrefixProxy(noVNCPathPrefix, noVNCTarget))
+	mux := newServerMux(token, passthroughProxy, noVNCProxy)
+	egressServer := newEgressProxyServer()
 
+	server := &http.Server{
+		Addr:              defaultProxyAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		log.Printf("sandbox egress proxy listening on %s", defaultEgressProxyAddr)
+		if err := egressServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("sandbox egress proxy failed: %v", err)
+		}
+	}()
+
+	log.Printf("sandbox proxy listening on %s", defaultProxyAddr)
+	log.Printf("sandbox proxy novnc target=%s", noVNCTarget)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("sandbox proxy failed: %v", err)
+	}
+}
+
+func newServerMux(token string, passthroughProxy http.Handler, noVNCProxy http.Handler) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", withAuthFunc(token, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -34,10 +57,10 @@ func main() {
 		}
 		http.Redirect(w, r, noVNCPathPrefix+"/vnc.html?autoconnect=true&resize=remote&path=websockify", http.StatusFound)
 	}))
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/healthz", withAuthFunc(token, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
-	})
+	}))
 	mux.HandleFunc("/shell", withAuthFunc(token, handleShell))
 	mux.HandleFunc("/files", withAuthFunc(token, handleListFiles))
 	mux.HandleFunc("/files/info", withAuthFunc(token, handleFileInfo))
@@ -49,6 +72,7 @@ func main() {
 	mux.HandleFunc("/files/move", withAuthFunc(token, handleMoveFiles))
 	mux.HandleFunc("/files/delete", withAuthFunc(token, handleDeleteFiles))
 	mux.HandleFunc("/files/mkdir", withAuthFunc(token, handleMkdir))
+	mux.HandleFunc("/egress-proxy", withAuthFunc(token, handleEgressProxy))
 	mux.Handle(noVNCPathPrefix+"/", noVNCProxy)
 	mux.HandleFunc(noVNCPathPrefix, withAuthFunc(token, func(w http.ResponseWriter, r *http.Request) {
 		target := noVNCPathPrefix + "/"
@@ -58,18 +82,7 @@ func main() {
 		http.Redirect(w, r, target, http.StatusPermanentRedirect)
 	}))
 	mux.Handle(websockifyPath, passthroughProxy)
-
-	server := &http.Server{
-		Addr:              defaultProxyAddr,
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-
-	log.Printf("sandbox proxy listening on %s", defaultProxyAddr)
-	log.Printf("sandbox proxy novnc target=%s", noVNCTarget)
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("sandbox proxy failed: %v", err)
-	}
+	return mux
 }
 
 func withAuth(token string, next http.Handler) http.Handler {

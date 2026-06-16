@@ -15,6 +15,12 @@ func websocketAccept(key string) string {
 
 const maxWebSocketFrameSize = 1 << 20 // 1 MiB
 
+const (
+	websocketOpcodeClose = 8
+	websocketOpcodePing  = 9
+	websocketOpcodePong  = 10
+)
+
 func readWebSocketFrame(reader io.Reader) ([]byte, byte, error) {
 	header := make([]byte, 2)
 	if _, err := io.ReadFull(reader, header); err != nil {

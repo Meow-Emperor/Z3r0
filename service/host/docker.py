@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import docker
+from docker.api.client import APIClient
 from docker.utils import parse_repository_tag
 
 from model.host.hosts import ManagedHost
@@ -10,10 +11,25 @@ from schema.host.hosts import ManagedHostImageSchema, PullManagedHostImageResult
 
 
 def docker_client_for_host(host: ManagedHost, *, timeout: int = 60) -> docker.DockerClient:
-    return docker.DockerClient(
+    return DirectDockerClient(
         base_url=f"tcp://{host.ip_address}:{host.docker_management_port}",
         timeout=timeout,
     )
+
+
+class DirectDockerClient(docker.DockerClient):
+    def __init__(self, *args, **kwargs):
+        self.api = DirectDockerAPIClient(*args, **kwargs)
+
+
+class DirectDockerAPIClient(APIClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.trust_env = False
+
+    def _retrieve_server_version(self):
+        self.trust_env = False
+        return super()._retrieve_server_version()
 
 
 def inspect_image_on_host_sync(host: ManagedHost, image_name: str) -> dict:

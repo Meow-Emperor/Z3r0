@@ -2,6 +2,7 @@ const routeLoaders = {
   landing: () => import("../features/landing/LandingPage"),
   login: () => import("../features/auth/LoginPage"),
   protectedAdminShell: () => import("./layouts/ProtectedAdminShell"),
+  egressProxies: () => import("../features/egress-proxies/EgressProxiesPage"),
   hosts: () => import("../features/hosts/HostsPage"),
   playground: () => import("../features/playground/PlaygroundPage"),
   workProjects: () => import("../features/work-projects/WorkProjectsPage"),
@@ -14,6 +15,7 @@ const routeLoaders = {
 
 const adminRouteLoaders: Record<string, () => Promise<unknown>> = {
   "/playground": routeLoaders.playground,
+  "/egress-proxies": routeLoaders.egressProxies,
   "/hosts": routeLoaders.hosts,
   "/work-projects": routeLoaders.workProjects,
   "/work-projects/:projectId": routeLoaders.workProjectWorkspace,
@@ -28,6 +30,7 @@ const preloadedRoutes = new Set<string>();
 export const loadLandingPage = routeLoaders.landing;
 export const loadLoginPage = routeLoaders.login;
 export const loadProtectedAdminShell = routeLoaders.protectedAdminShell;
+export const loadEgressProxiesPage = routeLoaders.egressProxies;
 export const loadHostsPage = routeLoaders.hosts;
 export const loadPlaygroundPage = routeLoaders.playground;
 export const loadWorkProjectsPage = routeLoaders.workProjects;

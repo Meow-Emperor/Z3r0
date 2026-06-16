@@ -5,6 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from config import get_config
 from logger import get_logger
+from model.egress_proxy.proxies import EgressProxy
 from model.host.hosts import ManagedHost
 from model.sandbox.async_jobs import SandboxAsyncJob
 from model.agent.notifications import AgentNotification
@@ -31,7 +32,7 @@ logger = get_logger(__name__)
 
 # registered so SQLModel.metadata picks every table up at create_all time
 _registered_models = [
-    SystemUser, ManagedHost, SandboxImage, SandboxContainer, WorkProject, WorkProjectOwner, WorkProjectSandboxContainer,
+    SystemUser, ManagedHost, EgressProxy, SandboxImage, SandboxContainer, WorkProject, WorkProjectOwner, WorkProjectSandboxContainer,
     WorkProjectAsset, WorkProjectFinding,
     WorkProjectGraphEdge, WorkProjectAttackPath, WorkProjectAttackPathStep,
     AgentSessionMeta, AgentMessageMeta, AgentContextCompaction,

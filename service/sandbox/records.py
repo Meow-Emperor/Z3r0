@@ -2,6 +2,7 @@ from sqlalchemy import String, cast, or_
 from sqlmodel import select
 
 from database import get_async_session
+from model.egress_proxy.proxies import EgressProxy
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.host.hosts import ManagedHost
@@ -9,15 +10,17 @@ from model.system_user.users import SystemUser
 from schema.sandbox.containers import SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import Page, paginate_statement
+from service.egress_proxy.proxies import egress_proxy_label
 from service.sandbox.types import SandboxContainerRecord
 
 
 def _base_container_record_statement():
     return (
-        select(SandboxContainer, SandboxImage.image_name, SystemUser.username, ManagedHost.ip_address)
+        select(SandboxContainer, SandboxImage.image_name, SystemUser.username, ManagedHost.ip_address, EgressProxy)
         .join(SandboxImage, SandboxContainer.image_id == SandboxImage.id)
         .join(SystemUser, SandboxContainer.owner_id == SystemUser.id)
         .join(ManagedHost, SandboxContainer.host_id == ManagedHost.id)
+        .outerjoin(EgressProxy, SandboxContainer.egress_proxy_id == EgressProxy.id)
     )
 
 
@@ -33,6 +36,8 @@ def _apply_keyword_filter(statement, keyword: str):
             SandboxImage.image_name.ilike(pattern),
             ManagedHost.ip_address.ilike(pattern),
             SystemUser.username.ilike(pattern),
+            EgressProxy.proxy_host.ilike(pattern),
+            EgressProxy.proxy_account.ilike(pattern),
             cast(SandboxContainer.status, String).ilike(pattern),
             cast(SandboxContainer.port_mappings, String).ilike(pattern),
         )
@@ -40,7 +45,13 @@ def _apply_keyword_filter(statement, keyword: str):
 
 
 def _to_record(row) -> SandboxContainerRecord:
-    return SandboxContainerRecord(container=row[0], image_name=row[1], owner_username=row[2], host_ip_address=row[3])
+    return SandboxContainerRecord(
+        container=row[0],
+        image_name=row[1],
+        owner_username=row[2],
+        host_ip_address=row[3],
+        egress_proxy_label=egress_proxy_label(row[4]),
+    )
 
 
 async def _paginate_container_records(statement, page: int, size: int) -> Page[SandboxContainerRecord]:

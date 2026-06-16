@@ -39,6 +39,8 @@ class SandboxContainerSchema(BaseModel):
     container_hash: str
     image_id: int
     image_name: str
+    egress_proxy_id: int | None
+    egress_proxy_label: str
     proxy_host_port: int
     port_mappings: list[SandboxContainerPortMapping]
     novnc_support: bool
@@ -53,6 +55,7 @@ class SandboxContainerSchema(BaseModel):
 class CreateSandboxContainerRequest(BaseModel):
     host_id: int = Field(gt=0)
     image_id: int = Field(gt=0)
+    egress_proxy_id: int | None = Field(default=None, gt=0)
     owner_id: int | None = Field(default=None, description="Assign container owner user ID. Admin only; defaults to the creator.")
     port_mappings: list[SandboxContainerPortMapping] = Field(default_factory=list, max_length=32)
     novnc_support: bool = False
@@ -77,6 +80,10 @@ class CreateSandboxContainerRequest(BaseModel):
 # delete sandbox container response schema (presence implies success)
 class DeleteSandboxContainerResponse(BaseModel):
     id: int
+
+
+class UpdateSandboxContainerEgressProxyRequest(BaseModel):
+    egress_proxy_id: int | None = Field(default=None, gt=0)
 
 
 # query sandbox containers response schema

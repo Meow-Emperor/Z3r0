@@ -13,6 +13,7 @@ import { showApiError } from "../../shared/api/feedback";
 import type { ContainerFileInfo } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import { formatBytes } from "../../shared/lib/number";
+import { UI_TEXT } from "../../shared/lib/uiText";
 
 const FileViewer = lazy(() => import("./FileViewer").then((module) => ({ default: module.FileViewer })));
 
@@ -271,7 +272,7 @@ export function ContainerFileManager({ containerId, containerName: _containerNam
         <Tooltip content={canPaste ? `Paste ${clipboard?.paths.length ?? 0} item(s)` : "Nothing to paste"}>
           <Button icon={<ClipboardPaste size={15} />} theme="borderless" disabled={!canPaste || toolbarDisabled} onClick={() => void handlePaste()} aria-label="Paste" />
         </Tooltip>
-        <Popconfirm title="Delete selected items" content={`Delete ${selectedPaths.size} selected item(s)?`} okType="danger" onConfirm={() => void handleDelete()}>
+        <Popconfirm title="Delete selected items" content={`Delete ${selectedPaths.size} selected item(s)?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void handleDelete()}>
           <Button icon={<Trash2 size={15} />} theme="borderless" type="danger" disabled={!hasSelection || toolbarDisabled} aria-label="Delete" />
         </Popconfirm>
         <span className="file-manager-separator" />
