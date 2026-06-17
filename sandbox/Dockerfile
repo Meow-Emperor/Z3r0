@@ -174,6 +174,7 @@ RUN set -eux; \
       python3 \
       ripgrep \
       supervisor \
+      tor \
       util-linux \
       unzip \
       websockify \
@@ -232,6 +233,7 @@ RUN set -eux; \
     python3 --version; \
     sqlmap --version; \
     supervisord --version; \
+    tor --version; \
     unzip -v >/dev/null; \
     rg --version; \
     whois --version; \

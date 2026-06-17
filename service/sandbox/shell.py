@@ -9,7 +9,7 @@ import websockets
 from database import get_async_session
 from model.sandbox.containers import SandboxContainer
 from schema.sandbox.containers import SandboxContainerStatus
-from service.sandbox.proxy import resolve_sandbox_proxy_target, sandbox_proxy_token_headers
+from service.sandbox.control_proxy import resolve_sandbox_control_proxy_target, sandbox_control_proxy_token_headers
 
 
 _DEFAULT_SHELL_ROWS = 24
@@ -44,13 +44,13 @@ async def open_container_shell(
     rows: int = _DEFAULT_SHELL_ROWS,
     cols: int = _DEFAULT_SHELL_COLS,
 ) -> ContainerShellSession:
-    target = await resolve_sandbox_proxy_target(id, require_running=True)
+    target = await resolve_sandbox_control_proxy_target(id, require_running=True)
     if target is None:
         raise ValueError("sandbox container not found")
     url = f"{target.ws_base_url}/shell?token={target.token}"
     websocket = await websockets.connect(
         url,
-        additional_headers=sandbox_proxy_token_headers(target),
+        additional_headers=sandbox_control_proxy_token_headers(target),
         proxy=None,
         open_timeout=10,
         close_timeout=5,

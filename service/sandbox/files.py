@@ -7,7 +7,7 @@ from typing import BinaryIO
 import httpx
 
 from schema.sandbox.containers import ContainerFileInfo, ContainerFileUploadItem, SandboxContainerStatus
-from service.sandbox.proxy import SandboxProxyTarget, resolve_sandbox_proxy_target, sandbox_proxy_token_headers
+from service.sandbox.control_proxy import SandboxControlProxyTarget, resolve_sandbox_control_proxy_target, sandbox_control_proxy_token_headers
 
 
 _http_client: httpx.AsyncClient | None = None
@@ -41,7 +41,7 @@ async def close_file_http_client() -> None:
 
 
 async def resolve_file_container_status(id: int) -> SandboxContainerStatus | None:
-    target = await resolve_sandbox_proxy_target(id)
+    target = await resolve_sandbox_control_proxy_target(id)
     if target is None:
         return None
     return target.status
@@ -103,11 +103,11 @@ async def download_container_paths(container_id: int, paths: list[str]) -> Conta
         "GET",
         f"{target.base_url}/files/download",
         params=params,
-        headers=sandbox_proxy_token_headers(target),
+        headers=sandbox_control_proxy_token_headers(target),
     )
     response = await stream.__aenter__()
     try:
-        await _raise_for_proxy_stream_response(response)
+        await _raise_for_control_proxy_stream_response(response)
     except Exception:
         await stream.__aexit__(None, None, None)
         raise
@@ -164,36 +164,36 @@ async def _request_json(
         json=json,
         data=data,
         files=files,
-        headers=sandbox_proxy_token_headers(target),
+        headers=sandbox_control_proxy_token_headers(target),
     )
-    _raise_for_proxy_response(response)
+    _raise_for_control_proxy_response(response)
     try:
         payload = response.json()
     except json_module.JSONDecodeError as exc:
-        raise RuntimeError("invalid sandbox proxy response") from exc
+        raise RuntimeError("invalid sandbox control proxy response") from exc
     return payload if isinstance(payload, dict) else {}
 
 
-async def _resolve_running_target(container_id: int) -> SandboxProxyTarget | None:
-    return await resolve_sandbox_proxy_target(container_id, require_running=True)
+async def _resolve_running_target(container_id: int) -> SandboxControlProxyTarget | None:
+    return await resolve_sandbox_control_proxy_target(container_id, require_running=True)
 
 
-def _raise_for_proxy_response(response: httpx.Response) -> None:
+def _raise_for_control_proxy_response(response: httpx.Response) -> None:
     if response.status_code == 404:
         raise FileNotFoundError("path not found")
     if response.status_code == 409:
         raise FileExistsError(response.text)
     if response.status_code >= 400:
-        raise RuntimeError(response.text or "sandbox proxy request failed")
+        raise RuntimeError(response.text or "sandbox control proxy request failed")
 
 
-async def _raise_for_proxy_stream_response(response: httpx.Response) -> None:
+async def _raise_for_control_proxy_stream_response(response: httpx.Response) -> None:
     if response.status_code == 404:
         raise FileNotFoundError("path not found")
     if response.status_code < 400:
         return
     content = await response.aread()
-    message = content.decode(errors="replace") if content else "sandbox proxy request failed"
+    message = content.decode(errors="replace") if content else "sandbox control proxy request failed"
     if response.status_code == 409:
         raise FileExistsError(message)
     raise RuntimeError(message)

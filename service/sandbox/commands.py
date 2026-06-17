@@ -15,7 +15,7 @@ from service.sandbox.docker_ops import (
     inspect_container_state_sync,
 )
 from service.sandbox import close_docker_response_sync as _close_response_sync
-from service.sandbox.proxy import resolve_container_egress_proxy_runtime_environment
+from service.sandbox.control_proxy import resolve_container_egress_environment
 from service.sandbox.status import save_sandbox_container_status
 from service.sandbox.types import SandboxContainerCommandResult
 
@@ -363,7 +363,7 @@ async def execute_sandbox_container_command(
         if host is None:
             raise ValueError("managed host not found")
 
-    environment = await resolve_container_egress_proxy_runtime_environment(id)
+    environment = await resolve_container_egress_environment(id)
 
     try:
         state = await asyncio.to_thread(inspect_container_state_sync, host, container_hash)

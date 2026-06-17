@@ -3,7 +3,7 @@ import { Eye, EyeOff, Network, Pencil, Server, Trash2, User, Wifi } from "lucide
 import { useEffect, useMemo, useState } from "react";
 import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressProxy, updateEgressProxy } from "../../shared/api/egressProxies";
 import { showApiError } from "../../shared/api/feedback";
-import { EGRESS_PROXY_TYPE } from "../../shared/api/generated/constants";
+import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPES } from "../../shared/api/generated/constants";
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
@@ -54,14 +54,10 @@ export function EgressProxiesPage() {
   }, [proxies]);
 
   const summary = useMemo(
-    () => proxies.reduce(
-      (acc, proxy) => ({
-        http: acc.http + (proxy.proxy_type === EGRESS_PROXY_TYPE.HTTP ? 1 : 0),
-        https: acc.https + (proxy.proxy_type === EGRESS_PROXY_TYPE.HTTPS ? 1 : 0),
-        socks5: acc.socks5 + (proxy.proxy_type === EGRESS_PROXY_TYPE.SOCKS5 ? 1 : 0),
-      }),
-      { http: 0, https: 0, socks5: 0 },
-    ),
+    () => proxies.reduce((acc, proxy) => ({
+      ...acc,
+      [proxy.proxy_type]: (acc[proxy.proxy_type] ?? 0) + 1,
+    }), Object.fromEntries(EGRESS_PROXY_TYPES.map((type) => [type, 0])) as Record<EgressProxy["proxy_type"], number>),
     [proxies],
   );
 
@@ -161,9 +157,7 @@ export function EgressProxiesPage() {
         loading={loading}
         metrics={[
           { label: "Total", value: total },
-          { label: "HTTP", value: summary.http },
-          { label: "HTTPS", value: summary.https },
-          { label: "SOCKS5", value: summary.socks5 },
+          ...EGRESS_PROXY_TYPES.map((type) => ({ label: type.toUpperCase(), value: summary[type] ?? 0 })),
         ]}
         empty={proxies.length === 0}
         emptyIcon={<Network size={42} />}

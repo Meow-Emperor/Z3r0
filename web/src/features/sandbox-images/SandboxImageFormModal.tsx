@@ -1,5 +1,5 @@
-import { Input, InputNumber } from "@douyinfe/semi-ui";
-import { Network, Package } from "lucide-react";
+import { Input, InputNumber, Select } from "@douyinfe/semi-ui";
+import { Network, Package, Route } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateSandboxImageRequest } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
@@ -11,7 +11,11 @@ type SandboxImageFormModalProps = {
   onSubmit: (payload: CreateSandboxImageRequest) => Promise<void>;
 };
 
-const EMPTY: CreateSandboxImageRequest = { image_name: "security-sandbox:latest", default_exposed_port: 8000 };
+const EMPTY: CreateSandboxImageRequest = {
+  image_name: "security-sandbox:latest",
+  control_proxy_port: 8000,
+  supports_tor: false,
+};
 
 export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: SandboxImageFormModalProps) {
   const [values, setValues] = useState<CreateSandboxImageRequest>(EMPTY);
@@ -26,9 +30,13 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
       title="Create Sandbox Image"
       saving={saving}
       submitLabel="Create"
-      submitDisabled={!values.image_name.trim() || values.default_exposed_port < 1 || values.default_exposed_port > 65535}
+      submitDisabled={!values.image_name.trim() || values.control_proxy_port < 1 || values.control_proxy_port > 65535}
       onCancel={onCancel}
-      onSubmit={() => onSubmit({ image_name: values.image_name.trim(), default_exposed_port: values.default_exposed_port })}
+      onSubmit={() => onSubmit({
+        image_name: values.image_name.trim(),
+        control_proxy_port: values.control_proxy_port,
+        supports_tor: values.supports_tor,
+      })}
     >
       <label>
         <span>Image Name</span>
@@ -38,14 +46,30 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
         />
       </label>
       <label>
-        <span>Default Exposed Port</span>
+        <span>Control Port</span>
         <InputNumber
           prefix={<Network size={16} />}
-          value={values.default_exposed_port}
+          value={values.control_proxy_port}
           min={1}
           max={65535}
-          onChange={(default_exposed_port) => {
-            if (typeof default_exposed_port === "number") setValues((current) => ({ ...current, default_exposed_port }));
+          onChange={(control_proxy_port) => {
+            if (typeof control_proxy_port === "number") setValues((current) => ({ ...current, control_proxy_port }));
+          }}
+        />
+      </label>
+      <label>
+        <span>Tor</span>
+        <Select
+          prefix={<Route size={16} />}
+          value={values.supports_tor ? "supported" : "unsupported"}
+          optionList={[
+            { label: "Unsupported", value: "unsupported" },
+            { label: "Supported", value: "supported" },
+          ]}
+          onChange={(value) => {
+            if (value === "supported" || value === "unsupported") {
+              setValues((current) => ({ ...current, supports_tor: value === "supported" }));
+            }
           }}
         />
       </label>

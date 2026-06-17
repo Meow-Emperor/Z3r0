@@ -1,13 +1,14 @@
 import { Button, Modal, Popconfirm, Select, Tag, Tooltip } from "@douyinfe/semi-ui";
-import { Box, Boxes, Fingerprint, FolderOpen, Monitor, Network, Play, Square, SquareTerminal, Trash2, User } from "lucide-react";
+import { Box, Boxes, Fingerprint, FolderOpen, Monitor, Network, Play, Route, Square, SquareTerminal, Trash2, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";
-import { canOpenContainerNoVNC, createSandboxContainer, deleteSandboxContainer, querySandboxContainers, startSandboxContainer, stopSandboxContainer, updateSandboxContainerEgressProxy } from "../../shared/api/sandboxContainers";
+import { canOpenContainerNoVNC, createSandboxContainer, deleteSandboxContainer, querySandboxContainers, startSandboxContainer, stopSandboxContainer, updateSandboxContainerEgress } from "../../shared/api/sandboxContainers";
 import { queryManagedHosts } from "../../shared/api/hosts";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { querySystemUsers } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
-import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxImage, SystemUser } from "../../shared/api/types";
+import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
+import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
@@ -36,7 +37,7 @@ export function SandboxContainersPage() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [egressProxies, setEgressProxies] = useState<EgressProxy[]>([]);
   const [egressProxiesLoading, setEgressProxiesLoading] = useState(false);
-  const [egressProxyModalContainer, setEgressProxyModalContainer] = useState<SandboxContainer | null>(null);
+  const [egressModalContainer, setEgressModalContainer] = useState<SandboxContainer | null>(null);
   const mountedRef = useRef(true);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
 
@@ -143,9 +144,9 @@ export function SandboxContainersPage() {
   const summary = useMemo(
     () => containers.reduce(
       (acc, container) => ({
-        running: acc.running + (container.status === "running" ? 1 : 0),
-        created: acc.created + (container.status === "created" ? 1 : 0),
-        stopped: acc.stopped + (container.status === "stopped" ? 1 : 0),
+        running: acc.running + (container.status === SANDBOX_CONTAINER_STATUS.RUNNING ? 1 : 0),
+        created: acc.created + (container.status === SANDBOX_CONTAINER_STATUS.CREATED ? 1 : 0),
+        stopped: acc.stopped + (container.status === SANDBOX_CONTAINER_STATUS.STOPPED ? 1 : 0),
       }),
       { running: 0, created: 0, stopped: 0 },
     ),
@@ -187,7 +188,13 @@ export function SandboxContainersPage() {
     },
     {
       key: "ports", header: "Ports", width: "minmax(0, 0.56fr)",
-      render: (container) => renderPortMappings(container),
+      render: (container) => renderContainerPorts(container),
+    },
+    {
+      key: "egress", header: "Egress", width: "minmax(0, 0.48fr)",
+      render: (container) => (
+        <Tag color={egressTagColor(container.egress_mode)}>{container.egress_label || container.egress_mode.toUpperCase()}</Tag>
+      ),
     },
     { key: "updated", header: "Updated", width: "200px", render: (c) => formatDateTime(c.updated_at) },
     {
@@ -195,27 +202,28 @@ export function SandboxContainersPage() {
       render: (container) => (
         <div className="row-actions">
           <Button icon={<FolderOpen size={15} />} theme="borderless"
-            disabled={container.status !== "running" || container.proxy_host_port <= 0}
+            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
             aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
           />
           <Button icon={<SquareTerminal size={15} />} theme="borderless"
-            disabled={container.status !== "running" || container.proxy_host_port <= 0}
+            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
             aria-label={`Connect shell for ${container.container_name}`} onClick={() => openShell(container)}
           />
           <Button icon={<Monitor size={15} />} theme="borderless"
-            disabled={container.status !== "running" || !canOpenContainerNoVNC(container)}
+            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || !canOpenContainerNoVNC(container)}
             aria-label={`Connect screen for ${container.container_name}`} onClick={() => openNoVNC(container)}
           />
           <Button icon={<Network size={15} />} theme="borderless"
-            aria-label={`Set egress proxy for ${container.container_name}`} onClick={() => setEgressProxyModalContainer(container)}
+            disabled={container.control_proxy_host_port <= 0}
+            aria-label={`Set egress for ${container.container_name}`} onClick={() => setEgressModalContainer(container)}
           />
           <Button icon={<Play size={15} />} theme="borderless" type="primary"
-            disabled={container.status !== "created" && container.status !== "stopped"}
+            disabled={container.status !== SANDBOX_CONTAINER_STATUS.CREATED && container.status !== SANDBOX_CONTAINER_STATUS.STOPPED}
             loading={startingId === container.id}
             aria-label={`Start ${container.container_name}`} onClick={() => void startContainer(container)}
           />
           <Button icon={<Square size={15} />} theme="borderless"
-            disabled={container.status !== "running"} loading={stoppingId === container.id}
+            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={stoppingId === container.id}
             aria-label={`Stop ${container.container_name}`} onClick={() => void stopContainer(container)}
           />
           <Popconfirm title="Delete container" content={`Delete ${container.container_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteContainer(container)}>
@@ -278,13 +286,13 @@ export function SandboxContainersPage() {
         onCancel={() => setModalOpen(false)}
         onSubmit={handleCreate}
       />
-      <ContainerEgressProxyModal
-        container={egressProxyModalContainer}
+      <ContainerEgressModal
+        container={egressModalContainer}
         egressProxies={egressProxies}
         loading={egressProxiesLoading}
-        onClose={() => setEgressProxyModalContainer(null)}
+        onClose={() => setEgressModalContainer(null)}
         onSaved={async () => {
-          setEgressProxyModalContainer(null);
+          setEgressModalContainer(null);
           await loadContainers();
         }}
       />
@@ -292,7 +300,7 @@ export function SandboxContainersPage() {
   );
 }
 
-function ContainerEgressProxyModal({
+function ContainerEgressModal({
   container,
   egressProxies,
   loading,
@@ -305,10 +313,12 @@ function ContainerEgressProxyModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [selectedProxyId, setSelectedProxyId] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    setEgressMode(container?.egress_mode ?? SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
     setSelectedProxyId(container?.egress_proxy_id ?? undefined);
   }, [container]);
 
@@ -316,7 +326,10 @@ function ContainerEgressProxyModal({
     if (!container) return;
     setSaving(true);
     try {
-      await updateSandboxContainerEgressProxy(container.id, { egress_proxy_id: selectedProxyId });
+      await updateSandboxContainerEgress(container.id, {
+        egress_mode: egressMode,
+        egress_proxy_id: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? selectedProxyId : undefined,
+      });
       await onSaved();
     } catch (error) {
       showApiError(error);
@@ -327,30 +340,51 @@ function ContainerEgressProxyModal({
 
   return (
     <Modal
-      title={container ? `Egress Proxy: ${container.container_name}` : "Egress Proxy"}
+      title={container ? `Egress: ${container.container_name}` : "Egress"}
       visible={Boolean(container)}
       width={460}
       okText={UI_TEXT.save}
       cancelText={UI_TEXT.cancel}
       confirmLoading={saving}
+      okButtonProps={{
+        disabled: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !selectedProxyId,
+      }}
       onOk={() => void save()}
       onCancel={onClose}
     >
       <div className="resource-form">
         <label>
-          <span>Egress Proxy</span>
+          <span>Egress Mode</span>
           <Select
-            prefix={<Network size={16} />}
-            value={selectedProxyId}
-            loading={loading}
-            placeholder="Direct connection"
-            emptyContent="No egress proxies"
-            optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
-            onClear={() => setSelectedProxyId(undefined)}
-            onChange={(value) => setSelectedProxyId(typeof value === "number" ? value : undefined)}
-            showClear
+            prefix={<Route size={16} />}
+            value={egressMode}
+            optionList={[
+              { label: "Direct", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
+              { label: "Managed Proxy", value: SANDBOX_CONTAINER_EGRESS_MODE.PROXY },
+              { label: "Tor", value: SANDBOX_CONTAINER_EGRESS_MODE.TOR, disabled: !container?.supports_tor },
+            ]}
+            onChange={(value) => {
+              if (typeof value !== "string") return;
+              const next = value as SandboxContainerEgressMode;
+              setEgressMode(next);
+              if (next !== SANDBOX_CONTAINER_EGRESS_MODE.PROXY) setSelectedProxyId(undefined);
+            }}
           />
         </label>
+        {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
+          <label>
+            <span>Managed Proxy</span>
+            <Select
+              prefix={<Network size={16} />}
+              value={selectedProxyId}
+              loading={loading}
+              placeholder="Select an egress proxy"
+              emptyContent="No egress proxies"
+              optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
+              onChange={(value) => setSelectedProxyId(typeof value === "number" ? value : undefined)}
+            />
+          </label>
+        ) : null}
       </div>
     </Modal>
   );
@@ -361,12 +395,12 @@ function renderContainerHash(containerHash: string) {
   return <Tooltip content={containerHash}>{containerHash.slice(0, 12)}</Tooltip>;
 }
 
-function renderPortMappings(container: SandboxContainer) {
-  if (container.port_mappings.length === 0) {
-    return <span className="resource-description">No exposed ports</span>;
-  }
+function renderContainerPorts(container: SandboxContainer) {
   return (
     <div className="port-mapping-list">
+      <Tag color="green">
+        control {container.control_proxy_host_port}:{container.control_proxy_port}/tcp
+      </Tag>
       {container.port_mappings.map((mapping) => (
         <Tag key={`${mapping.host_port}-${mapping.container_port}-${mapping.protocol}`} color="blue">
           {mapping.host_port}:{mapping.container_port}/{mapping.protocol}
@@ -378,4 +412,10 @@ function renderPortMappings(container: SandboxContainer) {
 
 function egressProxyOptionLabel(proxy: EgressProxy) {
   return `${proxy.proxy_type}://${proxy.proxy_host}:${proxy.proxy_port}`;
+}
+
+function egressTagColor(mode: SandboxContainerEgressMode) {
+  if (mode === SANDBOX_CONTAINER_EGRESS_MODE.TOR) return "violet";
+  if (mode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY) return "blue";
+  return "grey";
 }

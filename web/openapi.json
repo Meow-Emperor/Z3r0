@@ -1939,6 +1939,10 @@
       },
       "CreateSandboxContainerRequest": {
         "properties": {
+          "egress_mode": {
+            "$ref": "#/components/schemas/SandboxContainerEgressMode",
+            "default": "direct"
+          },
           "egress_proxy_id": {
             "anyOf": [
               {
@@ -1960,11 +1964,6 @@
             "exclusiveMinimum": 0.0,
             "title": "Image Id",
             "type": "integer"
-          },
-          "novnc_support": {
-            "default": false,
-            "title": "Novnc Support",
-            "type": "boolean"
           },
           "owner_id": {
             "anyOf": [
@@ -1996,11 +1995,11 @@
       },
       "CreateSandboxImageRequest": {
         "properties": {
-          "default_exposed_port": {
+          "control_proxy_port": {
             "default": 8000,
             "maximum": 65535.0,
             "minimum": 1.0,
-            "title": "Default Exposed Port",
+            "title": "Control Port",
             "type": "integer"
           },
           "image_name": {
@@ -2008,6 +2007,11 @@
             "minLength": 1,
             "title": "Image Name",
             "type": "string"
+          },
+          "supports_tor": {
+            "default": false,
+            "title": "Supports Tor",
+            "type": "boolean"
           }
         },
         "required": [
@@ -3027,6 +3031,15 @@
         "title": "SandboxCommandResultMetadata",
         "type": "object"
       },
+      "SandboxContainerEgressMode": {
+        "enum": [
+          "direct",
+          "proxy",
+          "tor"
+        ],
+        "title": "SandboxContainerEgressMode",
+        "type": "string"
+      },
       "SandboxContainerPortMapping": {
         "properties": {
           "container_port": {
@@ -3068,10 +3081,25 @@
             "title": "Container Name",
             "type": "string"
           },
+          "control_proxy_host_port": {
+            "title": "Control Host Port",
+            "type": "integer"
+          },
+          "control_proxy_port": {
+            "title": "Control Port",
+            "type": "integer"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "egress_label": {
+            "title": "Egress Label",
+            "type": "string"
+          },
+          "egress_mode": {
+            "$ref": "#/components/schemas/SandboxContainerEgressMode"
           },
           "egress_proxy_id": {
             "anyOf": [
@@ -3083,10 +3111,6 @@
               }
             ],
             "title": "Egress Proxy Id"
-          },
-          "egress_proxy_label": {
-            "title": "Egress Proxy Label",
-            "type": "string"
           },
           "host_id": {
             "title": "Host Id",
@@ -3108,10 +3132,6 @@
             "title": "Image Name",
             "type": "string"
           },
-          "novnc_support": {
-            "title": "Novnc Support",
-            "type": "boolean"
-          },
           "owner_id": {
             "title": "Owner Id",
             "type": "integer"
@@ -3127,12 +3147,12 @@
             "title": "Port Mappings",
             "type": "array"
           },
-          "proxy_host_port": {
-            "title": "Proxy Host Port",
-            "type": "integer"
-          },
           "status": {
             "$ref": "#/components/schemas/SandboxContainerStatus"
+          },
+          "supports_tor": {
+            "title": "Supports Tor",
+            "type": "boolean"
           },
           "updated_at": {
             "format": "date-time",
@@ -3148,11 +3168,13 @@
           "container_hash",
           "image_id",
           "image_name",
+          "supports_tor",
+          "control_proxy_port",
+          "egress_mode",
           "egress_proxy_id",
-          "egress_proxy_label",
-          "proxy_host_port",
+          "egress_label",
+          "control_proxy_host_port",
           "port_mappings",
-          "novnc_support",
           "status",
           "owner_id",
           "owner_username",
@@ -3174,14 +3196,14 @@
       },
       "SandboxImageSchema": {
         "properties": {
+          "control_proxy_port": {
+            "title": "Control Port",
+            "type": "integer"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
-          },
-          "default_exposed_port": {
-            "title": "Default Exposed Port",
-            "type": "integer"
           },
           "id": {
             "title": "Id",
@@ -3190,6 +3212,10 @@
           "image_name": {
             "title": "Image Name",
             "type": "string"
+          },
+          "supports_tor": {
+            "title": "Supports Tor",
+            "type": "boolean"
           },
           "updated_at": {
             "format": "date-time",
@@ -3200,7 +3226,8 @@
         "required": [
           "id",
           "image_name",
-          "default_exposed_port",
+          "control_proxy_port",
+          "supports_tor",
           "created_at",
           "updated_at"
         ],
@@ -4087,8 +4114,12 @@
         "title": "UpdateManagedHostRequest",
         "type": "object"
       },
-      "UpdateSandboxContainerEgressProxyRequest": {
+      "UpdateSandboxContainerEgressRequest": {
         "properties": {
+          "egress_mode": {
+            "$ref": "#/components/schemas/SandboxContainerEgressMode",
+            "default": "direct"
+          },
           "egress_proxy_id": {
             "anyOf": [
               {
@@ -4102,7 +4133,7 @@
             "title": "Egress Proxy Id"
           }
         },
-        "title": "UpdateSandboxContainerEgressProxyRequest",
+        "title": "UpdateSandboxContainerEgressRequest",
         "type": "object"
       },
       "UpdateSystemUserRequest": {
@@ -6962,9 +6993,9 @@
         ]
       }
     },
-    "/api/sandbox-containers/{id}/egress-proxy": {
+    "/api/sandbox-containers/{id}/egress": {
       "patch": {
-        "operationId": "update_sandbox_container_egress_proxy_handler_api_sandbox_containers__id__egress_proxy_patch",
+        "operationId": "update_sandbox_container_egress_handler_api_sandbox_containers__id__egress_patch",
         "parameters": [
           {
             "in": "path",
@@ -6980,7 +7011,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateSandboxContainerEgressProxyRequest"
+                "$ref": "#/components/schemas/UpdateSandboxContainerEgressRequest"
               }
             }
           },
@@ -7053,7 +7084,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Update Sandbox Container Egress Proxy Handler",
+        "summary": "Update Sandbox Container Egress Handler",
         "tags": [
           "sandbox-containers"
         ]

@@ -17,7 +17,7 @@ from service.egress_proxy.proxies import (
     test_egress_proxy,
     update_egress_proxy,
 )
-from service.sandbox.proxy import apply_egress_proxy_to_running_containers
+from service.sandbox.control_proxy import apply_managed_proxy_egress_to_running_containers
 from logger import get_logger
 
 
@@ -48,7 +48,7 @@ async def update_egress_proxy_handler(id: int, request: UpdateEgressProxyRequest
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="egress proxy not found")
     if result.proxy is None or result.message:
         return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
-    failed_container_ids = await apply_egress_proxy_to_running_containers(id)
+    failed_container_ids = await apply_managed_proxy_egress_to_running_containers(id)
     if failed_container_ids:
         logger.warning(
             "egress proxy updated but failed to apply to running containers: proxy=%s containers=%s",

@@ -7,16 +7,24 @@ from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.host.hosts import ManagedHost
 from model.system_user.users import SystemUser
-from schema.sandbox.containers import SandboxContainerStatus
+from schema.sandbox.containers import SandboxContainerSchema, SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import Page, paginate_statement
-from service.egress_proxy.proxies import egress_proxy_label
+from service.sandbox.egress import sandbox_egress_label
 from service.sandbox.types import SandboxContainerRecord
 
 
 def _base_container_record_statement():
     return (
-        select(SandboxContainer, SandboxImage.image_name, SystemUser.username, ManagedHost.ip_address, EgressProxy)
+        select(
+            SandboxContainer,
+            SandboxImage.image_name,
+            SandboxImage.supports_tor,
+            SandboxImage.control_proxy_port,
+            SystemUser.username,
+            ManagedHost.ip_address,
+            EgressProxy,
+        )
         .join(SandboxImage, SandboxContainer.image_id == SandboxImage.id)
         .join(SystemUser, SandboxContainer.owner_id == SystemUser.id)
         .join(ManagedHost, SandboxContainer.host_id == ManagedHost.id)
@@ -40,6 +48,8 @@ def _apply_keyword_filter(statement, keyword: str):
             EgressProxy.proxy_account.ilike(pattern),
             cast(SandboxContainer.status, String).ilike(pattern),
             cast(SandboxContainer.port_mappings, String).ilike(pattern),
+            cast(SandboxContainer.control_proxy_host_port, String).ilike(pattern),
+            cast(SandboxImage.control_proxy_port, String).ilike(pattern),
         )
     )
 
@@ -48,9 +58,11 @@ def _to_record(row) -> SandboxContainerRecord:
     return SandboxContainerRecord(
         container=row[0],
         image_name=row[1],
-        owner_username=row[2],
-        host_ip_address=row[3],
-        egress_proxy_label=egress_proxy_label(row[4]),
+        supports_tor=row[2],
+        control_proxy_port=row[3],
+        owner_username=row[4],
+        host_ip_address=row[5],
+        egress_label=sandbox_egress_label(row[0], row[6]),
     )
 
 
@@ -70,6 +82,31 @@ async def load_sandbox_container_record(id: int) -> SandboxContainerRecord | Non
         result = await session.exec(statement)
         row = result.first()
         return _to_record(row) if row is not None else None
+
+
+def sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContainerSchema:
+    container = record.container
+    return SandboxContainerSchema(
+        id=container.id or 0,
+        host_id=container.host_id,
+        host_ip_address=record.host_ip_address,
+        container_name=container.container_name,
+        container_hash=container.container_hash,
+        image_id=container.image_id,
+        image_name=record.image_name,
+        supports_tor=record.supports_tor,
+        control_proxy_port=record.control_proxy_port,
+        egress_mode=container.egress_mode,
+        egress_proxy_id=container.egress_proxy_id,
+        egress_label=record.egress_label,
+        control_proxy_host_port=container.control_proxy_host_port,
+        port_mappings=container.port_mappings,
+        status=container.status,
+        owner_id=container.owner_id,
+        owner_username=record.owner_username,
+        created_at=container.created_at,
+        updated_at=container.updated_at,
+    )
 
 
 async def query_sandbox_containers(

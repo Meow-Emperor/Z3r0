@@ -102,6 +102,7 @@ export type SandboxContainer = QuerySandboxContainersData["items"][number];
 export type QueryAvailableSandboxContainersParams = QueryParameters<paths["/api/sandbox-containers/available"]["get"]>;
 export type QueryAvailableSandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers/available"]["get"]>;
 export type SandboxContainerStatus = components["schemas"]["SandboxContainerStatus"];
+export type SandboxContainerEgressMode = components["schemas"]["SandboxContainerEgressMode"];
 export type SandboxContainerPortMapping = components["schemas"]["SandboxContainerPortMapping"];
 
 export type CreateSandboxContainerRequest = JsonRequestBody<paths["/api/sandbox-containers"]["post"]>;
@@ -113,9 +114,9 @@ export type StartSandboxContainerPathParams = PathParameters<paths["/api/sandbox
 export type StartSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/start"]["post"]>;
 export type StopSandboxContainerPathParams = PathParameters<paths["/api/sandbox-containers/{id}/stop"]["post"]>;
 export type StopSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers/{id}/stop"]["post"]>;
-export type UpdateSandboxContainerEgressProxyPathParams = PathParameters<paths["/api/sandbox-containers/{id}/egress-proxy"]["patch"]>;
-export type UpdateSandboxContainerEgressProxyRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/egress-proxy"]["patch"]>;
-export type UpdateSandboxContainerEgressProxyResponse = JsonResponse<paths["/api/sandbox-containers/{id}/egress-proxy"]["patch"]>;
+export type UpdateSandboxContainerEgressPathParams = PathParameters<paths["/api/sandbox-containers/{id}/egress"]["patch"]>;
+export type UpdateSandboxContainerEgressRequest = JsonRequestBody<paths["/api/sandbox-containers/{id}/egress"]["patch"]>;
+export type UpdateSandboxContainerEgressResponse = JsonResponse<paths["/api/sandbox-containers/{id}/egress"]["patch"]>;
 
 export type ListContainerFilesParams = QueryParameters<paths["/api/sandbox-containers/{id}/files"]["get"]>;
 export type ListContainerFilesResponse = JsonResponse<paths["/api/sandbox-containers/{id}/files"]["get"]>;

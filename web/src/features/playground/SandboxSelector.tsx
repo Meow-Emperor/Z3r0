@@ -1,6 +1,7 @@
 import { Select, Spin, Tag } from "@douyinfe/semi-ui";
 import { Box } from "lucide-react";
 import { useEffect, useMemo } from "react";
+import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { SandboxContainer } from "../../shared/api/types";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 
@@ -16,7 +17,7 @@ const CONTAINER_ID_PREVIEW_LENGTH = 12;
 
 export function SandboxSelector({ containers, loading, value, className = "", onChange }: SandboxSelectorProps) {
   const runningContainers = useMemo(
-    () => containers.filter((container) => container.status === "running"),
+    () => containers.filter((container) => container.status === SANDBOX_CONTAINER_STATUS.RUNNING),
     [containers],
   );
 

@@ -19,6 +19,7 @@ import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
 import { buildHostShellUrl } from "../../shared/api/hosts";
 import { buildContainerNoVNCUrl, buildContainerShellUrl, canOpenContainerNoVNC } from "../../shared/api/sandboxContainers";
+import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import { showApiError } from "../../shared/api/feedback";
 import type { ManagedHost, SandboxContainer } from "../../shared/api/types";
 import {
@@ -299,7 +300,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, [disposeShellResources, fitTerminal, shell]);
 
   const openShell = useCallback((container: SandboxContainer) => {
-    if (container.status !== "running" || container.proxy_host_port <= 0) return;
+    if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
 
     openShellTarget({
       key: `container:${container.id}`,
@@ -402,7 +403,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openFileManager = useCallback((container: SandboxContainer) => {
-    if (container.status !== "running" || container.proxy_host_port <= 0) return;
+    if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
 
     cancelFlightFrame(fileManagerFlightFrameRef);
     setFileManagerFlight(null);
@@ -425,7 +426,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
 
   const syncContainerWindows = useCallback((container: SandboxContainer | null) => {
     if (shell?.targetKey.startsWith("container:")) {
-      if (container?.status === "running" && container.proxy_host_port > 0) {
+      if (container && container.status === SANDBOX_CONTAINER_STATUS.RUNNING && container.control_proxy_host_port > 0) {
         openShell(container);
       } else {
         closeShell();
@@ -433,7 +434,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     }
 
     if (fileManager) {
-      if (container?.status === "running" && container.proxy_host_port > 0) {
+      if (container && container.status === SANDBOX_CONTAINER_STATUS.RUNNING && container.control_proxy_host_port > 0) {
         openFileManager(container);
       } else {
         closeFileManager();

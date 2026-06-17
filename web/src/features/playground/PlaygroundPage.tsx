@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactN
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
 import { showApiError } from "../../shared/api/feedback";
+import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import { canOpenContainerNoVNC, queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
 import { getWorkProjectRecordSnapshot } from "../../shared/api/workProjects";
 import type { AgentInputPart, SandboxContainer } from "../../shared/api/types";
@@ -59,7 +60,7 @@ export function PlaygroundPage() {
     () => sandboxContainers.find((container) => container.id === sandboxContainerId) ?? null,
     [sandboxContainerId, sandboxContainers],
   );
-  const shellUnavailableReason = getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresProxy: true });
+  const shellUnavailableReason = getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresControlProxy: true });
   const screenUnavailableReason = getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresNoVNC: true });
   const selectedSandboxName = selectedSandboxContainer?.container_name ?? "selected sandbox";
   const activeProjectId = activeSessionSummary?.session_type === "project" ? activeSessionSummary.project_id ?? null : null;
@@ -119,8 +120,7 @@ export function PlaygroundPage() {
   }, [
     activeSessionId,
     selectedSandboxContainer?.id,
-    selectedSandboxContainer?.novnc_support,
-    selectedSandboxContainer?.proxy_host_port,
+    selectedSandboxContainer?.control_proxy_host_port,
     selectedSandboxContainer?.status,
   ]);
 
@@ -313,11 +313,11 @@ function SandboxActionButton({ ariaLabel, disabled, icon, onClick, tooltip }: Sa
 
 function getSandboxActionUnavailableReason(
   container: SandboxContainer | null,
-  options: { requiresProxy?: boolean; requiresNoVNC?: boolean },
+  options: { requiresControlProxy?: boolean; requiresNoVNC?: boolean },
 ) {
   if (!container) return "Select a sandbox first";
-  if (container.status !== "running") return "Selected sandbox is not running";
-  if (options.requiresProxy && container.proxy_host_port <= 0) return "Selected sandbox proxy is not ready";
+  if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING) return "Selected sandbox is not running";
+  if (options.requiresControlProxy && container.control_proxy_host_port <= 0) return "Selected sandbox control port is not ready";
   if (options.requiresNoVNC && !canOpenContainerNoVNC(container)) return "Selected sandbox has no noVNC screen";
   return null;
 }

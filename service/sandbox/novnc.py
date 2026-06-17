@@ -3,9 +3,8 @@ from dataclasses import dataclass
 
 import httpx
 import websockets
-
 from logger import get_logger
-from service.sandbox.proxy import SandboxProxyTarget, resolve_sandbox_proxy_target, sandbox_proxy_token_headers
+from service.sandbox.control_proxy import SandboxControlProxyTarget, resolve_sandbox_control_proxy_target, sandbox_control_proxy_token_headers
 
 
 logger = get_logger(__name__)
@@ -33,20 +32,22 @@ async def close_novnc_http_client() -> None:
 
 @dataclass(frozen=True)
 class NoVNCTarget:
-    proxy: SandboxProxyTarget
+    control_proxy: SandboxControlProxyTarget
 
 
 async def resolve_novnc_target(container_id: int) -> NoVNCTarget | None:
-    target = await resolve_sandbox_proxy_target(container_id, require_running=True, require_novnc=True)
-    return NoVNCTarget(proxy=target) if target is not None else None
+    target = await resolve_sandbox_control_proxy_target(container_id, require_running=True)
+    if target is None:
+        return None
+    return NoVNCTarget(control_proxy=target)
 
 
 async def proxy_novnc_http(target: NoVNCTarget, path: str) -> httpx.Response | None:
-    url = f"{target.proxy.base_url}/novnc/{path}"
+    url = f"{target.control_proxy.base_url}/novnc/{path}"
     try:
-        return await _get_http_client().get(url, headers=sandbox_proxy_token_headers(target.proxy))
+        return await _get_http_client().get(url, headers=sandbox_control_proxy_token_headers(target.control_proxy))
     except (httpx.HTTPError, OSError):
-        logger.debug("novnc http proxy failed: %s -> %s", target.proxy.container_id, url, exc_info=True)
+        logger.debug("novnc http proxy failed: %s -> %s", target.control_proxy.container_id, url, exc_info=True)
         return None
 
 
@@ -57,11 +58,11 @@ async def proxy_novnc_websocket(
     client_connected,
     subprotocols: list[str] | None = None,
 ) -> None:
-    url = f"{target.proxy.ws_base_url}/websockify?token={target.proxy.token}"
+    url = f"{target.control_proxy.ws_base_url}/websockify?token={target.control_proxy.token}"
     try:
         async with websockets.connect(
             url,
-            additional_headers=sandbox_proxy_token_headers(target.proxy),
+            additional_headers=sandbox_control_proxy_token_headers(target.control_proxy),
             subprotocols=subprotocols or [],
             proxy=None,
             max_size=2**20,
@@ -70,7 +71,7 @@ async def proxy_novnc_websocket(
         ) as upstream:
             await _bidirectional_ws_forward(upstream, receive_from_client, send_to_client, client_connected)
     except (websockets.exceptions.WebSocketException, OSError, asyncio.CancelledError):
-        logger.debug("novnc ws proxy ended: %s", target.proxy.container_id, exc_info=True)
+        logger.debug("novnc ws proxy ended: %s", target.control_proxy.container_id, exc_info=True)
 
 
 async def _bidirectional_ws_forward(upstream, receive_from_client, send_to_client, client_connected):

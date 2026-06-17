@@ -1439,7 +1439,7 @@
   padding: 32px 0;
 }
 
-.novnc-toggle-row {
+.capability-toggle-row {
   display: flex;
   min-height: 34px;
   align-items: center;
@@ -1450,7 +1450,7 @@
   font-weight: 650;
 }
 
-.novnc-controls {
+.capability-controls {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -1458,36 +1458,20 @@
   gap: 12px;
 }
 
-.novnc-port-field {
-  display: grid;
-  grid-template-columns: max-content minmax(150px, 180px);
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.novnc-port-field .semi-select {
-  width: 100%;
-}
-
 @media (max-width: 560px) {
-  .novnc-toggle-row,
-  .novnc-controls {
+  .capability-toggle-row,
+  .capability-controls {
     align-items: stretch;
   }
 
-  .novnc-toggle-row {
+  .capability-toggle-row {
     flex-direction: column;
   }
 
-  .novnc-controls {
+  .capability-controls {
     justify-content: space-between;
   }
 
-  .novnc-port-field {
-    grid-template-columns: max-content minmax(0, 1fr);
-  }
 }
 
 .port-mapping-fieldset {

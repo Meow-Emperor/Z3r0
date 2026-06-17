@@ -21,13 +21,19 @@ import (
 )
 
 const (
-	defaultEgressProxyAddr       = "127.0.0.1:8118"
-	egressProxyProfilePath       = "/etc/profile.d/z3r0-egress-proxy.sh"
-	egressProxyUpstreamTypeKey   = "Z3R0_EGRESS_PROXY_UPSTREAM_TYPE"
-	egressProxyUpstreamAddrKey   = "Z3R0_EGRESS_PROXY_UPSTREAM_ADDR"
+	defaultEgressProxyAddr = "127.0.0.1:8118"
+	defaultTorSocksAddr    = "127.0.0.1:9050"
+	egressProfilePath      = "/etc/profile.d/z3r0-egress.sh"
+	egressUpstreamTypeKey  = "Z3R0_EGRESS_UPSTREAM_TYPE"
+	egressUpstreamAddrKey  = "Z3R0_EGRESS_UPSTREAM_ADDR"
+
+	egressUpstreamTypeHTTP   = "http"
+	egressUpstreamTypeHTTPS  = "https"
+	egressUpstreamTypeSOCKS5 = "socks5"
+	egressUpstreamTypeTor    = "tor"
 )
 
-var egressProxyAppEnvKeys = []string{
+var egressAppEnvKeys = []string{
 	"HTTP_PROXY",
 	"http_proxy",
 	"HTTPS_PROXY",
@@ -38,11 +44,11 @@ var egressProxyAppEnvKeys = []string{
 	"no_proxy",
 }
 
-type egressProxyRequest struct {
+type egressRequest struct {
 	Environment map[string]string `json:"environment"`
 }
 
-type egressProxyConfig struct {
+type egressConfig struct {
 	UpstreamType string
 	UpstreamAddr string
 }
@@ -52,37 +58,43 @@ type httpProxyTarget struct {
 	UseTLS bool
 }
 
-type egressProxyManager struct {
+type egressManager struct {
 	mu     sync.RWMutex
 	env    map[string]string
-	config egressProxyConfig
+	config egressConfig
 }
 
-var egressProxyState = newEgressProxyManager()
+var egressState = newEgressManager()
 
-func newEgressProxyManager() *egressProxyManager {
-	env := currentProcessEgressProxyEnv()
-	config := egressProxyConfig{
-		UpstreamType: strings.TrimSpace(os.Getenv(egressProxyUpstreamTypeKey)),
-		UpstreamAddr: strings.TrimSpace(os.Getenv(egressProxyUpstreamAddrKey)),
+func newEgressManager() *egressManager {
+	env := currentProcessEgressEnv()
+	config := egressConfig{
+		UpstreamType: os.Getenv(egressUpstreamTypeKey),
+		UpstreamAddr: os.Getenv(egressUpstreamAddrKey),
 	}
-	return &egressProxyManager{env: env, config: config}
+	return &egressManager{env: env, config: config}
 }
 
-func handleEgressProxy(w http.ResponseWriter, r *http.Request) {
+func handleEgress(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var req egressProxyRequest
+	var req egressRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if err := egressProxyState.Set(req.Environment); err != nil {
-		http.Error(w, "failed to update egress proxy", http.StatusInternalServerError)
+	next, config, err := egressEnvFromRequest(req.Environment)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := egressState.Set(next, config); err != nil {
+		http.Error(w, "failed to update egress", http.StatusInternalServerError)
 		return
 	}
 
@@ -90,54 +102,87 @@ func handleEgressProxy(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"ok":true}`))
 }
 
-func (m *egressProxyManager) Set(env map[string]string) error {
-	next, config := normalizeEgressProxyEnv(env)
-	if err := writeEgressProxyProfile(next); err != nil {
+func (m *egressManager) Set(env map[string]string, config egressConfig) error {
+	if err := writeEgressProfile(env); err != nil {
 		return err
 	}
 
 	m.mu.Lock()
-	m.env = next
+	m.env = env
 	m.config = config
 	m.mu.Unlock()
 	return nil
 }
 
-func (m *egressProxyManager) RuntimeEnvironmentOverlay() []string {
+func (m *egressManager) RuntimeEnvironmentOverlay() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	overlay := make([]string, 0, len(egressProxyEnvKeys()))
-	for _, key := range egressProxyAppEnvKeys {
+	overlay := make([]string, 0, len(egressEnvKeys()))
+	for _, key := range egressAppEnvKeys {
 		overlay = append(overlay, key+"="+m.env[key])
 	}
-	overlay = append(overlay, egressProxyUpstreamTypeKey+"=", egressProxyUpstreamAddrKey+"=")
+	overlay = append(overlay, egressUpstreamTypeKey+"=", egressUpstreamAddrKey+"=")
 	return overlay
 }
 
-func (m *egressProxyManager) Config() egressProxyConfig {
+func (m *egressManager) Config() egressConfig {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.config
 }
 
-func normalizeEgressProxyEnv(env map[string]string) (map[string]string, egressProxyConfig) {
-	normalized := make(map[string]string)
-	for _, key := range egressProxyAppEnvKeys {
+func egressEnvFromRequest(env map[string]string) (map[string]string, egressConfig, error) {
+	next := make(map[string]string)
+	for _, key := range egressAppEnvKeys {
 		if value, ok := env[key]; ok {
-			normalized[key] = strings.TrimSpace(value)
+			next[key] = value
 		}
 	}
-	return normalized, egressProxyConfig{
-		UpstreamType: strings.TrimSpace(env[egressProxyUpstreamTypeKey]),
-		UpstreamAddr: strings.TrimSpace(env[egressProxyUpstreamAddrKey]),
+	config := egressConfig{
+		UpstreamType: env[egressUpstreamTypeKey],
+		UpstreamAddr: env[egressUpstreamAddrKey],
+	}
+	if !isSupportedEgressUpstreamType(config.UpstreamType) {
+		return nil, egressConfig{}, fmt.Errorf("unsupported upstream proxy type: %s", config.UpstreamType)
+	}
+	if err := validateEgressConfig(config); err != nil {
+		return nil, egressConfig{}, err
+	}
+	return next, config, nil
+}
+
+func isSupportedEgressUpstreamType(value string) bool {
+	switch value {
+	case "", egressUpstreamTypeHTTP, egressUpstreamTypeHTTPS, egressUpstreamTypeSOCKS5, egressUpstreamTypeTor:
+		return true
+	default:
+		return false
 	}
 }
 
-func writeEgressProxyProfile(env map[string]string) error {
+func validateEgressConfig(config egressConfig) error {
+	switch config.UpstreamType {
+	case "":
+		if config.UpstreamAddr != "" {
+			return fmt.Errorf("upstream address requires an upstream proxy type")
+		}
+	case egressUpstreamTypeTor:
+		if config.UpstreamAddr != "" {
+			return fmt.Errorf("tor egress does not accept an upstream address")
+		}
+	case egressUpstreamTypeHTTP, egressUpstreamTypeHTTPS, egressUpstreamTypeSOCKS5:
+		if config.UpstreamAddr == "" {
+			return fmt.Errorf("upstream address is required for %s egress", config.UpstreamType)
+		}
+	}
+	return nil
+}
+
+func writeEgressProfile(env map[string]string) error {
 	var b strings.Builder
 	b.WriteString("# Generated by sandbox-proxy. Do not edit.\n")
-	for _, key := range egressProxyEnvKeys() {
+	for _, key := range egressEnvKeys() {
 		b.WriteString("unset ")
 		b.WriteString(key)
 		b.WriteString("\n")
@@ -155,22 +200,22 @@ func writeEgressProxyProfile(env map[string]string) error {
 		b.WriteString(shellQuote(env[key]))
 		b.WriteString("\n")
 	}
-	return os.WriteFile(egressProxyProfilePath, []byte(b.String()), 0644)
+	return os.WriteFile(egressProfilePath, []byte(b.String()), 0644)
 }
 
-func currentProcessEgressProxyEnv() map[string]string {
+func currentProcessEgressEnv() map[string]string {
 	env := make(map[string]string)
-	for _, key := range egressProxyAppEnvKeys {
-		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+	for _, key := range egressAppEnvKeys {
+		if value := os.Getenv(key); value != "" {
 			env[key] = value
 		}
 	}
 	return env
 }
 
-func egressProxyEnvKeys() []string {
-	keys := append([]string{}, egressProxyAppEnvKeys...)
-	return append(keys, egressProxyUpstreamTypeKey, egressProxyUpstreamAddrKey)
+func egressEnvKeys() []string {
+	keys := append([]string{}, egressAppEnvKeys...)
+	return append(keys, egressUpstreamTypeKey, egressUpstreamAddrKey)
 }
 
 func shellQuote(value string) string {
@@ -202,7 +247,7 @@ func handleEgressHTTP(w http.ResponseWriter, r *http.Request) {
 
 	upstream, useProxyFormat, proxyAuth, err := dialEgressHTTP(target)
 	if err != nil {
-		log.Printf("egress proxy HTTP dial failed target=%s upstream=%s: %v", target.Host, egressProxyState.Config().LogLabel(), err)
+		log.Printf("egress HTTP dial failed target=%s upstream=%s: %v", target.Host, egressState.Config().LogLabel(), err)
 		http.Error(w, "failed to connect upstream", http.StatusBadGateway)
 		return
 	}
@@ -223,7 +268,7 @@ func handleEgressHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := writeEgressHTTPRequest(req, upstream, useProxyFormat); err != nil {
-		log.Printf("egress proxy HTTP write failed target=%s: %v", target.Host, err)
+		log.Printf("egress HTTP write failed target=%s: %v", target.Host, err)
 		http.Error(w, "failed to write upstream request", http.StatusBadGateway)
 		return
 	}
@@ -233,7 +278,7 @@ func handleEgressHTTP(w http.ResponseWriter, r *http.Request) {
 func handleEgressConnect(w http.ResponseWriter, r *http.Request) {
 	upstream, err := dialEgressTunnel(r.Host, "443")
 	if err != nil {
-		log.Printf("egress proxy CONNECT failed target=%s upstream=%s: %v", r.Host, egressProxyState.Config().LogLabel(), err)
+		log.Printf("egress CONNECT failed target=%s upstream=%s: %v", r.Host, egressState.Config().LogLabel(), err)
 		if statusErr, ok := err.(*httpProxyStatusError); ok {
 			http.Error(w, statusErr.Status, statusErr.StatusCode)
 			return
@@ -259,21 +304,24 @@ func handleEgressConnect(w http.ResponseWriter, r *http.Request) {
 }
 
 func dialEgressHTTP(target *url.URL) (net.Conn, bool, string, error) {
-	config := egressProxyState.Config()
+	config := egressState.Config()
 	address := ensurePort(target.Host, defaultPortForURL(target))
-	if config.UpstreamAddr == "" {
+	if config.UpstreamType == "" {
 		conn, err := net.DialTimeout("tcp", address, 15*time.Second)
 		return conn, false, "", err
 	}
 	switch config.UpstreamType {
-	case "http", "https":
+	case egressUpstreamTypeHTTP, egressUpstreamTypeHTTPS:
 		conn, proxy, err := dialHTTPProxy(config)
 		if err != nil {
 			return nil, false, "", err
 		}
 		return conn, true, proxyAuthorizationHeader(proxy.URL), nil
-	case "socks5":
+	case egressUpstreamTypeSOCKS5:
 		conn, err := dialViaSocks5Proxy(config.UpstreamAddr, address)
+		return conn, false, "", err
+	case egressUpstreamTypeTor:
+		conn, err := dialViaTorProxy(address)
 		return conn, false, "", err
 	default:
 		return nil, false, "", fmt.Errorf("unsupported upstream proxy type: %s", config.UpstreamType)
@@ -282,21 +330,23 @@ func dialEgressHTTP(target *url.URL) (net.Conn, bool, string, error) {
 
 func dialEgressTunnel(target string, defaultPort string) (net.Conn, error) {
 	target = ensurePort(target, defaultPort)
-	config := egressProxyState.Config()
-	if config.UpstreamAddr == "" {
+	config := egressState.Config()
+	if config.UpstreamType == "" {
 		return net.DialTimeout("tcp", target, 15*time.Second)
 	}
 	switch config.UpstreamType {
-	case "http", "https":
+	case egressUpstreamTypeHTTP, egressUpstreamTypeHTTPS:
 		return dialViaHTTPProxy(config, target)
-	case "socks5":
+	case egressUpstreamTypeSOCKS5:
 		return dialViaSocks5Proxy(config.UpstreamAddr, target)
+	case egressUpstreamTypeTor:
+		return dialViaTorProxy(target)
 	default:
 		return nil, fmt.Errorf("unsupported upstream proxy type: %s", config.UpstreamType)
 	}
 }
 
-func dialViaHTTPProxy(config egressProxyConfig, target string) (net.Conn, error) {
+func dialViaHTTPProxy(config egressConfig, target string) (net.Conn, error) {
 	conn, proxy, err := dialHTTPProxy(config)
 	if err != nil {
 		return nil, err
@@ -309,7 +359,7 @@ func dialViaHTTPProxy(config egressProxyConfig, target string) (net.Conn, error)
 	return conn, nil
 }
 
-func dialHTTPProxy(config egressProxyConfig) (net.Conn, httpProxyTarget, error) {
+func dialHTTPProxy(config egressConfig) (net.Conn, httpProxyTarget, error) {
 	proxy, err := parseHTTPProxyTarget(config.UpstreamType, config.UpstreamAddr)
 	if err != nil {
 		return nil, httpProxyTarget{}, err
@@ -367,8 +417,11 @@ func (e *httpProxyStatusError) Error() string {
 	return "http proxy connect failed: " + e.Status
 }
 
-func (c egressProxyConfig) LogLabel() string {
+func (c egressConfig) LogLabel() string {
 	if c.UpstreamAddr == "" {
+		if c.UpstreamType == egressUpstreamTypeTor {
+			return "tor://" + defaultTorSocksAddr
+		}
 		return "direct"
 	}
 	host := c.UpstreamAddr
@@ -376,6 +429,10 @@ func (c egressProxyConfig) LogLabel() string {
 		host = address
 	}
 	return c.UpstreamType + "://" + host
+}
+
+func dialViaTorProxy(target string) (net.Conn, error) {
+	return dialViaSocks5Proxy(defaultTorSocksAddr, target)
 }
 
 func dialViaSocks5Proxy(upstream string, target string) (net.Conn, error) {
@@ -518,7 +575,7 @@ func parseHTTPProxyTarget(proxyType string, upstream string) (httpProxyTarget, e
 	if err != nil {
 		return httpProxyTarget{}, err
 	}
-	useTLS := proxyType == "https"
+	useTLS := proxyType == egressUpstreamTypeHTTPS
 	defaultPort := "8080"
 	if useTLS {
 		defaultPort = "443"
@@ -565,11 +622,18 @@ func splitUpstreamAuth(upstream string) (string, string, string) {
 }
 
 func splitUserinfoHost(value string) (string, string, string, bool) {
-	before, after, ok := strings.Cut(value, "@")
-	if !ok {
+	index := strings.LastIndex(value, "@")
+	if index < 0 {
 		return "", "", value, false
 	}
+	before, after := value[:index], value[index+1:]
 	user, password, _ := strings.Cut(before, ":")
+	if decoded, err := url.QueryUnescape(user); err == nil {
+		user = decoded
+	}
+	if decoded, err := url.QueryUnescape(password); err == nil {
+		password = decoded
+	}
 	return user, password, after, true
 }
 

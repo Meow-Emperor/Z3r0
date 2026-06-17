@@ -11,15 +11,17 @@ SandboxContainerProtocol = Literal["tcp", "udp"]
 class SandboxContainerRecord:
     container: SandboxContainer
     image_name: str
+    supports_tor: bool
+    control_proxy_port: int
     owner_username: str
     host_ip_address: str
-    egress_proxy_label: str = ""
+    egress_label: str = ""
 
 
 @dataclass(frozen=True)
 class SandboxContainerMutationResult:
     record: SandboxContainerRecord | None
-    changed: bool
+    succeeded: bool
     message: str = ""
     not_found: bool = False
 

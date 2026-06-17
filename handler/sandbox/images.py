@@ -18,7 +18,8 @@ from service.common.pagination import paginated_payload
 async def create_sandbox_image_handler(request: CreateSandboxImageRequest) -> CommonResponse:
     sandbox_image = await create_sandbox_image(
         image_name=request.image_name,
-        default_exposed_port=request.default_exposed_port,
+        control_proxy_port=request.control_proxy_port,
+        supports_tor=request.supports_tor,
     )
     return CommonResponse(
         message="sandbox image created",

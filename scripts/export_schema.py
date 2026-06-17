@@ -58,7 +58,10 @@ def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
         f"export const WORK_PROJECT_ATTACK_PATH_STATUSES = {_enum_values_ts(schema, 'WorkProjectAttackPathStatus')} as const;\n"
         f"export const EGRESS_PROXY_TYPES = {_enum_values_ts(schema, 'EgressProxyType')} as const;\n"
         f"export const EGRESS_PROXY_TYPE = {_enum_object_ts(schema, 'EgressProxyType')} as const;\n"
+        f"export const SANDBOX_CONTAINER_EGRESS_MODES = {_enum_values_ts(schema, 'SandboxContainerEgressMode')} as const;\n"
+        f"export const SANDBOX_CONTAINER_EGRESS_MODE = {_enum_object_ts(schema, 'SandboxContainerEgressMode')} as const;\n"
         f"export const SANDBOX_CONTAINER_STATUSES = {_enum_values_ts(schema, 'SandboxContainerStatus')} as const;\n"
+        f"export const SANDBOX_CONTAINER_STATUS = {_enum_object_ts(schema, 'SandboxContainerStatus')} as const;\n"
         f"export const SESSION_TYPES = {_enum_values_ts(schema, 'SessionType')} as const;\n\n"
         f"export const ACCESS_TOKEN_HEADER = {json.dumps(_get_access_token_header())};\n",
         encoding="utf-8",

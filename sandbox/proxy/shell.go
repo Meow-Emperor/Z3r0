@@ -50,7 +50,7 @@ func handleShell(w http.ResponseWriter, r *http.Request) {
 	defer ptmx.Close()
 
 	cmd := shellCommand()
-	cmd.Env = append(os.Environ(), egressProxyState.RuntimeEnvironmentOverlay()...)
+	cmd.Env = append(os.Environ(), egressState.RuntimeEnvironmentOverlay()...)
 	cmd.Env = append(cmd.Env, "TERM=xterm-256color")
 	cmd.Stdin = pts
 	cmd.Stdout = pts

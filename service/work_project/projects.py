@@ -9,6 +9,7 @@ from core.agent.constants import DEFAULT_AGENT_CODE
 from database import get_async_session
 from logger import get_logger
 from model.agent.sessions import AgentSessionMeta
+from model.egress_proxy.proxies import EgressProxy
 from model.sandbox.containers import SandboxContainer
 from model.system_user.users import SystemUser
 from model.work_project.assets import WorkProjectAsset
@@ -33,6 +34,9 @@ from schema.work_project.projects import (
 from schema.work_project.records import WorkProjectRecordSnapshotSchema, WorkProjectRecordsSchema
 from service.agent.sessions import cancel_sessions, delete_session, ensure_sdk_session_row, list_sessions
 from service.common.pagination import Page, paginate_statement
+from service.sandbox.egress import sandbox_egress_label
+from service.sandbox.records import sandbox_container_schema
+from service.sandbox.types import SandboxContainerRecord
 from service.work_project.assets import apply_asset_request
 from service.work_project.graph import get_work_project_graph_snapshot_in_tx, purge_edges_touching_asset
 from service.work_project.progress import derive_work_project_status
@@ -524,33 +528,36 @@ async def _sandbox_containers_by_project(session, project_ids: list[int]) -> dic
     if not ids:
         return {}
     rows = (await session.exec(
-        select(WorkProjectSandboxContainer, SandboxContainer, SandboxImage.image_name, SystemUser.username, ManagedHost.ip_address)
+        select(
+            WorkProjectSandboxContainer,
+            SandboxContainer,
+            SandboxImage.image_name,
+            SandboxImage.supports_tor,
+            SandboxImage.control_proxy_port,
+            SystemUser.username,
+            ManagedHost.ip_address,
+            EgressProxy,
+        )
         .join(SandboxContainer, SandboxContainer.id == WorkProjectSandboxContainer.sandbox_container_id)
         .join(SandboxImage, SandboxImage.id == SandboxContainer.image_id)
         .join(SystemUser, SystemUser.id == SandboxContainer.owner_id)
         .join(ManagedHost, ManagedHost.id == SandboxContainer.host_id)
+        .outerjoin(EgressProxy, EgressProxy.id == SandboxContainer.egress_proxy_id)
         .where(WorkProjectSandboxContainer.project_id.in_(ids))
         .order_by(WorkProjectSandboxContainer.project_id, WorkProjectSandboxContainer.position, WorkProjectSandboxContainer.sandbox_container_id)
     )).all()
     result: dict[int, list[SandboxContainerSchema]] = {project_id: [] for project_id in ids}
-    for link, container, image_name, owner_username, host_ip_address in rows:
-        result.setdefault(link.project_id, []).append(SandboxContainerSchema(
-            id=container.id or 0,
-            host_id=container.host_id,
-            host_ip_address=host_ip_address,
-            container_name=container.container_name,
-            container_hash=container.container_hash,
-            image_id=container.image_id,
+    for link, container, image_name, supports_tor, control_proxy_port, owner_username, host_ip_address, egress_proxy in rows:
+        record = SandboxContainerRecord(
+            container=container,
             image_name=image_name,
-            proxy_host_port=container.proxy_host_port,
-            port_mappings=container.port_mappings,
-            novnc_support=container.novnc_support,
-            status=container.status,
-            owner_id=container.owner_id,
+            supports_tor=supports_tor,
+            control_proxy_port=control_proxy_port,
             owner_username=owner_username,
-            created_at=container.created_at,
-            updated_at=container.updated_at,
-        ))
+            host_ip_address=host_ip_address,
+            egress_label=sandbox_egress_label(container, egress_proxy),
+        )
+        result.setdefault(link.project_id, []).append(sandbox_container_schema(record))
     return result
 
 

@@ -1,5 +1,5 @@
-import { Button, Popconfirm } from "@douyinfe/semi-ui";
-import { Boxes, Network, Trash2 } from "lucide-react";
+import { Button, Popconfirm, Tag } from "@douyinfe/semi-ui";
+import { Boxes, Network, Route, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createSandboxImage, deleteSandboxImage, querySandboxImages } from "../../shared/api/sandboxImages";
 import type { CreateSandboxImageRequest, SandboxImage } from "../../shared/api/types";
@@ -42,9 +42,9 @@ export function SandboxImagesPage() {
   const summary = useMemo(
     () => images.reduce(
       (acc, image) => ({
-        ports: acc.ports + (image.default_exposed_port > 0 ? 1 : 0),
+        tor: acc.tor + (image.supports_tor ? 1 : 0),
       }),
-      { ports: 0 },
+      { tor: 0 },
     ),
     [images],
   );
@@ -59,12 +59,21 @@ export function SandboxImagesPage() {
           <div className="resource-avatar"><Boxes size={18} /></div>
           <div>
             <strong>{image.image_name}</strong>
-            <span><Network size={13} />Default port {image.default_exposed_port}</span>
+            <span><Network size={13} />Control port {image.control_proxy_port}</span>
           </div>
         </div>
       ),
     },
-    { key: "port", header: "Default Port", width: "130px", render: (image) => image.default_exposed_port },
+    { key: "port", header: "Control Port", width: "130px", render: (image) => image.control_proxy_port },
+    {
+      key: "capabilities", header: "Capabilities", width: "180px",
+      render: (image) => (
+        <div className="port-mapping-list">
+          {image.supports_tor ? <Tag color="violet" prefixIcon={<Route size={12} />}>Tor</Tag> : null}
+          {!image.supports_tor ? <span className="resource-description">None</span> : null}
+        </div>
+      ),
+    },
     { key: "created", header: "Created", width: "minmax(150px, 1fr)", render: (i) => formatDateTime(i.created_at) },
     { key: "updated", header: "Updated", width: "minmax(150px, 1fr)", render: (i) => formatDateTime(i.updated_at) },
     {
@@ -89,7 +98,7 @@ export function SandboxImagesPage() {
         loading={loading}
         metrics={[
           { label: "Total", value: total },
-          { label: "Configured Ports", value: summary.ports },
+          { label: "Tor", value: summary.tor },
         ]}
         empty={images.length === 0}
         emptyIcon={<Boxes size={42} />}

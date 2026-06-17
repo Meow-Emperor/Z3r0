@@ -17,11 +17,16 @@ class DeleteSandboxImageResult:
     message: str = ""
 
 
-async def create_sandbox_image(image_name: str, default_exposed_port: int) -> SandboxImage:
+async def create_sandbox_image(
+    image_name: str,
+    control_proxy_port: int,
+    supports_tor: bool,
+) -> SandboxImage:
     now = datetime.now()
     sandbox_image = SandboxImage(
         image_name=image_name,
-        default_exposed_port=default_exposed_port,
+        control_proxy_port=control_proxy_port,
+        supports_tor=supports_tor,
         created_at=now,
         updated_at=now,
     )

@@ -18,7 +18,10 @@ export const WORK_PROJECT_GRAPH_EDGE_CATEGORY = {"related": "structural", "resol
 export const WORK_PROJECT_ATTACK_PATH_STATUSES = ["suspected", "validated", "blocked", "closed"] as const;
 export const EGRESS_PROXY_TYPES = ["http", "https", "socks5"] as const;
 export const EGRESS_PROXY_TYPE = {"HTTP": "http", "HTTPS": "https", "SOCKS5": "socks5"} as const;
+export const SANDBOX_CONTAINER_EGRESS_MODES = ["direct", "proxy", "tor"] as const;
+export const SANDBOX_CONTAINER_EGRESS_MODE = {"DIRECT": "direct", "PROXY": "proxy", "TOR": "tor"} as const;
 export const SANDBOX_CONTAINER_STATUSES = ["created", "running", "stopped", "error"] as const;
+export const SANDBOX_CONTAINER_STATUS = {"CREATED": "created", "RUNNING": "running", "STOPPED": "stopped", "ERROR": "error"} as const;
 export const SESSION_TYPES = ["chat", "project"] as const;
 
 export const ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token";

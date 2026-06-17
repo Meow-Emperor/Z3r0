@@ -14,6 +14,12 @@ class SandboxContainerStatus(StrEnum):
     ERROR = "error"
 
 
+class SandboxContainerEgressMode(StrEnum):
+    DIRECT = "direct"
+    PROXY = "proxy"
+    TOR = "tor"
+
+
 # sandbox container port mapping schema
 class SandboxContainerPortMapping(BaseModel):
     container_port: int = Field(ge=1, le=65535)
@@ -39,11 +45,13 @@ class SandboxContainerSchema(BaseModel):
     container_hash: str
     image_id: int
     image_name: str
+    supports_tor: bool
+    control_proxy_port: int = Field(title="Control Port")
+    egress_mode: SandboxContainerEgressMode
     egress_proxy_id: int | None
-    egress_proxy_label: str
-    proxy_host_port: int
+    egress_label: str
+    control_proxy_host_port: int = Field(title="Control Host Port")
     port_mappings: list[SandboxContainerPortMapping]
-    novnc_support: bool
     status: SandboxContainerStatus
     owner_id: int
     owner_username: str
@@ -52,16 +60,24 @@ class SandboxContainerSchema(BaseModel):
 
 
 # create sandbox container request schema
+def _validate_egress_contract(egress_mode: SandboxContainerEgressMode, egress_proxy_id: int | None) -> None:
+    if egress_mode != SandboxContainerEgressMode.PROXY and egress_proxy_id is not None:
+        raise ValueError("egress_proxy_id is only valid when egress_mode is proxy")
+    if egress_mode == SandboxContainerEgressMode.PROXY and egress_proxy_id is None:
+        raise ValueError("egress_proxy_id is required when egress_mode is proxy")
+
+
 class CreateSandboxContainerRequest(BaseModel):
     host_id: int = Field(gt=0)
     image_id: int = Field(gt=0)
+    egress_mode: SandboxContainerEgressMode = SandboxContainerEgressMode.DIRECT
     egress_proxy_id: int | None = Field(default=None, gt=0)
     owner_id: int | None = Field(default=None, description="Assign container owner user ID. Admin only; defaults to the creator.")
     port_mappings: list[SandboxContainerPortMapping] = Field(default_factory=list, max_length=32)
-    novnc_support: bool = False
 
     @model_validator(mode="after")
     def validate_container_contract(self):
+        _validate_egress_contract(self.egress_mode, self.egress_proxy_id)
         container_ports: set[tuple[int, str]] = set()
         host_ports: set[tuple[int, str]] = set()
         for mapping in self.port_mappings:
@@ -82,8 +98,14 @@ class DeleteSandboxContainerResponse(BaseModel):
     id: int
 
 
-class UpdateSandboxContainerEgressProxyRequest(BaseModel):
+class UpdateSandboxContainerEgressRequest(BaseModel):
+    egress_mode: SandboxContainerEgressMode = SandboxContainerEgressMode.DIRECT
     egress_proxy_id: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_egress_contract(self):
+        _validate_egress_contract(self.egress_mode, self.egress_proxy_id)
+        return self
 
 
 # query sandbox containers response schema

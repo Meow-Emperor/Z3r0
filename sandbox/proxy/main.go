@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	defaultProxyAddr   = ":8000"
-	defaultNoVNCTarget = "http://127.0.0.1:8080"
-	noVNCPathPrefix    = "/novnc"
-	websockifyPath     = "/websockify"
-	tokenEnvName       = "SANDBOX_PROXY_TOKEN"
+	defaultControlProxyAddr = ":8000"
+	defaultNoVNCTarget      = "http://127.0.0.1:8080"
+	noVNCPathPrefix         = "/novnc"
+	websockifyPath          = "/websockify"
+	tokenEnvName            = "SANDBOX_CONTROL_PROXY_TOKEN"
 )
 
 func main() {
@@ -29,22 +29,22 @@ func main() {
 	egressServer := newEgressProxyServer()
 
 	server := &http.Server{
-		Addr:              defaultProxyAddr,
+		Addr:              defaultControlProxyAddr,
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
-		log.Printf("sandbox egress proxy listening on %s", defaultEgressProxyAddr)
+		log.Printf("sandbox egress listening on %s", defaultEgressProxyAddr)
 		if err := egressServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("sandbox egress proxy failed: %v", err)
+			log.Fatalf("sandbox egress failed: %v", err)
 		}
 	}()
 
-	log.Printf("sandbox proxy listening on %s", defaultProxyAddr)
-	log.Printf("sandbox proxy novnc target=%s", noVNCTarget)
+	log.Printf("sandbox control proxy listening on %s", defaultControlProxyAddr)
+	log.Printf("sandbox control proxy novnc target=%s", noVNCTarget)
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("sandbox proxy failed: %v", err)
+		log.Fatalf("sandbox control proxy failed: %v", err)
 	}
 }
 
@@ -72,7 +72,7 @@ func newServerMux(token string, passthroughProxy http.Handler, noVNCProxy http.H
 	mux.HandleFunc("/files/move", withAuthFunc(token, handleMoveFiles))
 	mux.HandleFunc("/files/delete", withAuthFunc(token, handleDeleteFiles))
 	mux.HandleFunc("/files/mkdir", withAuthFunc(token, handleMkdir))
-	mux.HandleFunc("/egress-proxy", withAuthFunc(token, handleEgressProxy))
+	mux.HandleFunc("/egress", withAuthFunc(token, handleEgress))
 	mux.Handle(noVNCPathPrefix+"/", noVNCProxy)
 	mux.HandleFunc(noVNCPathPrefix, withAuthFunc(token, func(w http.ResponseWriter, r *http.Request) {
 		target := noVNCPathPrefix + "/"

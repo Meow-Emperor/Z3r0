@@ -1,7 +1,8 @@
-import { Select, Switch } from "@douyinfe/semi-ui";
-import { Boxes, Network, Server, User } from "lucide-react";
+import { Select } from "@douyinfe/semi-ui";
+import { Boxes, Network, Route, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxImage, SystemUser } from "../../shared/api/types";
+import { SANDBOX_CONTAINER_EGRESS_MODE } from "../../shared/api/generated/constants";
+import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import {
   createEmptyPortMapping,
@@ -43,27 +44,28 @@ export function SandboxContainerFormModal({
   const availableImages = useMemo(() => images, [images]);
   const [hostId, setHostId] = useState<number | undefined>();
   const [imageId, setImageId] = useState<number | undefined>();
+  const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [egressProxyId, setEgressProxyId] = useState<number | undefined>();
   const [ownerId, setOwnerId] = useState<number | undefined>();
   const [portMappings, setPortMappings] = useState<PortMappingFormValue[]>([]);
-  const [novncSupport, setNoVNCSupport] = useState(false);
+  const selectedImage = useMemo(() => images.find((image) => image.id === imageId), [imageId, images]);
 
   useEffect(() => {
     if (!open) return;
     setHostId(undefined);
     setImageId(undefined);
+    setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
     setEgressProxyId(undefined);
     setOwnerId(currentUserId);
     setPortMappings([]);
-    setNoVNCSupport(false);
   }, [open, currentUserId]);
 
   const submit = () => onSubmit({
     host_id: hostId || 0,
     image_id: imageId || 0,
-    egress_proxy_id: egressProxyId,
+    egress_mode: egressMode,
+    egress_proxy_id: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? egressProxyId : undefined,
     owner_id: ownerId !== currentUserId ? ownerId : undefined,
-    novnc_support: novncSupport,
     port_mappings: portMappings.map(({ container_port, host_port, protocol }) => ({
       container_port,
       host_port,
@@ -86,10 +88,20 @@ export function SandboxContainerFormModal({
   };
 
   const selectImage = (value: unknown) => {
-    if (typeof value === "number") setImageId(value);
+    if (typeof value !== "number") return;
+    const nextImage = images.find((image) => image.id === value);
+    setImageId(value);
+    if (!nextImage?.supports_tor && egressMode === SANDBOX_CONTAINER_EGRESS_MODE.TOR) {
+      setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
+    }
   };
 
-  const submitDisabled = !hostId || !imageId;
+  const submitDisabled = (
+    !hostId
+    || !imageId
+    || (egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !egressProxyId)
+    || (egressMode === SANDBOX_CONTAINER_EGRESS_MODE.TOR && !selectedImage?.supports_tor)
+  );
 
   return (
     <ResourceModal
@@ -124,7 +136,10 @@ export function SandboxContainerFormModal({
           disabled={availableImages.length === 0}
           placeholder="Select a sandbox image"
           onChange={selectImage}
-          optionList={availableImages.map((image) => ({ label: `${image.image_name} :${image.default_exposed_port}`, value: image.id }))}
+          optionList={availableImages.map((image) => ({
+            label: `${image.image_name} · control ${image.control_proxy_port}`,
+            value: image.id,
+          }))}
         />
       </label>
 
@@ -141,26 +156,38 @@ export function SandboxContainerFormModal({
       </label>
 
       <label>
-        <span>Egress Proxy</span>
+        <span>Egress Mode</span>
         <Select
-          prefix={<Network size={16} />}
-          value={egressProxyId}
-          loading={egressProxiesLoading}
-          placeholder="No egress proxy"
-          emptyContent="No egress proxies"
-          onClear={() => setEgressProxyId(undefined)}
-          onChange={(value) => setEgressProxyId(typeof value === "number" ? value : undefined)}
-          optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
-          showClear
+          prefix={<Route size={16} />}
+          value={egressMode}
+          optionList={[
+            { label: "Direct", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
+            { label: "Managed Proxy", value: SANDBOX_CONTAINER_EGRESS_MODE.PROXY },
+            { label: "Tor", value: SANDBOX_CONTAINER_EGRESS_MODE.TOR, disabled: !selectedImage?.supports_tor },
+          ]}
+          onChange={(value) => {
+            if (typeof value !== "string") return;
+            const next = value as SandboxContainerEgressMode;
+            setEgressMode(next);
+            if (next !== SANDBOX_CONTAINER_EGRESS_MODE.PROXY) setEgressProxyId(undefined);
+          }}
         />
       </label>
 
-      <div className="novnc-toggle-row">
-        <span>noVNC</span>
-        <div className="novnc-controls">
-          <Switch checked={novncSupport} onChange={setNoVNCSupport} aria-label="Enable noVNC" />
-        </div>
-      </div>
+      {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
+        <label>
+          <span>Managed Proxy</span>
+          <Select
+            prefix={<Network size={16} />}
+            value={egressProxyId}
+            loading={egressProxiesLoading}
+            placeholder="Select an egress proxy"
+            emptyContent="No egress proxies"
+            onChange={(value) => setEgressProxyId(typeof value === "number" ? value : undefined)}
+            optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
+          />
+        </label>
+      ) : null}
 
       <PortMappingEditor
         mappings={portMappings}

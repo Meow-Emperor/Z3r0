@@ -1,4 +1,5 @@
 import { apiBlob, apiDelete, apiForm, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { SANDBOX_CONTAINER_STATUS } from "./generated/constants";
 import { getStoredAccessToken } from "../auth/session";
 import { buildQuery } from "./query";
 import type {
@@ -32,9 +33,9 @@ import type {
   StartSandboxContainerResponse,
   StopSandboxContainerPathParams,
   StopSandboxContainerResponse,
-  UpdateSandboxContainerEgressProxyPathParams,
-  UpdateSandboxContainerEgressProxyRequest,
-  UpdateSandboxContainerEgressProxyResponse,
+  UpdateSandboxContainerEgressPathParams,
+  UpdateSandboxContainerEgressRequest,
+  UpdateSandboxContainerEgressResponse,
 } from "./types";
 
 const SANDBOX_CONTAINERS_PATH = "/api/sandbox-containers";
@@ -59,11 +60,11 @@ export function stopSandboxContainer(id: StopSandboxContainerPathParams["id"]) {
   return apiPost<StopSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/stop`);
 }
 
-export function updateSandboxContainerEgressProxy(
-  id: UpdateSandboxContainerEgressProxyPathParams["id"],
-  payload: UpdateSandboxContainerEgressProxyRequest,
+export function updateSandboxContainerEgress(
+  id: UpdateSandboxContainerEgressPathParams["id"],
+  payload: UpdateSandboxContainerEgressRequest,
 ) {
-  return apiPatch<UpdateSandboxContainerEgressProxyResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/egress-proxy`, payload);
+  return apiPatch<UpdateSandboxContainerEgressResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/egress`, payload);
 }
 
 export function deleteSandboxContainer(id: SandboxContainerPathParams["id"]) {
@@ -75,12 +76,12 @@ export function buildContainerShellUrl(containerId: number) {
 }
 
 export function canOpenContainerNoVNC(container: SandboxContainer) {
-  return Boolean(container.novnc_support && container.proxy_host_port > 0 && container.status === "running");
+  return Boolean(container.control_proxy_host_port > 0 && container.status === SANDBOX_CONTAINER_STATUS.RUNNING);
 }
 
 export function buildContainerNoVNCUrl(container: SandboxContainer) {
   if (!canOpenContainerNoVNC(container)) {
-    throw new Error("container does not support noVNC");
+    throw new Error("container control port is not ready");
   }
 
   const token = getStoredAccessToken();

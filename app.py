@@ -41,7 +41,7 @@ from service.sandbox.status import (
 )
 from service.sandbox.novnc import close_novnc_http_client
 from service.sandbox.files import close_file_http_client
-from service.sandbox.proxy import close_proxy_http_client
+from service.sandbox.control_proxy import close_control_proxy_http_client
 from service.host.hosts import ensure_local_managed_host
 from service.system_user.users import create_system_user, query_system_user_by_username
 from utils.urllib3_compat import install_urllib3_closed_file_close_patch
@@ -125,7 +125,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         await get_agent_pool().stop()
         await close_novnc_http_client()
         await close_file_http_client()
-        await close_proxy_http_client()
+        await close_control_proxy_http_client()
         await close_engine()
 
 

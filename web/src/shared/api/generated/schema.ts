@@ -299,7 +299,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sandbox-containers/{id}/egress-proxy": {
+    "/api/sandbox-containers/{id}/egress": {
         parameters: {
             query?: never;
             header?: never;
@@ -312,8 +312,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Sandbox Container Egress Proxy Handler */
-        patch: operations["update_sandbox_container_egress_proxy_handler_api_sandbox_containers__id__egress_proxy_patch"];
+        /** Update Sandbox Container Egress Handler */
+        patch: operations["update_sandbox_container_egress_handler_api_sandbox_containers__id__egress_patch"];
         trace?: never;
     };
     "/api/sandbox-containers/{id}/files": {
@@ -1744,17 +1744,14 @@ export interface components {
         };
         /** CreateSandboxContainerRequest */
         CreateSandboxContainerRequest: {
+            /** @default direct */
+            egress_mode: components["schemas"]["SandboxContainerEgressMode"];
             /** Egress Proxy Id */
             egress_proxy_id?: number | null;
             /** Host Id */
             host_id: number;
             /** Image Id */
             image_id: number;
-            /**
-             * Novnc Support
-             * @default false
-             */
-            novnc_support: boolean;
             /**
              * Owner Id
              * @description Assign container owner user ID. Admin only; defaults to the creator.
@@ -1766,12 +1763,17 @@ export interface components {
         /** CreateSandboxImageRequest */
         CreateSandboxImageRequest: {
             /**
-             * Default Exposed Port
+             * Control Port
              * @default 8000
              */
-            default_exposed_port: number;
+            control_proxy_port: number;
             /** Image Name */
             image_name: string;
+            /**
+             * Supports Tor
+             * @default false
+             */
+            supports_tor: boolean;
         };
         /** CreateSystemUserRequest */
         CreateSystemUserRequest: {
@@ -2213,6 +2215,11 @@ export interface components {
             run_id: string | null;
             status: components["schemas"]["SandboxAsyncJobStatus"];
         };
+        /**
+         * SandboxContainerEgressMode
+         * @enum {string}
+         */
+        SandboxContainerEgressMode: "direct" | "proxy" | "tor";
         /** SandboxContainerPortMapping */
         SandboxContainerPortMapping: {
             /** Container Port */
@@ -2232,15 +2239,20 @@ export interface components {
             container_hash: string;
             /** Container Name */
             container_name: string;
+            /** Control Host Port */
+            control_proxy_host_port: number;
+            /** Control Port */
+            control_proxy_port: number;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Egress Label */
+            egress_label: string;
+            egress_mode: components["schemas"]["SandboxContainerEgressMode"];
             /** Egress Proxy Id */
             egress_proxy_id: number | null;
-            /** Egress Proxy Label */
-            egress_proxy_label: string;
             /** Host Id */
             host_id: number;
             /** Host Ip Address */
@@ -2251,17 +2263,15 @@ export interface components {
             image_id: number;
             /** Image Name */
             image_name: string;
-            /** Novnc Support */
-            novnc_support: boolean;
             /** Owner Id */
             owner_id: number;
             /** Owner Username */
             owner_username: string;
             /** Port Mappings */
             port_mappings: components["schemas"]["SandboxContainerPortMapping"][];
-            /** Proxy Host Port */
-            proxy_host_port: number;
             status: components["schemas"]["SandboxContainerStatus"];
+            /** Supports Tor */
+            supports_tor: boolean;
             /**
              * Updated At
              * Format: date-time
@@ -2275,17 +2285,19 @@ export interface components {
         SandboxContainerStatus: "created" | "running" | "stopped" | "error";
         /** SandboxImageSchema */
         SandboxImageSchema: {
+            /** Control Port */
+            control_proxy_port: number;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Default Exposed Port */
-            default_exposed_port: number;
             /** Id */
             id: number;
             /** Image Name */
             image_name: string;
+            /** Supports Tor */
+            supports_tor: boolean;
             /**
              * Updated At
              * Format: date-time
@@ -2783,8 +2795,10 @@ export interface components {
             /** Ssh Port */
             ssh_port?: number | null;
         };
-        /** UpdateSandboxContainerEgressProxyRequest */
-        UpdateSandboxContainerEgressProxyRequest: {
+        /** UpdateSandboxContainerEgressRequest */
+        UpdateSandboxContainerEgressRequest: {
+            /** @default direct */
+            egress_mode: components["schemas"]["SandboxContainerEgressMode"];
             /** Egress Proxy Id */
             egress_proxy_id?: number | null;
         };
@@ -4583,7 +4597,7 @@ export interface operations {
             };
         };
     };
-    update_sandbox_container_egress_proxy_handler_api_sandbox_containers__id__egress_proxy_patch: {
+    update_sandbox_container_egress_handler_api_sandbox_containers__id__egress_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -4594,7 +4608,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateSandboxContainerEgressProxyRequest"];
+                "application/json": components["schemas"]["UpdateSandboxContainerEgressRequest"];
             };
         };
         responses: {

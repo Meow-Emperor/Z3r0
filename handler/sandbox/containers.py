@@ -34,7 +34,7 @@ from schema.sandbox.containers import (
     QuerySandboxContainersResponse,
     SandboxContainerSchema,
     SandboxContainerStatus,
-    UpdateSandboxContainerEgressProxyRequest,
+    UpdateSandboxContainerEgressRequest,
 )
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import paginated_payload
@@ -57,7 +57,7 @@ from service.sandbox.lifecycle import (
     delete_sandbox_container,
     start_sandbox_container,
     stop_sandbox_container,
-    update_sandbox_container_egress_proxy,
+    update_sandbox_container_egress,
 )
 from service.sandbox.novnc import (
     proxy_novnc_http,
@@ -67,6 +67,7 @@ from service.sandbox.novnc import (
 from service.sandbox.records import (
     query_available_sandbox_containers,
     query_sandbox_containers,
+    sandbox_container_schema,
 )
 from service.sandbox.shell import (
     ContainerShellSession,
@@ -76,10 +77,7 @@ from service.sandbox.shell import (
     resolve_shell_container,
     write_container_shell,
 )
-from service.sandbox.types import (
-    SandboxContainerMutationResult,
-    SandboxContainerRecord,
-)
+from service.sandbox.types import SandboxContainerMutationResult
 
 
 logger = get_logger(__name__)
@@ -87,42 +85,19 @@ _NOVNC_ACCESS_COOKIE = "z3r0_novnc_access"
 _SHELL_KEEPALIVE_INTERVAL_SECONDS = 25
 
 
-def _sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContainerSchema:
-    container = record.container
-    return SandboxContainerSchema(
-        id=container.id or 0,
-        host_id=container.host_id,
-        host_ip_address=record.host_ip_address,
-        container_name=container.container_name,
-        container_hash=container.container_hash,
-        image_id=container.image_id,
-        image_name=record.image_name,
-        egress_proxy_id=container.egress_proxy_id,
-        egress_proxy_label=record.egress_proxy_label,
-        proxy_host_port=container.proxy_host_port,
-        port_mappings=container.port_mappings,
-        novnc_support=container.novnc_support,
-        status=container.status,
-        owner_id=container.owner_id,
-        owner_username=record.owner_username,
-        created_at=container.created_at,
-        updated_at=container.updated_at,
-    )
-
-
 def _mutation_response(result: SandboxContainerMutationResult) -> CommonResponse:
     if result.record is None:
         status = HTTPStatus.NOT_FOUND if result.not_found else HTTPStatus.BAD_REQUEST
         return CommonResponse(code=status.value, message=result.message)
-    if not result.changed:
+    if not result.succeeded:
         return CommonResponse(
             code=HTTPStatus.BAD_REQUEST.value,
             message=result.message,
-            data=_sandbox_container_schema(result.record),
+            data=sandbox_container_schema(result.record),
         )
     return CommonResponse(
         message=result.message,
-        data=_sandbox_container_schema(result.record),
+        data=sandbox_container_schema(result.record),
     )
 
 
@@ -133,10 +108,10 @@ async def create_sandbox_container_handler(
     result = await create_sandbox_container(
         host_id=request.host_id,
         image_id=request.image_id,
+        egress_mode=request.egress_mode,
         egress_proxy_id=request.egress_proxy_id,
         owner_id=owner_id,
         port_mappings=request.port_mappings,
-        novnc_support=request.novnc_support,
     )
     return _mutation_response(result)
 
@@ -149,11 +124,15 @@ async def stop_sandbox_container_handler(id: int) -> CommonResponse:
     return _mutation_response(await stop_sandbox_container(id))
 
 
-async def update_sandbox_container_egress_proxy_handler(
+async def update_sandbox_container_egress_handler(
     id: int,
-    request: UpdateSandboxContainerEgressProxyRequest,
+    request: UpdateSandboxContainerEgressRequest,
 ) -> CommonResponse:
-    return _mutation_response(await update_sandbox_container_egress_proxy(id, request.egress_proxy_id))
+    return _mutation_response(await update_sandbox_container_egress(
+        id,
+        egress_mode=request.egress_mode,
+        egress_proxy_id=request.egress_proxy_id,
+    ))
 
 
 async def delete_sandbox_container_handler(id: int) -> CommonResponse:
@@ -167,7 +146,7 @@ async def query_sandbox_containers_handler(page: int, size: int, keyword: str) -
     return CommonResponse(data=QuerySandboxContainersResponse(
         **paginated_payload(
             sandbox_containers,
-            [_sandbox_container_schema(record) for record in sandbox_containers.items],
+            [sandbox_container_schema(record) for record in sandbox_containers.items],
         ),
     ))
 
@@ -189,7 +168,7 @@ async def query_available_sandbox_containers_handler(
     return CommonResponse(data=QuerySandboxContainersResponse(
         **paginated_payload(
             sandbox_containers,
-            [_sandbox_container_schema(record) for record in sandbox_containers.items],
+            [sandbox_container_schema(record) for record in sandbox_containers.items],
         ),
     ))
 
