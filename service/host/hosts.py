@@ -37,6 +37,10 @@ async def create_managed_host(
     host_account: str,
     host_password: str,
     docker_management_port: int,
+    docker_tls_enabled: bool,
+    docker_client_ca_cert: str,
+    docker_client_cert: str,
+    docker_client_key: str,
 ) -> ManagedHost:
     now = datetime.now()
     host = ManagedHost(
@@ -45,6 +49,10 @@ async def create_managed_host(
         host_account=host_account,
         host_password=host_password,
         docker_management_port=docker_management_port,
+        docker_tls_enabled=docker_tls_enabled,
+        docker_client_ca_cert=docker_client_ca_cert,
+        docker_client_cert=docker_client_cert,
+        docker_client_key=docker_client_key,
         created_at=now,
         updated_at=now,
     )
@@ -64,23 +72,57 @@ async def update_managed_host(
     host_account: str | None = None,
     host_password: str | None = None,
     docker_management_port: int | None = None,
+    docker_tls_enabled: bool | None = None,
+    docker_client_ca_cert: str | None = None,
+    docker_client_cert: str | None = None,
+    docker_client_key: str | None = None,
 ) -> UpdateManagedHostResult:
     async with get_async_session() as session:
         host = await session.get(ManagedHost, id)
         if host is None:
             return UpdateManagedHostResult(host=None, not_found=True, message="managed host not found")
 
-        docker_endpoint_changed = (
-            (ip_address is not None and ip_address != host.ip_address)
-            or (
-                docker_management_port is not None
-                and docker_management_port != host.docker_management_port
-            )
+        next_docker_tls_enabled = (
+            docker_tls_enabled if docker_tls_enabled is not None else host.docker_tls_enabled
         )
-        if docker_endpoint_changed and await _host_has_sandbox_containers(session, id):
+        next_docker_client_ca_cert = (
+            docker_client_ca_cert
+            if docker_client_ca_cert is not None
+            else host.docker_client_ca_cert
+        )
+        next_docker_client_cert = (
+            docker_client_cert
+            if docker_client_cert is not None
+            else host.docker_client_cert
+        )
+        next_docker_client_key = (
+            docker_client_key
+            if docker_client_key is not None
+            else host.docker_client_key
+        )
+        if not next_docker_tls_enabled:
+            next_docker_client_ca_cert = ""
+            next_docker_client_cert = ""
+            next_docker_client_key = ""
+        elif not all((next_docker_client_ca_cert, next_docker_client_cert, next_docker_client_key)):
             return UpdateManagedHostResult(
                 host=host,
-                message="host docker endpoint is used by sandbox containers",
+                message="docker TLS CA certificate, client certificate, and client key are required",
+            )
+
+        docker_connection_changed = _docker_connection_changed(
+            host=host,
+            ip_address=ip_address,
+            docker_management_port=docker_management_port,
+            docker_tls_enabled=next_docker_tls_enabled,
+            docker_client_ca_cert=next_docker_client_ca_cert,
+            docker_client_cert=next_docker_client_cert,
+            docker_client_key=next_docker_client_key,
+        )
+        if docker_connection_changed and await _host_has_sandbox_containers(session, id):
+            return UpdateManagedHostResult(
+                host=host,
+                message="host docker connection is used by sandbox containers",
             )
 
         if ip_address is not None:
@@ -93,6 +135,10 @@ async def update_managed_host(
             host.host_password = host_password
         if docker_management_port is not None:
             host.docker_management_port = docker_management_port
+        host.docker_tls_enabled = next_docker_tls_enabled
+        host.docker_client_ca_cert = next_docker_client_ca_cert
+        host.docker_client_cert = next_docker_client_cert
+        host.docker_client_key = next_docker_client_key
 
         host.updated_at = datetime.now()
         session.add(host)
@@ -158,6 +204,10 @@ async def ensure_local_managed_host() -> ManagedHost:
                 host_account=username,
                 host_password="",
                 docker_management_port=2375,
+                docker_tls_enabled=False,
+                docker_client_ca_cert="",
+                docker_client_cert="",
+                docker_client_key="",
                 created_at=now,
                 updated_at=now,
             )
@@ -222,3 +272,26 @@ async def delete_managed_host_image(id: int, image_id: str, force: bool = False)
 async def _host_has_sandbox_containers(session, host_id: int) -> bool:
     result = await session.exec(select(SandboxContainer.id).where(SandboxContainer.host_id == host_id).limit(1))
     return result.first() is not None
+
+
+def _docker_connection_changed(
+    *,
+    host: ManagedHost,
+    ip_address: str | None,
+    docker_management_port: int | None,
+    docker_tls_enabled: bool,
+    docker_client_ca_cert: str,
+    docker_client_cert: str,
+    docker_client_key: str,
+) -> bool:
+    return (
+        (ip_address is not None and ip_address != host.ip_address)
+        or (
+            docker_management_port is not None
+            and docker_management_port != host.docker_management_port
+        )
+        or docker_tls_enabled != host.docker_tls_enabled
+        or docker_client_ca_cert != host.docker_client_ca_cert
+        or docker_client_cert != host.docker_client_cert
+        or docker_client_key != host.docker_client_key
+    )

@@ -16,6 +16,10 @@ class ManagedHostSchema(BaseModel):
     host_account: str
     host_password: str
     docker_management_port: int
+    docker_tls_enabled: bool
+    docker_client_ca_cert: str
+    docker_client_cert: str
+    docker_client_key: str
     created_at: datetime
     updated_at: datetime
 
@@ -26,8 +30,19 @@ class CreateManagedHostRequest(BaseModel):
     host_account: str = Field(min_length=1, max_length=128)
     host_password: str = Field(min_length=1, max_length=512)
     docker_management_port: int = Field(default=2375, ge=1, le=65535)
+    docker_tls_enabled: bool = False
+    docker_client_ca_cert: str = ""
+    docker_client_cert: str = ""
+    docker_client_key: str = ""
 
-    @field_validator("ip_address", "host_account", mode="before")
+    @field_validator(
+        "ip_address",
+        "host_account",
+        "docker_client_ca_cert",
+        "docker_client_cert",
+        "docker_client_key",
+        mode="before",
+    )
     @classmethod
     def normalize_text(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -42,6 +57,20 @@ class CreateManagedHostRequest(BaseModel):
         except ValueError as exc:
             raise ValueError("ip address must be a valid IPv4 or IPv6 address") from exc
 
+    @model_validator(mode="after")
+    def validate_docker_tls_certificates(self):
+        if self.docker_tls_enabled and not all((
+            self.docker_client_ca_cert,
+            self.docker_client_cert,
+            self.docker_client_key,
+        )):
+            raise ValueError("docker TLS CA certificate, client certificate, and client key are required")
+        if not self.docker_tls_enabled:
+            self.docker_client_ca_cert = ""
+            self.docker_client_cert = ""
+            self.docker_client_key = ""
+        return self
+
 
 class UpdateManagedHostRequest(BaseModel):
     ip_address: str | None = Field(default=None, min_length=1, max_length=255)
@@ -49,8 +78,19 @@ class UpdateManagedHostRequest(BaseModel):
     host_account: str | None = Field(default=None, min_length=1, max_length=128)
     host_password: str | None = Field(default=None, min_length=1, max_length=512)
     docker_management_port: int | None = Field(default=None, ge=1, le=65535)
+    docker_tls_enabled: bool | None = None
+    docker_client_ca_cert: str | None = None
+    docker_client_cert: str | None = None
+    docker_client_key: str | None = None
 
-    @field_validator("ip_address", "host_account", mode="before")
+    @field_validator(
+        "ip_address",
+        "host_account",
+        "docker_client_ca_cert",
+        "docker_client_cert",
+        "docker_client_key",
+        mode="before",
+    )
     @classmethod
     def normalize_text(cls, value: Any) -> Any:
         if isinstance(value, str):
@@ -77,6 +117,10 @@ class UpdateManagedHostRequest(BaseModel):
                 self.host_account,
                 self.host_password,
                 self.docker_management_port,
+                self.docker_tls_enabled,
+                self.docker_client_ca_cert,
+                self.docker_client_cert,
+                self.docker_client_key,
             )
         ):
             raise ValueError("at least one field must be provided")

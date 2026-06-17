@@ -1726,10 +1726,30 @@ export interface components {
         /** CreateManagedHostRequest */
         CreateManagedHostRequest: {
             /**
+             * Docker Client Ca Cert
+             * @default
+             */
+            docker_client_ca_cert: string;
+            /**
+             * Docker Client Cert
+             * @default
+             */
+            docker_client_cert: string;
+            /**
+             * Docker Client Key
+             * @default
+             */
+            docker_client_key: string;
+            /**
              * Docker Management Port
              * @default 2375
              */
             docker_management_port: number;
+            /**
+             * Docker Tls Enabled
+             * @default false
+             */
+            docker_tls_enabled: boolean;
             /** Host Account */
             host_account: string;
             /** Host Password */
@@ -2036,8 +2056,16 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Docker Client Ca Cert */
+            docker_client_ca_cert: string;
+            /** Docker Client Cert */
+            docker_client_cert: string;
+            /** Docker Client Key */
+            docker_client_key: string;
             /** Docker Management Port */
             docker_management_port: number;
+            /** Docker Tls Enabled */
+            docker_tls_enabled: boolean;
             /** Host Account */
             host_account: string;
             /** Host Password */
@@ -2784,8 +2812,16 @@ export interface components {
         };
         /** UpdateManagedHostRequest */
         UpdateManagedHostRequest: {
+            /** Docker Client Ca Cert */
+            docker_client_ca_cert?: string | null;
+            /** Docker Client Cert */
+            docker_client_cert?: string | null;
+            /** Docker Client Key */
+            docker_client_key?: string | null;
             /** Docker Management Port */
             docker_management_port?: number | null;
+            /** Docker Tls Enabled */
+            docker_tls_enabled?: boolean | null;
             /** Host Account */
             host_account?: string | null;
             /** Host Password */

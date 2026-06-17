@@ -9,6 +9,7 @@ type ResourceModalProps = {
   submitLabel: string;
   submitDisabled?: boolean;
   width?: number;
+  className?: string;
   onCancel: () => void;
   onSubmit: () => void | Promise<void>;
   children: ReactNode;
@@ -21,6 +22,7 @@ export function ResourceModal({
   submitLabel,
   submitDisabled = false,
   width = 520,
+  className,
   onCancel,
   onSubmit,
   children,
@@ -31,7 +33,15 @@ export function ResourceModal({
   };
 
   return (
-    <Modal title={title} visible={open} onCancel={onCancel} footer={null} width={width} maskClosable={!saving}>
+    <Modal
+      title={title}
+      visible={open}
+      onCancel={onCancel}
+      footer={null}
+      width={width}
+      maskClosable={!saving}
+      className={className}
+    >
       <form className="resource-form" onSubmit={handleSubmit}>
         {children}
         <div className="modal-actions">

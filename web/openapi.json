@@ -1896,12 +1896,32 @@
       },
       "CreateManagedHostRequest": {
         "properties": {
+          "docker_client_ca_cert": {
+            "default": "",
+            "title": "Docker Client Ca Cert",
+            "type": "string"
+          },
+          "docker_client_cert": {
+            "default": "",
+            "title": "Docker Client Cert",
+            "type": "string"
+          },
+          "docker_client_key": {
+            "default": "",
+            "title": "Docker Client Key",
+            "type": "string"
+          },
           "docker_management_port": {
             "default": 2375,
             "maximum": 65535.0,
             "minimum": 1.0,
             "title": "Docker Management Port",
             "type": "integer"
+          },
+          "docker_tls_enabled": {
+            "default": false,
+            "title": "Docker Tls Enabled",
+            "type": "boolean"
           },
           "host_account": {
             "maxLength": 128,
@@ -2603,9 +2623,25 @@
             "title": "Created At",
             "type": "string"
           },
+          "docker_client_ca_cert": {
+            "title": "Docker Client Ca Cert",
+            "type": "string"
+          },
+          "docker_client_cert": {
+            "title": "Docker Client Cert",
+            "type": "string"
+          },
+          "docker_client_key": {
+            "title": "Docker Client Key",
+            "type": "string"
+          },
           "docker_management_port": {
             "title": "Docker Management Port",
             "type": "integer"
+          },
+          "docker_tls_enabled": {
+            "title": "Docker Tls Enabled",
+            "type": "boolean"
           },
           "host_account": {
             "title": "Host Account",
@@ -2640,6 +2676,10 @@
           "host_account",
           "host_password",
           "docker_management_port",
+          "docker_tls_enabled",
+          "docker_client_ca_cert",
+          "docker_client_cert",
+          "docker_client_key",
           "created_at",
           "updated_at"
         ],
@@ -4045,6 +4085,39 @@
       },
       "UpdateManagedHostRequest": {
         "properties": {
+          "docker_client_ca_cert": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docker Client Ca Cert"
+          },
+          "docker_client_cert": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docker Client Cert"
+          },
+          "docker_client_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docker Client Key"
+          },
           "docker_management_port": {
             "anyOf": [
               {
@@ -4057,6 +4130,17 @@
               }
             ],
             "title": "Docker Management Port"
+          },
+          "docker_tls_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docker Tls Enabled"
           },
           "host_account": {
             "anyOf": [

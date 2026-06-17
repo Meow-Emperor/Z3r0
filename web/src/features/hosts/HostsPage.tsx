@@ -1,10 +1,10 @@
-import { Button, Modal, Popconfirm, Select, Table, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Modal, Popconfirm, Select, Table, Tag, Tooltip } from "@douyinfe/semi-ui";
 import { Boxes, Download, Eye, EyeOff, Pencil, Server, SquareTerminal, Trash2, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createManagedHost, deleteManagedHost, listManagedHostImages, pullManagedHostImages, removeManagedHostImage, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
-import type { CreateManagedHostRequest, ManagedHost, ManagedHostImage, SandboxImage, UpdateManagedHostRequest } from "../../shared/api/types";
+import type { ManagedHost, ManagedHostImage, SandboxImage } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
@@ -110,8 +110,16 @@ export function HostsPage() {
       },
     },
     {
-      key: "docker", header: "Docker Port", width: "120px",
+      key: "docker", header: "Docker Port", width: "110px",
       render: (host) => host.docker_management_port,
+    },
+    {
+      key: "tls", header: "Mode", width: "90px",
+      render: (host) => (
+        <Tag color={host.docker_tls_enabled ? "green" : "grey"}>
+          {host.docker_tls_enabled ? "TLS" : "Plain"}
+        </Tag>
+      ),
     },
     { key: "updated", header: "Updated", width: "minmax(0, 0.7fr)", render: (host) => formatDateTime(host.updated_at) },
     {
@@ -170,19 +178,14 @@ export function HostsPage() {
         />
       </ResourcePageShell>
 
-      {modal?.mode === "edit" ? (
-        <HostFormModal
-          open mode="edit" host={modal.host} saving={saving}
-          onCancel={() => setModal(null)}
-          onSubmit={(payload: UpdateManagedHostRequest) => submit(() => updateManagedHost(modal.host.id, payload))}
-        />
-      ) : (
-        <HostFormModal
-          open={modal?.mode === "create"} mode="create" host={null} saving={saving}
-          onCancel={() => setModal(null)}
-          onSubmit={(payload: CreateManagedHostRequest) => submit(() => createManagedHost(payload))}
-        />
-      )}
+      <HostFormModal
+        open={Boolean(modal)}
+        host={modal?.mode === "edit" ? modal.host : null}
+        saving={saving}
+        onCancel={() => setModal(null)}
+        onCreate={(payload) => submit(() => createManagedHost(payload))}
+        onUpdate={(host, payload) => submit(() => updateManagedHost(host.id, payload))}
+      />
       <HostImagesModal host={imageModalHost} onClose={() => setImageModalHost(null)} />
     </>
   );

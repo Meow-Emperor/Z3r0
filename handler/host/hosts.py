@@ -56,6 +56,10 @@ async def create_managed_host_handler(request: CreateManagedHostRequest) -> Comm
         host_account=request.host_account,
         host_password=request.host_password,
         docker_management_port=request.docker_management_port,
+        docker_tls_enabled=request.docker_tls_enabled,
+        docker_client_ca_cert=request.docker_client_ca_cert,
+        docker_client_cert=request.docker_client_cert,
+        docker_client_key=request.docker_client_key,
     )
     return CommonResponse(data=ManagedHostSchema.model_validate(host))
 
@@ -68,6 +72,10 @@ async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest
         host_account=request.host_account,
         host_password=request.host_password,
         docker_management_port=request.docker_management_port,
+        docker_tls_enabled=request.docker_tls_enabled,
+        docker_client_ca_cert=request.docker_client_ca_cert,
+        docker_client_cert=request.docker_client_cert,
+        docker_client_key=request.docker_client_key,
     )
     if result.not_found:
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
