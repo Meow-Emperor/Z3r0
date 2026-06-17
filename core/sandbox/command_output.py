@@ -18,7 +18,7 @@ OUTPUT_CHUNK_LINE_COUNT = 200
 OUTPUT_DIR = "/tmp/shell-command-output"
 COMMAND_TIMEOUT_ERROR = "Command execution timed out."
 _OUTPUT_PREFIX = f"{OUTPUT_DIR}/"
-_META_PREFIX = "__z3r0_command_meta__"
+_META_PREFIX = "__sandbox_command_meta__"
 _OUTPUT_FILE_RE = re.compile(
     r"^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.log$",
     re.IGNORECASE,

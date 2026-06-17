@@ -67,7 +67,7 @@ async def _execute_container_command(
     environment: dict[str, str],
     timeout_seconds: float,
 ) -> SandboxContainerCommandResult:
-    marker_path = f"/tmp/z3r0-command-{uuid4().hex}.pid"
+    marker_path = f"/tmp/sandbox-command-{uuid4().hex}.pid"
     cancel_requested = threading.Event()
     running_command = _RunningContainerCommand()
     command_task = asyncio.create_task(

@@ -12,7 +12,7 @@ type SandboxImageFormModalProps = {
 };
 
 const EMPTY: CreateSandboxImageRequest = {
-  image_name: "security-sandbox:latest",
+  image_name: "sandbox-runtime:latest",
   control_proxy_port: 8000,
   supports_tor: false,
 };

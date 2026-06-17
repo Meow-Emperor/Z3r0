@@ -2,4 +2,4 @@
 
 set -eu
 
-docker build -t security-sandbox:latest .
+docker build -t sandbox-runtime:latest .

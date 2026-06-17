@@ -349,11 +349,11 @@ async def container_novnc_http(
     id: int,
     path: str,
     token: str = Query(default=""),
-    z3r0_novnc_access: str = Cookie(default=""),
+    sandbox_novnc_access: str = Cookie(default=""),
 ):
     return await handle_novnc_http_proxy(
         id=id,
         path=path,
         token=token,
-        cookie_token=z3r0_novnc_access,
+        cookie_token=sandbox_novnc_access,
     )

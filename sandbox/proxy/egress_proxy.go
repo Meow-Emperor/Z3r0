@@ -23,9 +23,9 @@ import (
 const (
 	defaultEgressProxyAddr = "127.0.0.1:8118"
 	defaultTorSocksAddr    = "127.0.0.1:9050"
-	egressProfilePath      = "/etc/profile.d/z3r0-egress.sh"
-	egressUpstreamTypeKey  = "Z3R0_EGRESS_UPSTREAM_TYPE"
-	egressUpstreamAddrKey  = "Z3R0_EGRESS_UPSTREAM_ADDR"
+	egressProfilePath      = "/etc/profile.d/sandbox-egress.sh"
+	egressUpstreamTypeKey  = "SANDBOX_EGRESS_UPSTREAM_TYPE"
+	egressUpstreamAddrKey  = "SANDBOX_EGRESS_UPSTREAM_ADDR"
 
 	egressUpstreamTypeHTTP   = "http"
 	egressUpstreamTypeHTTPS  = "https"

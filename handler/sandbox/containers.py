@@ -81,7 +81,7 @@ from service.sandbox.types import SandboxContainerMutationResult
 
 
 logger = get_logger(__name__)
-_NOVNC_ACCESS_COOKIE = "z3r0_novnc_access"
+_NOVNC_ACCESS_COOKIE = "sandbox_novnc_access"
 _SHELL_KEEPALIVE_INTERVAL_SECONDS = 25
 
 
