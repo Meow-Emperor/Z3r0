@@ -38,12 +38,14 @@ export function ResourceText({ children, title }: { children: ReactNode; title?:
 export function SecretCell({
   hiddenText = "********",
   id,
+  maskEmpty = false,
   onToggle,
   value,
   visible,
 }: {
   hiddenText?: string;
   id: string;
+  maskEmpty?: boolean;
   onToggle: () => void;
   value?: string;
   visible: boolean;
@@ -53,7 +55,7 @@ export function SecretCell({
 
   return (
     <div className="resource-secret-cell">
-      <code>{visible ? (value || "-") : hasValue ? hiddenText : "-"}</code>
+      <code>{visible ? (value || "-") : hasValue || maskEmpty ? hiddenText : "-"}</code>
       <Tooltip content={visible ? "Hide secret" : "Show secret"}>
         <Button
           icon={visible ? <EyeOff size={14} /> : <Eye size={14} />}

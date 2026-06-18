@@ -75,7 +75,7 @@ export function HostsPage() {
     {
       key: "password", header: "Password", width: "minmax(0, 0.6fr)",
       render: (host) => (
-        <SecretCell id={host.ip_address} value={host.host_password} visible={secrets.isVisible(host.id)} onToggle={() => secrets.toggle(host.id)} />
+        <SecretCell id={host.ip_address} value={host.host_password} visible={secrets.isVisible(host.id)} maskEmpty onToggle={() => secrets.toggle(host.id)} />
       ),
     },
     {
