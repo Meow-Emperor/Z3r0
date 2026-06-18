@@ -15,6 +15,7 @@ __pycache__
 
 node_modules
 dist
+cache
 web/node_modules
 web/dist
 web/dist-app

@@ -9,339 +9,240 @@
 
 <p align="center">
   <a href="#architecture">Architecture</a> ·
-  <a href="#agent-team">Agent Team</a> ·
-  <a href="#runtime-model">Runtime Model</a> ·
-  <a href="#deployment">Deployment</a> ·
-  <a href="QUICKSTART.md">Quickstart</a>
+  <a href="#runtime-flow">Runtime Flow</a> ·
+  <a href="#evidence-model">Evidence Model</a> ·
+  <a href="#sandbox-and-egress">Sandbox and Egress</a> ·
+  <a href="https://yv1ing.github.io/Z3r0/en/">Documentation</a> ·
+  <a href="https://yv1ing.github.io/Z3r0/en/guide/quick-start">Quick Start</a>
 </p>
 
 <p align="center">
-  <strong>AI-native red-team workbench for authorized penetration testing and vulnerability research, with specialist agents, sandboxed tooling, evidence records, and replayable timelines.</strong>
+  <strong>Open-source red team collaboration workbench for authorized penetration testing, vulnerability discovery, code auditing, and security research.</strong>
 </p>
 
 ---
 
-> :warning: **Legal Notice**
+> :warning: **Security Notice**
 >
-> **This project may be used only within a lawful and explicitly authorized scope for security testing, assessment, and research. Any unauthorized, unlawful, or harmful use is strictly prohibited. The author assumes no responsibility for any consequences, losses, damages, legal liabilities, or unlawful acts caused by users.**
+> This project is intended only for security testing, risk assessment, and academic research within legal and explicitly authorized scopes. It must not be used for unlawful, unauthorized, or destructive purposes.
 >
-> This project is provided only for authorized red-team operations, penetration testing, vulnerability research, security assessment, code auditing, internal review, and controlled research. It does not grant permission to test, access, scan, or affect any third-party system, network, service, account, or data. Users are solely responsible for obtaining and preserving authorization, defining scope, and complying with applicable laws, contracts, and authorization boundaries.
+> This project does not grant permission to test, access, scan, or affect any third-party systems, networks, services, accounts, or data.
+>
+> **The author is not responsible for any consequences, losses, damages, legal liabilities, or unlawful behavior caused by users.**
 
-Z3r0 is an AI-native red-team workbench for authorized penetration testing and vulnerability research. It coordinates specialist agents across reconnaissance, vulnerability validation, attack-path analysis, code audit, reverse engineering, and cryptographic review, while running tools through bound Docker sandboxes and preserving assets, findings, relationships, and attack paths as durable evidence records.
+## Overview
 
-## Design Principles
+Z3r0 is a control-plane-oriented red team workbench. It combines a React operator console, a FastAPI management plane, a session-based multi-agent runtime, project-scoped evidence records, distributed Docker sandbox resources, and a controlled egress layer.
 
-- **Authorization before automation**: every workflow assumes an explicit legal scope, controlled targets, and operator accountability before any tool capability is used.
-- **Role-governed red-team execution**: the coordinator owns decomposition and synthesis; specialist agents handle reconnaissance, vulnerability validation, code audit, reverse engineering, and cryptographic review within scoped responsibilities.
-- **Structured evidence over transient context**: durable WorkProject records persist assets, findings, relationship edges, and attack paths outside model context so evidence remains reviewable after the conversation changes.
-- **Resumable long-running work**: notification obligations model background subagent work and sandbox jobs, allowing drivers to stop cleanly and resume only when integration work is ready.
-- **Controlled execution boundary**: command execution, browser workflows, file management, GUI tooling, and skills run through bound Docker sandboxes rather than the application host.
-- **Stable contracts**: the frontend consumes application REST, WebSocket, timeline, and generated schema contracts instead of model SDK or provider internals.
+The design goal is to make agent-assisted security work operationally bounded and reviewable. Conversations are not treated as the only source of truth. Project scope, assets, findings, relationship graph edges, attack paths, sandbox resources, egress policy, and replayable timeline events are represented as explicit application data.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  Operator["Authorized Red-Team Operator"]
-  Workbench["React Red-Team Workbench<br/>Presentation Layer"]
-  API["FastAPI API<br/>API Layer"]
-  Runtime["Agent Runtime<br/>Orchestration Layer"]
-  Drivers["Instance Drivers<br/>Async Scheduling Layer"]
-  Notifications["Notification Obligations<br/>Liveness Layer"]
-  Graph["Session Agent Graph<br/>Capability Layer"]
-  Timeline["Timeline Event Log<br/>Replay Layer"]
-  Record["WorkProject Evidence Records<br/>Review Layer"]
-  Evidence["Evidence Chain<br/>Assets / Findings / Attack Paths"]
-  Sandbox["Docker Sandbox<br/>Execution Layer"]
-  Tools["Sandbox Tool Surface<br/>Tool Layer"]
-  Models["Model Providers<br/>Model Layer"]
-  Events["Event Contract<br/>Streaming Layer"]
-  Store[("PostgreSQL Store<br/>Persistence Layer")]
+  Operator["Authorized Operator"]
+  Workbench["React Workbench<br/>Playground / Projects / Sandboxes / Egress"]
+  API["FastAPI Control Plane<br/>REST + WebSocket"]
+
+  subgraph Runtime["Agent Runtime Plane"]
+    Session["Session Runtime"]
+    Graph["Session Agent Graph"]
+    Team["Lead + Specialist Agents"]
+    Timeline["Timeline Event Stream"]
+  end
+
+  subgraph Evidence["Evidence Plane"]
+    Project["WorkProject"]
+    Records["Assets / Findings / Edges / Paths"]
+    Tasks["Tasks / Agent Summaries"]
+  end
+
+  subgraph Execution["Execution Plane"]
+    Hosts["Managed Docker Hosts"]
+    Containers["Sandbox Containers"]
+    ControlProxy["Sandbox Control Proxy"]
+    Egress["Local Egress Proxy"]
+  end
+
+  Store[("PostgreSQL")]
 
   Operator --> Workbench
-  Workbench -->|REST / WebSocket| API
-  API --> Runtime
-  Runtime --> Drivers
-  Runtime --> Graph
-  Runtime --> Record
-  Runtime --> Sandbox
-  Runtime --> Events
-  Runtime --> Store
-  Drivers --> Notifications
-  Notifications --> Runtime
-  Events --> Timeline
+  Workbench -->|REST| API
+  Workbench -->|WebSocket| API
+  API --> Session --> Graph --> Team
+  Team --> Records
+  Team --> Containers
+  Session --> Timeline
+  Project --> Records
+  Project --> Tasks
+  Hosts --> Containers --> ControlProxy --> Egress
+  API --> Project
+  API --> Hosts
+  API --> Containers
+  API --> Egress
   Timeline --> Store
-  Graph --> Tools
-  Graph --> Models
-  Sandbox --> Tools
-  Record --> Store
-  Record --> Evidence
-  Evidence --> Workbench
-  Events --> Workbench
+  Records --> Store
+  Tasks --> Store
+  Project --> Store
+  Containers --> Store
 ```
 
-The system is organized into explicit layers: user-facing red-team workbench, API boundary, runtime orchestration, resumable instance drivers, notification-backed liveness, session agent graph, controlled execution, model access, streaming event contract, durable timeline replay, and persisted WorkProject evidence records. The backend owns authentication, session lifecycle, context projection, event normalization, delegation, sandbox binding, tool mounting, notification obligations, persistence, project-scoped records, and history compaction. The frontend consumes stable REST and WebSocket contracts and does not depend on model SDK or provider internals.
+Z3r0 separates the system into four architectural planes:
 
-### Value Model
+| Plane | Scope |
+| --- | --- |
+| Control plane | Users, system configuration, agents, sessions, WorkProjects, managed hosts, sandbox images, sandbox containers, and egress proxies. |
+| Runtime plane | Multi-agent session execution, live event streaming, long-running task continuity, history projection, and timeline replay. |
+| Evidence plane | Project scope, assets, findings, relationship graph, attack paths, task progress, and per-agent summaries. |
+| Execution plane | Docker hosts, sandbox containers, shell/file/noVNC access, command execution, sandbox skills, and outbound network policy. |
+
+This separation is reflected in the repository structure: routers and handlers expose application contracts, services own domain behavior, models define persistent state, and the React workbench consumes the stable REST/WebSocket surface.
+
+## Runtime Flow
+
+```mermaid
+sequenceDiagram
+  participant UI as React Workbench
+  participant API as FastAPI
+  participant Pool as Session Runtime
+  participant Agents as Agent Graph
+  participant Tools as Tool Layer
+  participant Project as WorkProject
+  participant Sandbox as Sandbox Pool
+  participant DB as PostgreSQL
+
+  UI->>API: Submit scoped message
+  API->>Pool: Start or resume session
+  Pool->>Agents: Execute lead or specialist agent
+  Agents->>Tools: Invoke project, knowledge, sandbox, or delegation tools
+
+  alt Evidence operation
+    Tools->>Project: Create or update assets, findings, graph edges, paths
+    Project->>DB: Persist structured evidence
+  else Sandbox operation
+    Tools->>Sandbox: Execute command / read output / use shell, files, noVNC
+    Sandbox->>DB: Persist task state and output metadata
+  else Background work
+    Tools->>DB: Persist resumable task state
+    DB-->>Pool: Result becomes available
+    Pool->>Agents: Resume result integration
+  end
+
+  Pool->>DB: Persist normalized timeline events
+  Pool-->>API: Stream transcript events
+  API-->>UI: Live view and replayable history
+```
+
+The runtime is designed for assessments that outlive a single browser interaction. The frontend can stream live events, reload persisted timeline pages, switch sessions, inspect subagent work, and open project records without depending on provider-specific model events. Long-running commands and specialist tasks are represented as application state, so results can be integrated after they complete instead of forcing the operator to wait in a blocking turn.
+
+## Evidence Model
 
 ```mermaid
 flowchart LR
-  Scope["Authorized Red-Team Scope<br/>targets, owners, sandbox"] --> Agents["Specialist Agent Team<br/>coordinator + experts"]
-  Agents --> Tools["Sandboxed Tooling<br/>commands, files, GUI, skills"]
-  Tools --> Evidence["Evidence Records<br/>assets, findings, edges, paths"]
-  Evidence --> Review["Human Review<br/>workspace, graph, replay"]
-  Review --> Continuity["Continuity<br/>resume, audit, handoff records"]
+  Scope["Declared Scope"]
+  Assets["Assets<br/>service / domain / network / binary"]
+  Edges["Relationship Graph<br/>structural + offensive edges"]
+  Findings["Findings<br/>proof + impact + status"]
+  Paths["Attack Paths<br/>ordered edge traversal"]
+  Review["Review Surface<br/>records + graph + timeline"]
+
+  Scope --> Assets
+  Assets --> Edges
+  Assets --> Findings
+  Edges --> Findings
+  Edges --> Paths
+  Findings --> Review
+  Paths --> Review
 ```
 
-This value chain keeps red-team and vulnerability research work operationally bounded. Scope is declared before execution, agents work through explicit tools, tool output is distilled into structured evidence, and reviewers can inspect the resulting graph and timeline without relying on hidden model state.
+WorkProject is the durable evidence boundary for professional review. Assets are graph nodes. Relationships describe architecture or attack progression. Findings attach proof and impact to affected assets and, when needed, to a specific relationship. Attack paths are ordered traversals through the graph.
 
-## Agent Team
+| Data object | Role in the assessment |
+| --- | --- |
+| WorkProject | Assessment container for owners, type, status, scope assets, sandbox bindings, sessions, tasks, and summaries. |
+| Asset | Normalized target or discovered object: service, domain, network, or binary. |
+| Finding | Security observation with severity, status, proof, impact, and optional graph binding. |
+| Graph edge | Directed relationship between two assets, either structural or offensive. |
+| Attack path | Ordered path over graph edges, used to reconstruct access or impact progression. |
 
-| Code | Name | Role | Responsibility |
-| --- | --- | --- | --- |
-| `cso` | Z3r0 | Chief Security Officer | Task decomposition, coordination, result integration |
-| `cae` | V3ra | Chief Audit Engineer | Source code audit, dependency review, remediation verification |
-| `cie` | L1ly | Chief Intelligence Engineer | Reconnaissance, asset discovery, relationship mapping |
-| `cpe` | Fr4nk | Chief Penetration Engineer | Penetration testing, vulnerability validation, impact verification |
-| `cre` | J4m3 | Chief Reverse Engineer | File, binary, firmware, and APK reverse engineering |
-| `cce` | Nu1L | Chief Cryptography Engineer | Protocol review, key management, cryptographic implementation analysis |
+This model keeps evidence independent from model context. Agent summaries can remain compact while durable facts stay queryable, visualizable, and reviewable.
+
+## Sandbox and Egress
 
 ```mermaid
 flowchart TB
-  CSO["cso / Z3r0"]
-  CSO --> CAE["cae / V3ra<br/>Code Audit"]
-  CSO --> CIE["cie / L1ly<br/>Reconnaissance"]
-  CSO --> CPE["cpe / Fr4nk<br/>Validation"]
-  CSO --> CRE["cre / J4m3<br/>Reverse"]
-  CSO --> CCE["cce / Nu1L<br/>Cryptography"]
+  Project["WorkProject"]
+  Runtime["Agent / Operator Session"]
+  Pool["Sandbox Resource Pool"]
+  HostA["Managed Host A"]
+  HostB["Managed Host B"]
+  ContainerA["Sandbox Container"]
+  ContainerB["Sandbox Container"]
+  Control["Sandbox Control Proxy<br/>shell / files / noVNC / egress API"]
+  LocalProxy["In-container Egress Proxy<br/>127.0.0.1:8118"]
+  Policy["Egress Policy"]
+  Direct["Direct"]
+  HTTP["HTTP / HTTPS"]
+  SOCKS["SOCKS5"]
 
-  CAE --> A1["Knowledge and Sandbox Tools"]
-  CIE --> K1["Knowledge and Sandbox Tools"]
-  CPE --> S1["Knowledge and Sandbox Tools"]
-  CRE --> S2["Knowledge and Sandbox Tools"]
-  CCE --> S3["Knowledge and Sandbox Tools"]
+  Project --> Pool
+  Runtime --> Pool
+  Pool --> HostA --> ContainerA
+  Pool --> HostB --> ContainerB
+  ContainerA --> Control --> LocalProxy --> Policy
+  ContainerB --> Control
+  Policy --> Direct
+  Policy --> HTTP
+  Policy --> SOCKS
 ```
 
-Agent capabilities are assembled per session. `AgentRegistry` uses configuration, role specifications, knowledge generation, the current sandbox binding, and the current WorkProject binding to create a session-level agent graph. Command tools are mounted only when an authorized, running sandbox is bound to the session. WorkProject record tools are mounted only for project sessions, keeping ordinary chat sessions separate from assets, findings, relationship edges, and attack paths.
+Sandboxing is treated as infrastructure, not as an incidental tool call. Administrators manage Docker hosts, sandbox images, running containers, exposed ports, and project bindings. Operators and agents work through selected running containers, and the same sandbox boundary supports command execution, shell sessions, file management, browser/noVNC review, and sandbox-local skills.
 
-## Runtime Model
+Outbound traffic is normalized through a container-level egress profile. The sandbox runtime exports proxy environment variables to a local proxy inside the container; the control plane can update the upstream policy to direct access or a managed HTTP, HTTPS, or SOCKS5 proxy. This gives the platform a unified place to manage network identity, traffic routing, and operator-environment isolation.
 
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant W as WebSocket
-  participant P as AgentSessionPool
-  participant S as AgentSession
-  participant TR as TaskRuntime
-  participant A as Agent
-  participant N as Notifications
-  participant T as Timeline
-  participant DB as PostgreSQL
+## Technical Highlights
 
-  U->>W: send(text, agent_code, sandbox_id)
-  W->>P: get_or_create(session_id)
-  P->>S: start_turn(content)
-  S->>S: launch main instance driver
-  S->>TR: run_until_idle(initial_content)
-  TR->>DB: load projected history
-  TR->>A: Runner.run_streamed()
-  A-->>TR: iter_interruptible_events()
-  TR-->>S: normalized events
-  S-->>W: publish to subscribers
-  S->>T: stamp seq + upsert persistable event
-  T->>DB: timeline event log
-  TR->>DB: persist messages + metadata
-  W-->>U: thinking / text / tool / done
+| Highlight | Description |
+| --- | --- |
+| Multi-agent orchestration | A lead agent coordinates specialist agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis. |
+| Project evidence plane | WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries. |
+| Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
+| Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
+| Unified egress layer | Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface. |
+| Operator workbench | The frontend combines chat, project records, graph review, sandbox selector, terminal, files, and noVNC into one workflow. |
 
-  Note over TR,A: Notification arrives during turn
-  TR->>TR: InterruptSignal (deferred if tool pending)
-  TR->>DB: flush_partial_context
-  TR->>N: claim PENDING notification
-  N-->>TR: notification prompt / user message
-  TR->>TR: run notification turn
-  S->>S: stop when no PENDING work and leave AWAITING work dormant
-```
+## Expert Team
 
-Key runtime boundaries:
-
-- **Non-blocking instance drivers**: `AgentSession._drive` and `_SubagentDriver` run the optional initial turn, drain currently claimable notifications, then settle. Drivers stop while background work is still `AWAITING`; completion notifications relaunch the owning main or subagent instance when integration work is ready.
-- **Interrupt-driven task execution**: `run_until_idle` manages the agent turn lifecycle; `iter_interruptible_events` races the SDK event stream against notification signals and raises `InterruptSignal` at safe points (after pending tool calls complete), modeled after CPU interrupt masking for atomicity.
-- **Notification-backed liveness**: `AgentNotification` rows are the single source of truth for active work. `AWAITING` tracks running background obligations, `PENDING` wakes the owning agent, and `PROCESSING` marks a claimed notification turn.
-- **Turn-terminal async commands**: `execute_async_command` dispatches a sandbox command, returns only `status` and `run_id`, and `AgentRegistry` ends the turn immediately via `tool_use_behavior`. The agent is resumed automatically when the command completes; there is no polling or list-wait loop.
-- **Timeline event log**: live events are stamped with stable `seq` values and item keys in `TimelineLogWriter`; persistable events are upserted into the durable event log so replay reads the same wire events instead of reconstructing UI state from SDK messages.
-- **Event normalization**: raw model and agent SDK events are converted into stable frontend events such as `thinking_delta`, `text_delta`, `tool_call`, `tool_result`, and `subagent_task`.
-- **Session pool**: `AgentSessionPool` manages active sessions, notification recovery, interruption, cancellation, idle eviction, and tool-binding invalidation.
-- **History projection**: `Z3r0Session` adds owner and nested-call metadata around SDK messages so each agent receives the right view of the shared conversation.
-- **Context compaction**: when context approaches the model window, the runtime summarizes earlier projected history while preserving recent context and durable facts.
-
-## Delegation Flow
-
-```mermaid
-sequenceDiagram
-  participant CSO as CSO Agent
-  participant D as Delegation Tools
-  participant DB as PostgreSQL
-  participant SJ as Subagent Driver
-  participant Child as Specialist Agent
-  participant N as Notifications
-  participant P as Parent Driver
-
-  CSO->>D: start_subagent_task(agent_code, brief)
-  D->>DB: create task + AWAITING parent obligation
-  D->>SJ: register _SubagentDriver and spawn drive
-  SJ-->>CSO: run_id (CSO ends turn)
-  SJ->>Child: run_until_idle(brief)
-  Child-->>SJ: stream progress / final output
-  alt child starts nested work
-    SJ->>N: sees outstanding target obligations
-    SJ->>SJ: go dormant with no live task
-  else child reaches terminal status
-    SJ->>DB: complete / fail task
-    DB->>N: AWAITING -> PENDING parent obligation
-    N->>P: resume_target_instance(parent)
-    P->>CSO: claim result notification
-    CSO-->>CSO: integrate result
-  end
-```
-
-Specialist agents run through resumable per-run `_SubagentDriver` instances. Starting a subagent creates the `AgentSubordinateTask` record and the parent `SUBAGENT_FINISHED` notification obligation in one database transaction, so the parent never observes a gap where the child is neither running nor pending integration. Each subagent driver uses the same `run_until_idle` executor as the main agent, streams nested events through the session event bus, and then settles into one of three states: relaunch if a claimable notification arrived during drain, go dormant if child work or async jobs are still outstanding, or complete/fail/cancel the task.
-
-When a subagent completes or fails, the task update and parent obligation transition (`AWAITING` -> `PENDING`) commit together. `resume_target_instance` wakes the owning driver: main-agent targets route through `AgentSessionPool.resume_session`, while subagent targets relaunch their dormant `_SubagentDriver`. Canceled subagents resolve their obligation without waking the parent.
-
-## Sandbox Tooling
-
-```mermaid
-flowchart LR
-  Agent["Agent Tool Call"] --> Binding["Sandbox Binding Check"]
-  Binding -->|running + authorized| Sync["execute_sync_command"]
-  Binding -->|running + authorized| Async["execute_async_command"]
-  Binding --> Skill["load_skill"]
-  Binding --> Knowledge["agent knowledge"]
-  Sync --> Docker["Docker exec"]
-  Docker --> Output["ToolResult JSON + output_file"]
-  Output --> Agent
-  Async --> Job[("SandboxAsyncJob<br/>AWAITING obligation")]
-  Job -->|completed / failed| Notify["PENDING owner notification"]
-  Notify --> Agent
-  Agent --> Read["read_sandbox_command_output"]
-  Read --> Docker
-
-  User["User"] --> Shell["Web Shell"]
-  User --> File["File Manager"]
-  User --> Screen["noVNC"]
-  Shell --> Docker
-  File --> Docker
-  Screen --> Docker
-```
-
-The optional sandbox image can include a browser, noVNC, reverse engineering utilities, network assessment utilities, and related review tools. Synchronous commands return captured output metadata immediately. Asynchronous commands are deliberately turn-terminal: after dispatch, the agent stops and is resumed only after the job completes or fails, with terminal status, exit code, output size, and output file delivered through the owner notification. Agents read completed output with `read_sandbox_command_output`; they do not poll running jobs.
-
-## WorkProject Records
-
-WorkProject sessions are the durable assessment workspace. They keep structured records outside the model context and outside SDK-owned tables:
-
-- **Assets**: the only graph nodes. `type` is one of `service`, `domain`, `network`, or `binary`; `service`/`domain`/`network` use the `host` field (port optional for `service`), `binary` uses `path`, and a short recon `banner` is stored in the small `extra` object. `origin` marks each asset as declared `scope` or agent-`discovered`. Each asset is keyed by a normalized `(type, identifier)` identity.
-- **Findings**: suspected, validated, or false-positive risks. A finding records the affected asset and carries its own proof in `description`/`impact`; when it substantiates a relationship or attack step it is attached to the relevant graph edge.
-- **Relationship graph**: directed edges between two assets. The `type` is either structural (`related`, `resolves_to`, `hosts`, `connects_to`, `trusts`) describing the target architecture, or offensive (`exploits`, `pivots_to`, `leads_to`) describing attack progression. Findings attached to an edge are its supporting evidence.
-- **Attack paths**: ordered chains where each step traverses one relationship edge, explaining how access or impact progressed.
-
-These records are read through WorkProject-scoped REST APIs and project-session UI views, and are created and updated by agents through session tools when the session has a bound WorkProject; ordinary chat sessions do not receive these tools or UI entry points. Agent summaries remain compact checkpoints, while durable facts live in the structured project records. Report generation remains a planned roadmap phase and is not part of the current implementation.
-
-### Auditable Attack Chain
-
-The four record types form a single graph: assets are nodes, edges are directed relationships between them, findings are the evidence attached to a node and/or an edge, and an attack path is an ordered walk over edges. An edge's structural-vs-offensive category is derived from its `type` (it is not a stored column). Because every claim is pinned to the graph element it describes, the whole assessment is traceable end to end.
-
-```mermaid
-erDiagram
-  ASSET {
-    enum   type        "service | domain | network | binary"
-    enum   origin      "scope | discovered"
-    string identifier  "(type, identifier) identity"
-    string created_by_agent_code  "agent provenance for discovered assets"
-    string created_from_session_id "agent provenance for discovered assets"
-  }
-  EDGE {
-    enum   type   "related|resolves_to|hosts|connects_to|trusts|exploits|pivots_to|leads_to"
-    string label
-    int    source_asset_id
-    int    target_asset_id
-  }
-  FINDING {
-    enum     status      "suspected | validated | false_positive"
-    int      asset_id    "affected node"
-    int      edge_id     "substantiated relation"
-    datetime validated_at
-  }
-  ATTACK_PATH {
-    enum   status  "suspected | validated | blocked | closed"
-    string title
-  }
-  ATTACK_PATH_STEP {
-    int sequence "ordered hop"
-    int edge_id  "traversed relation"
-  }
-
-  ASSET            ||--o{ EDGE             : "source / target node"
-  ASSET            ||--o{ FINDING          : "affected asset"
-  EDGE             ||--o{ FINDING          : "evidence (edge_id)"
-  EDGE             ||--o{ ATTACK_PATH_STEP : "traversed by"
-  ATTACK_PATH      ||--o{ ATTACK_PATH_STEP : "ordered steps"
-```
-
-The chain is auditable and traceable on five axes:
-
-- **Provenance** — agent-created assets, edges, findings, paths, and steps carry `created_by_agent_code`, `created_from_session_id`, and `created_at`/`updated_at`, so each discovered fact traces back to the exact agent and session that produced it and when. Declared `scope` assets are owned by project metadata and keep runtime provenance blank.
-- **Evidence binding** — a finding's `edge_id` ties proof to a specific relationship and its `asset_id` ties proof to a specific node; the proof itself (`description`/`impact`) lives in the finding, so any relation or attack step can be drilled down to the evidence that justifies it.
-- **Confidence lifecycle** — a finding's `status` (`suspected` → `validated`/`false_positive`, with the moment of validation stamped by `validated_at`) and an attack path's `status` (`suspected` → `validated`, or `blocked`/`closed`) make the maturity of every claim explicit; nothing is presented as fact until it is validated.
-- **Replayable path** — an attack path is an ordered list of steps, each pinned to one edge between two assets, so the route from entry to impact can be reconstructed hop by hop, with each hop carrying its own supporting findings.
-- **Scope accountability & integrity** — `origin` separates declared `scope` from agent-`discovered` surface so work can be checked against the engagement boundary, and referential rules keep the graph consistent (deleting an asset purges its edges and detaches its findings; deleting an edge removes the steps that traverse it and detaches its findings), so the audit trail never holds dangling references.
-
-## Technical Characteristics
-
-- **True async instance drivers**: main and subagent drivers drain ready turns and then stop; they do not block on background children or long sandbox commands. Completion notifications relaunch the owning instance when integration work is ready.
-- **Interrupt-driven task runtime**: `run_until_idle` provides a unified execution loop for both main and sub-agents; `iter_interruptible_events` races the SDK event stream against notification signals, raising `InterruptSignal` with CPU-interrupt-style atomicity that defers preemption until pending tool calls complete.
-- **Notification obligation scheduler**: subagent tasks and sandbox async jobs register `AWAITING` obligations atomically with their own records; terminal updates flip obligations to `PENDING`, `COMPLETED`, `FAILED`, or `CANCELED` so session liveness comes from one table.
-- **Turn-terminal async command dispatch**: successful `execute_async_command` calls end the agent turn immediately through SDK tool-use behavior, preventing follow-up polling and making completion notification the only resume path.
-- **Session-level agent graph**: role configuration, tools, knowledge, and subagents are bound dynamically per session.
-- **Self-healing delegation drivers**: subagents can be canceled while live or dormant, stale running tasks are failed on backend restart, and relaunch budgets prevent hot loops when a driver cannot make progress.
-- **Durable timeline replay**: the UI timeline persists stable event payloads with monotonic `seq` values and item keys, so refresh/replay uses the same event contract as live streaming.
-- **Viewer-specific context projection**: agents share one persisted history while receiving scoped context views, reducing cross-agent leakage of private tool details.
-- **Long-context compaction**: model-window-aware summaries preserve durable facts and recent state for long reviews.
-- **Stable streaming contract**: the frontend is decoupled from SDK event details and consumes application-level event schemas.
-- **Sandbox tool invalidation**: sandbox status changes invalidate tool bindings and clean up running subagent tasks or async commands.
-- **Project-scoped security records**: assets, findings, relationship edges, and attack paths are persisted as app-owned WorkProject records and replayed from stable API contracts.
+| Code | Name | Role | Responsibilities |
+| --- | --- | --- | --- |
+| `cso` | Z3r0 | Chief Security Lead | Task decomposition, team coordination, result integration |
+| `cae` | V3ra | Code Audit Engineer | Source code auditing, dependency review, remediation verification |
+| `cie` | L1ly | Intelligence Gathering Engineer | Intelligence gathering, asset discovery, relationship mapping |
+| `cpe` | Fr4nk | Penetration Testing Engineer | Penetration testing, vulnerability validation, impact confirmation |
+| `cre` | J4m3 | Reverse Analysis Engineer | Reverse analysis, firmware disassembly, binary unpacking |
+| `cce` | Nu1L | Cryptography Engineer | Cryptographic analysis, key review, security assessment |
 
 ## Repository Layout
 
 ```text
 core/        Agent specs, runtime, task runtime, delegation, context, tools
-service/     Domain services: agent, sandbox, users, work projects
+service/     Domain services for agent, sandbox, users, hosts, egress, projects
 router/      FastAPI route declarations
-handler/     HTTP and WebSocket handlers
+handler/     HTTP and WebSocket request handling
 model/       SQLModel database models
 schema/      Pydantic API contracts
-web/         React workbench
-sandbox/     Optional Docker sandbox image
-.z3r0/       Runtime config, agent prompts, logs
+web/         React workbench and landing page
+sandbox/     Docker sandbox image and control proxy
+docs/        VitePress documentation
+.z3r0/       Runtime configuration, agent prompts, knowledge files, logs
 ```
 
-## Deployment
+## Documentation
 
-For a step-by-step setup guide, see [QUICKSTART.md](QUICKSTART.md).
-
-```bash
-cp .z3r0/config.json.example .z3r0/config.json
-# Review database, initial administrator, model provider, and sandbox settings.
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-Open `http://127.0.0.1:8000`.
-
-## Security Boundary
-
-Z3r0 is intended only for authorized red-team operations, penetration testing, vulnerability research, security assessment, code auditing, internal review, and research or training environments. The project does not authorize access to any third-party target and must not be used for unauthorized or unlawful activity. Sandbox containers, the Docker socket, terminal access, file management, and model credentials are high-privilege assets and should be used only in trusted, isolated environments.
-
-Users must define and follow an explicit authorization scope before using any tool capability. The author is not responsible for any consequence, loss, damage, legal liability, or unlawful act caused by user activity.
+- [Overview](https://yv1ing.github.io/Z3r0/en/guide/overview)
+- [Quick Start](https://yv1ing.github.io/Z3r0/en/guide/quick-start)
+- [First Use](https://yv1ing.github.io/Z3r0/en/guide/first-use)
+- [Join Community](https://yv1ing.github.io/Z3r0/en/guide/community)
 
 ## Acknowledgments
 
