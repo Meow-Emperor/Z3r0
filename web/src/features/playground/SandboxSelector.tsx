@@ -1,6 +1,6 @@
 import { Select, Spin, Tag } from "@douyinfe/semi-ui";
 import { Box } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { SandboxContainer } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
@@ -22,17 +22,11 @@ export function SandboxSelector({ containers, loading, value, className = "", on
     [containers],
   );
 
-  useEffect(() => {
-    if (value != null && !runningContainers.some((container) => container.id === value)) {
-      onChange(null);
-    }
-  }, [onChange, runningContainers, value]);
-
   const optionList = runningContainers.map((container) => ({
     label: renderContainerOption(container),
     value: container.id,
   }));
-  const selectedContainer = runningContainers.find((container) => container.id === value);
+  const selectedContainer = containers.find((container) => container.id === value) ?? null;
 
   return (
     <div className={cx("sandbox-selector", className)}>

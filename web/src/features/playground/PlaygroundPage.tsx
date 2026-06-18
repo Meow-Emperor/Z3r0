@@ -1,5 +1,5 @@
 import { Button, Tooltip } from "@douyinfe/semi-ui";
-import { Activity, FolderKanban, FolderOpen, Monitor, Plus, SquareTerminal } from "lucide-react";
+import { Activity, FolderKanban, FolderOpen, Monitor, PanelRightOpen, Plus, SquareTerminal } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
@@ -73,6 +73,10 @@ export function PlaygroundPage() {
   const openProjectRecords = useCallback(() => {
     setProjectRecordsOpen(true);
   }, []);
+  const openSubagentPanel = useCallback(() => {
+    const tab = [...subagentTabs].reverse().find((item) => item.status === "running") ?? subagentTabs[subagentTabs.length - 1];
+    if (tab) setSelectedSubagent(tab.agentCode);
+  }, [setSelectedSubagent, subagentTabs]);
 
   const openSelectedFileManager = useCallback(() => {
     if (selectedSandboxContainer) openFileManager(selectedSandboxContainer);
@@ -163,10 +167,29 @@ export function PlaygroundPage() {
 
   useEffect(() => {
     if (activeSessionSummary?.session_type !== "project" || !projectSandboxScopeLoaded || sandboxContainerId === null) return;
+    if (activeSessionSummary.is_running) return;
     if (!projectSandboxContainerIds.includes(sandboxContainerId)) {
       void changeSandboxContainer(null);
     }
-  }, [activeSessionSummary?.session_type, changeSandboxContainer, projectSandboxContainerIds, projectSandboxScopeLoaded, sandboxContainerId]);
+  }, [activeSessionSummary?.is_running, activeSessionSummary?.session_type, changeSandboxContainer, projectSandboxContainerIds, projectSandboxScopeLoaded, sandboxContainerId]);
+
+  useEffect(() => {
+    if (activeSessionSummary?.session_type !== "project" || activeSessionSummary.is_running || !projectSandboxScopeLoaded || sandboxLoading || sandboxContainerId !== null) return;
+    const allowed = new Set(projectSandboxContainerIds);
+    const firstAvailable = sandboxContainers.find((container) => (
+      allowed.has(container.id) && container.status === SANDBOX_CONTAINER_STATUS.RUNNING
+    ));
+    if (firstAvailable) void changeSandboxContainer(firstAvailable.id);
+  }, [
+    activeSessionSummary?.is_running,
+    activeSessionSummary?.session_type,
+    changeSandboxContainer,
+    projectSandboxContainerIds,
+    projectSandboxScopeLoaded,
+    sandboxContainerId,
+    sandboxContainers,
+    sandboxLoading,
+  ]);
 
   const headerNode = useMemo(() => (
     <>
@@ -187,6 +210,13 @@ export function PlaygroundPage() {
             onClick={openProjectRecords}
           />
         ) : null}
+        <SandboxActionButton
+          ariaLabel="Open subagent panel"
+          disabled={subagentTabs.length === 0}
+          icon={<PanelRightOpen size={15} />}
+          tooltip={subagentTabs.length > 0 ? "Open subagent panel" : "No subagent messages"}
+          onClick={openSubagentPanel}
+        />
         <SandboxActionButton
           ariaLabel={`Open terminal for ${selectedSandboxName}`}
           disabled={Boolean(shellUnavailableReason)}
@@ -217,7 +247,7 @@ export function PlaygroundPage() {
         <span>{STATUS_LABEL[status] ?? "Idle"}</span>
       </span>
     </>
-  ), [activeProjectId, changeSandboxContainer, openProjectRecords, openSelectedFileManager, openSelectedNoVNC, openSelectedShell, sandboxContainerId, selectableSandboxContainers, sandboxLoading, screenUnavailableReason, selectSession, selectedSandboxName, shellUnavailableReason, status]);
+  ), [activeProjectId, changeSandboxContainer, openProjectRecords, openSelectedFileManager, openSelectedNoVNC, openSelectedShell, openSubagentPanel, sandboxContainerId, selectableSandboxContainers, sandboxLoading, screenUnavailableReason, selectSession, selectedSandboxName, shellUnavailableReason, status, subagentTabs.length]);
 
   useLayoutEffect(() => {
     setHeaderActions(headerNode);
