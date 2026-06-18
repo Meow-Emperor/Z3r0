@@ -1,6 +1,7 @@
 import { Button, Spin } from "@douyinfe/semi-ui";
 import { ArrowDown } from "lucide-react";
 import { ReactNode, RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { cx } from "../../shared/lib/className";
 import { useAutoFollowScroll } from "./useAutoFollowScroll";
 
 type MessageScrollPanelProps = {
@@ -112,16 +113,16 @@ export function MessageScrollPanel({
   }, [preserveScrollKey]);
 
   return (
-    <div className={`message-scroll-shell${className ? ` ${className}` : ""}`}>
+    <div className={cx("message-scroll-shell", className)}>
       <div
         ref={containerRef}
-        className={`message-scroll-viewport${scrollbarVisible ? " message-scroll-viewport-scrolling" : ""}`}
+        className={cx("message-scroll-viewport", scrollbarVisible && "message-scroll-viewport-scrolling")}
         aria-label={ariaLabel}
         aria-busy={loading}
         tabIndex={0}
         {...scrollHandlers}
       >
-        <div className={`message-scroll-content${contentClassName ? ` ${contentClassName}` : ""}`}>
+        <div className={cx("message-scroll-content", contentClassName)}>
           {children(tailRef)}
         </div>
       </div>
@@ -132,7 +133,7 @@ export function MessageScrollPanel({
       ) : null}
       {enabled && !following ? (
         <Button
-          className={`message-scroll-tail-floating${scrollButtonClassName ? ` ${scrollButtonClassName}` : ""}`}
+          className={cx("message-scroll-tail-floating", scrollButtonClassName)}
           icon={<ArrowDown size={16} />}
           theme="solid"
           type="tertiary"

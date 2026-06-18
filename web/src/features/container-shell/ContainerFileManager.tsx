@@ -4,7 +4,7 @@ import {
   Copy, Download, File, FilePlus, Folder, FolderOpen, FolderPlus, Grid3X3, List,
   RefreshCw, Scissors, Trash2, Upload,
 } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   copyContainerFiles, createContainerDirectory, deleteContainerFiles,
   downloadContainerFiles, listContainerFiles, moveContainerFiles, uploadContainerFiles, writeContainerFile,
@@ -14,6 +14,7 @@ import type { ContainerFileInfo } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import { formatBytes } from "../../shared/lib/number";
 import { UI_TEXT } from "../../shared/lib/uiText";
+import { cx } from "../../shared/lib/className";
 
 const FileViewer = lazy(() => import("./FileViewer").then((module) => ({ default: module.FileViewer })));
 
@@ -22,10 +23,9 @@ type ClipboardState = { action: "copy" | "cut"; paths: string[]; sourceDir: stri
 
 type Props = {
   containerId: number;
-  containerName: string;
 };
 
-export function ContainerFileManager({ containerId, containerName: _containerName }: Props) {
+export function ContainerFileManager({ containerId }: Props) {
   const [path, setPath] = useState("/");
   const [files, setFiles] = useState<ContainerFileInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -134,18 +134,17 @@ export function ContainerFileManager({ containerId, containerName: _containerNam
     setSelectedPaths(new Set([file.path]));
   }, []);
 
+  const openFileViewer = useCallback((file: ContainerFileInfo) => {
+    setViewingFile(file);
+  }, []);
+
   const handleFileDoubleClick = useCallback((file: ContainerFileInfo) => {
     if (file.type === "directory") {
       navigateTo(file.path);
       return;
     }
-    void openFileViewer(file);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigateTo]);
-
-  const openFileViewer = useCallback((file: ContainerFileInfo) => {
-    setViewingFile(file);
-  }, []);
+    openFileViewer(file);
+  }, [navigateTo, openFileViewer]);
 
   const handleCopy = useCallback(() => {
     if (selectedPaths.size === 0) return;
@@ -370,16 +369,13 @@ export function ContainerFileManager({ containerId, containerName: _containerNam
 }
 
 
-const FILE_LIST_HEADER_COLS: [string, string][] = [
-  ["name", "minmax(0, 1.2fr)"],
-  ["size", "92px"],
-  ["modified", "168px"],
-  ["perms", "92px"],
-];
+const FILE_LIST_GRID_STYLE: CSSProperties = {
+  gridTemplateColumns: "minmax(0, 1.2fr) 92px 168px 92px",
+};
 
 function FileListHeader() {
   return (
-    <div className="file-manager-list-row file-manager-list-head" style={{ gridTemplateColumns: FILE_LIST_HEADER_COLS.map(([, w]) => w).join(" ") }}>
+    <div className="file-manager-list-row file-manager-list-head" style={FILE_LIST_GRID_STYLE}>
       <div>Name</div>
       <div>Size</div>
       <div>Modified</div>
@@ -396,8 +392,8 @@ function FileListRow({ file, selected, onClick, onDoubleClick }: {
 }) {
   return (
     <div
-      className={`file-manager-list-row${selected ? " file-manager-list-row-selected" : ""}`}
-      style={{ gridTemplateColumns: FILE_LIST_HEADER_COLS.map(([, w]) => w).join(" ") }}
+      className={cx("file-manager-list-row", selected && "file-manager-list-row-selected")}
+      style={FILE_LIST_GRID_STYLE}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
     >
@@ -420,7 +416,7 @@ function FileIconItem({ file, selected, onClick, onDoubleClick }: {
 }) {
   return (
     <div
-      className={`file-manager-icon-item${selected ? " file-manager-icon-item-selected" : ""}`}
+      className={cx("file-manager-icon-item", selected && "file-manager-icon-item-selected")}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       title={file.name}
@@ -474,7 +470,7 @@ function InlineCreateRow({ type, onConfirm, onCancel }: {
   return (
     <div
       className="file-manager-list-row file-manager-create-row"
-      style={{ gridTemplateColumns: FILE_LIST_HEADER_COLS.map(([, w]) => w).join(" ") }}
+      style={FILE_LIST_GRID_STYLE}
     >
       <div className="file-manager-name">
         {type === "dir" ? <Folder size={15} /> : <File size={15} />}

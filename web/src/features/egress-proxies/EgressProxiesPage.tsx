@@ -1,16 +1,18 @@
 import { Button, Popconfirm, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
-import { Eye, EyeOff, Network, Pencil, Server, Trash2, User, Wifi } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Network, Pencil, Server, Trash2, Wifi } from "lucide-react";
+import { useMemo, useState } from "react";
 import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressProxy, updateEgressProxy } from "../../shared/api/egressProxies";
 import { showApiError } from "../../shared/api/feedback";
 import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPES } from "../../shared/api/generated/constants";
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import { useVisibleResourceIds } from "../../shared/hooks/useVisibleResourceIds";
 import { formatDateTime } from "../../shared/lib/date";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { EgressProxyFormModal } from "./EgressProxyFormModal";
@@ -23,7 +25,7 @@ export function EgressProxiesPage() {
     setKeyword, search, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<EgressProxy>({ query: queryEgressProxies });
   const [modal, setModal] = useState<ModalState>(null);
-  const [visiblePasswords, setVisiblePasswords] = useState<Set<number>>(() => new Set());
+  const secrets = useVisibleResourceIds(proxies);
   const [testingId, setTestingId] = useState<number | null>(null);
 
   const { run: deleteProxy, busyId: deletingId } = useResourceAction<EgressProxy>(
@@ -45,14 +47,6 @@ export function EgressProxiesPage() {
     },
   });
 
-  useEffect(() => {
-    const proxyIds = new Set(proxies.map((proxy) => proxy.id));
-    setVisiblePasswords((current) => {
-      const next = new Set([...current].filter((id) => proxyIds.has(id)));
-      return next.size === current.size ? current : next;
-    });
-  }, [proxies]);
-
   const summary = useMemo(
     () => proxies.reduce((acc, proxy) => ({
       ...acc,
@@ -60,15 +54,6 @@ export function EgressProxiesPage() {
     }), Object.fromEntries(EGRESS_PROXY_TYPES.map((type) => [type, 0])) as Record<EgressProxy["proxy_type"], number>),
     [proxies],
   );
-
-  const togglePassword = (proxyId: number) => {
-    setVisiblePasswords((current) => {
-      const next = new Set(current);
-      if (next.has(proxyId)) next.delete(proxyId);
-      else next.add(proxyId);
-      return next;
-    });
-  };
 
   const testProxy = async (proxy: EgressProxy) => {
     setTestingId(proxy.id);
@@ -90,13 +75,11 @@ export function EgressProxiesPage() {
     {
       key: "proxy", header: "Proxy", width: "minmax(0, 0.8fr)",
       render: (proxy) => (
-        <div className="container-identity">
-          <div className="resource-avatar"><Network size={18} /></div>
-          <div>
-            <strong>{proxy.proxy_host}:{proxy.proxy_port}</strong>
-            <span><Server size={13} />{proxy.proxy_type.toUpperCase()}</span>
-          </div>
-        </div>
+        <ResourceIdentity
+          icon={<Network size={18} />}
+          title={`${proxy.proxy_host}:${proxy.proxy_port}`}
+          detail={<><Server size={13} />{proxy.proxy_type.toUpperCase()}</>}
+        />
       ),
     },
     {
@@ -105,30 +88,19 @@ export function EgressProxiesPage() {
     },
     {
       key: "account", header: "Account", width: "minmax(0, 0.5fr)",
-      render: (proxy) => <span className="owner-cell"><User size={13} />{proxy.proxy_account || "-"}</span>,
+      render: (proxy) => <OwnerCell>{proxy.proxy_account || "-"}</OwnerCell>,
     },
     {
       key: "password", header: "Password", width: "minmax(0, 0.55fr)",
-      render: (proxy) => {
-        const visible = visiblePasswords.has(proxy.id);
-        return (
-          <div className="host-password-cell">
-            <code>{visible ? (proxy.proxy_password || "-") : maskPassword(proxy.proxy_password)}</code>
-            <Tooltip content={visible ? "Hide password" : "Show password"}>
-              <Button icon={visible ? <EyeOff size={14} /> : <Eye size={14} />} theme="borderless"
-                aria-label={visible ? `Hide password for ${proxy.proxy_host}` : `Show password for ${proxy.proxy_host}`}
-                onClick={() => togglePassword(proxy.id)}
-              />
-            </Tooltip>
-          </div>
-        );
-      },
+      render: (proxy) => (
+        <SecretCell id={proxy.proxy_host} value={proxy.proxy_password} visible={secrets.isVisible(proxy.id)} onToggle={() => secrets.toggle(proxy.id)} />
+      ),
     },
     { key: "updated", header: "Updated", width: "minmax(0, 0.55fr)", render: (proxy) => formatDateTime(proxy.updated_at) },
     {
       key: "actions", header: "Actions", width: "136px",
       render: (proxy) => (
-        <div className="row-actions">
+        <RowActions>
           <Tooltip content="Test proxy">
             <Button icon={<Wifi size={15} />} theme="borderless"
               loading={testingId === proxy.id}
@@ -144,7 +116,7 @@ export function EgressProxiesPage() {
               loading={deletingId === proxy.id} aria-label={`Delete ${proxy.proxy_host}`}
             />
           </Popconfirm>
-        </div>
+        </RowActions>
       ),
     },
   ];
@@ -196,9 +168,4 @@ export function EgressProxiesPage() {
       )}
     </>
   );
-}
-
-function maskPassword(password: string) {
-  if (!password) return "-";
-  return "********";
 }

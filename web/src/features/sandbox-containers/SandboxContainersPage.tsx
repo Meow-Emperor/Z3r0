@@ -1,6 +1,6 @@
 import { Button, Modal, Popconfirm, Select, Tag, Tooltip } from "@douyinfe/semi-ui";
 import { Box, Boxes, Fingerprint, FolderOpen, Monitor, Network, Play, Route, Square, SquareTerminal, Trash2, User } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";
 import { canOpenContainerNoVNC, createSandboxContainer, deleteSandboxContainer, querySandboxContainers, startSandboxContainer, stopSandboxContainer, updateSandboxContainerEgress } from "../../shared/api/sandboxContainers";
 import { queryManagedHosts } from "../../shared/api/hosts";
@@ -11,7 +11,9 @@ import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS } from "../../s
 import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { OwnerCell, ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
+import { useOptionList } from "../../shared/hooks/useOptionList";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
@@ -29,73 +31,28 @@ export function SandboxContainersPage() {
     setKeyword, search, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<SandboxContainer>({ query: querySandboxContainers });
   const [modalOpen, setModalOpen] = useState(false);
-  const [images, setImages] = useState<SandboxImage[]>([]);
-  const [imagesLoading, setImagesLoading] = useState(false);
-  const [hosts, setHosts] = useState<ManagedHost[]>([]);
-  const [hostsLoading, setHostsLoading] = useState(false);
-  const [users, setUsers] = useState<SystemUser[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [egressProxies, setEgressProxies] = useState<EgressProxy[]>([]);
-  const [egressProxiesLoading, setEgressProxiesLoading] = useState(false);
+  const {
+    items: images,
+    loading: imagesLoading,
+    load: loadReadyImages,
+  } = useOptionList<SandboxImage>({ query: querySandboxImages });
+  const {
+    items: hosts,
+    loading: hostsLoading,
+    load: loadHosts,
+  } = useOptionList<ManagedHost>({ query: queryManagedHosts });
+  const {
+    items: users,
+    loading: usersLoading,
+    load: loadUsers,
+  } = useOptionList<SystemUser>({ query: querySystemUsers });
+  const {
+    items: egressProxies,
+    loading: egressProxiesLoading,
+    load: loadEgressProxies,
+  } = useOptionList<EgressProxy>({ query: queryEgressProxies });
   const [egressModalContainer, setEgressModalContainer] = useState<SandboxContainer | null>(null);
-  const mountedRef = useRef(true);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
-
-  const loadReadyImages = useCallback(async () => {
-    if (!mountedRef.current) return;
-    setImagesLoading(true);
-    try {
-      const response = await querySandboxImages({ page: 1, size: 100, keyword: "" });
-      if (!mountedRef.current) return;
-      setImages(response.data?.items || []);
-    } catch (error) {
-      if (mountedRef.current) showApiError(error);
-    } finally {
-      if (mountedRef.current) setImagesLoading(false);
-    }
-  }, []);
-
-  const loadUsers = useCallback(async () => {
-    if (!mountedRef.current) return;
-    setUsersLoading(true);
-    try {
-      const response = await querySystemUsers({ page: 1, size: 100, keyword: "" });
-      if (!mountedRef.current) return;
-      setUsers(response.data?.items || []);
-    } catch (error) {
-      if (mountedRef.current) showApiError(error);
-    } finally {
-      if (mountedRef.current) setUsersLoading(false);
-    }
-  }, []);
-
-  const loadHosts = useCallback(async () => {
-    if (!mountedRef.current) return;
-    setHostsLoading(true);
-    try {
-      const response = await queryManagedHosts({ page: 1, size: 100, keyword: "" });
-      if (!mountedRef.current) return;
-      setHosts(response.data?.items || []);
-    } catch (error) {
-      if (mountedRef.current) showApiError(error);
-    } finally {
-      if (mountedRef.current) setHostsLoading(false);
-    }
-  }, []);
-
-  const loadEgressProxies = useCallback(async () => {
-    if (!mountedRef.current) return;
-    setEgressProxiesLoading(true);
-    try {
-      const response = await queryEgressProxies({ page: 1, size: 100, keyword: "" });
-      if (!mountedRef.current) return;
-      setEgressProxies(response.data?.items || []);
-    } catch (error) {
-      if (mountedRef.current) showApiError(error);
-    } finally {
-      if (mountedRef.current) setEgressProxiesLoading(false);
-    }
-  }, []);
 
   const refreshAll = useCallback(async () => {
     await loadContainers();
@@ -114,17 +71,6 @@ export function SandboxContainersPage() {
   const { run: deleteContainer, busyId: deletingId } = useResourceAction<SandboxContainer>(
     (container) => deleteSandboxContainer(container.id), loadContainers,
   );
-
-  useEffect(() => {
-    mountedRef.current = true;
-    void loadReadyImages();
-    void loadHosts();
-    void loadUsers();
-    void loadEgressProxies();
-    return () => {
-      mountedRef.current = false;
-    };
-  }, [loadReadyImages, loadHosts, loadUsers, loadEgressProxies]);
 
   useAdminResourceHeader({
     createLabel: "Create Container",
@@ -159,13 +105,11 @@ export function SandboxContainersPage() {
     {
       key: "container", header: "Container", width: "minmax(0, 0.78fr)",
       render: (container) => (
-        <div className="container-identity">
-          <div className="resource-avatar"><Box size={18} /></div>
-          <div>
-            <strong>{container.container_name}</strong>
-            <span><Fingerprint size={13} />{renderContainerHash(container.container_hash)}</span>
-          </div>
-        </div>
+        <ResourceIdentity
+          icon={<Box size={18} />}
+          title={container.container_name}
+          detail={<><Fingerprint size={13} />{renderContainerHash(container.container_hash)}</>}
+        />
       ),
     },
     {
@@ -176,15 +120,15 @@ export function SandboxContainersPage() {
     },
     {
       key: "host", header: "Host", width: "150px",
-      render: (container) => <div className="resource-description" title={container.host_ip_address}>{container.host_ip_address}</div>,
+      render: (container) => <ResourceText title={container.host_ip_address}>{container.host_ip_address}</ResourceText>,
     },
     {
       key: "image", header: "Image", width: "minmax(0, 0.62fr)",
-      render: (container) => <div className="resource-description" title={container.image_name}>{container.image_name}</div>,
+      render: (container) => <ResourceText title={container.image_name}>{container.image_name}</ResourceText>,
     },
     {
       key: "owner", header: "Owner", width: "minmax(0, 0.58fr)",
-      render: (container) => <span className="owner-cell"><User size={13} />{container.owner_username}</span>,
+      render: (container) => <OwnerCell>{container.owner_username}</OwnerCell>,
     },
     {
       key: "ports", header: "Ports", width: "minmax(0, 0.56fr)",
@@ -200,7 +144,7 @@ export function SandboxContainersPage() {
     {
       key: "actions", header: "Actions", width: "150px",
       render: (container) => (
-        <div className="row-actions">
+        <RowActions>
           <Button icon={<FolderOpen size={15} />} theme="borderless"
             disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
             aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
@@ -231,7 +175,7 @@ export function SandboxContainersPage() {
               loading={deletingId === container.id} aria-label={`Delete ${container.container_name}`}
             />
           </Popconfirm>
-        </div>
+        </RowActions>
       ),
     },
   ];

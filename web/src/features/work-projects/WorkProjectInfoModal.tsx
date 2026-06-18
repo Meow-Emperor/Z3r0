@@ -64,26 +64,18 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
                 title="Tasks"
                 icon={<FileText size={15} />}
                 empty={!project.tasks.length ? "No data." : ""}
-                className="project-info-panel"
-                emptyClassName="project-info-empty"
+                mode="info"
               >
-                <WorkProjectTasks project={project} className="project-info-scroll-list project-info-tasks" rowClassName="project-info-task-row" />
+                <WorkProjectTasks project={project} mode="info" />
               </WorkProjectPanel>
 
               <WorkProjectPanel
                 title="Agent Summaries"
                 icon={<UserRound size={15} />}
                 empty={!project.agent_summaries.length ? "No data." : ""}
-                className="project-info-panel project-info-summary-panel"
-                emptyClassName="project-info-empty"
+                mode="info"
               >
-                <WorkProjectSummaries
-                  project={project}
-                  className="project-info-scroll-list project-info-summaries project-info-summary-scroll"
-                  rowClassName="project-info-summary"
-                  progressClassName="project-info-summary-task"
-                  blockClassName="project-info-summary-block"
-                />
+                <WorkProjectSummaries project={project} mode="info" />
               </WorkProjectPanel>
             </section>
 

@@ -5,6 +5,7 @@ import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "rea
 import { SessionList } from "../../features/playground/SessionList";
 import { useAgentSessionContext } from "../../features/playground/AgentSessionProvider";
 import { useAuth } from "../../shared/auth/AuthProvider";
+import { cx } from "../../shared/lib/className";
 import z3r0Logo from "../../assets/z3r0-logo.png";
 import { preloadAdminRoute, preloadAdminRoutes } from "../routePreload";
 
@@ -155,10 +156,8 @@ export function AdminLayout() {
           </div>
         </header>
         <main className="admin-content">
-          <div className={`admin-content-viewport admin-content-viewport-${contentMode}`}>
-            <div
-              className={`admin-route admin-route-${contentMode}`}
-            >
+          <div className={cx("admin-content-viewport", `admin-content-viewport-${contentMode}`)}>
+            <div className={cx("admin-route", `admin-route-${contentMode}`)}>
               <Suspense fallback={<AdminRouteFallback />}>
                 <Outlet context={outletContext} />
               </Suspense>

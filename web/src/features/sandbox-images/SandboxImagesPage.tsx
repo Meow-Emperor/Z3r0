@@ -5,6 +5,7 @@ import { createSandboxImage, deleteSandboxImage, querySandboxImages } from "../.
 import type { CreateSandboxImageRequest, SandboxImage } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
@@ -55,13 +56,11 @@ export function SandboxImagesPage() {
     {
       key: "image", header: "Image", width: "minmax(280px, 360px)",
       render: (image) => (
-        <div className="image-identity">
-          <div className="resource-avatar"><Boxes size={18} /></div>
-          <div>
-            <strong>{image.image_name}</strong>
-            <span><Network size={13} />Control port {image.control_proxy_port}</span>
-          </div>
-        </div>
+        <ResourceIdentity
+          icon={<Boxes size={18} />}
+          title={image.image_name}
+          detail={<><Network size={13} />Control port {image.control_proxy_port}</>}
+        />
       ),
     },
     { key: "port", header: "Control Port", width: "130px", render: (image) => image.control_proxy_port },
@@ -70,7 +69,7 @@ export function SandboxImagesPage() {
       render: (image) => (
         <div className="port-mapping-list">
           {image.supports_tor ? <Tag color="violet" prefixIcon={<Route size={12} />}>Tor</Tag> : null}
-          {!image.supports_tor ? <span className="resource-description">None</span> : null}
+          {!image.supports_tor ? <ResourceText>None</ResourceText> : null}
         </div>
       ),
     },
@@ -79,13 +78,13 @@ export function SandboxImagesPage() {
     {
       key: "actions", header: "Actions", width: "104px",
       render: (image) => (
-        <div className="row-actions">
+        <RowActions>
           <Popconfirm title="Delete image" content={`Delete ${image.image_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteImage(image)}>
             <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
               loading={deletingId === image.id} aria-label={`Delete ${image.image_name}`}
             />
           </Popconfirm>
-        </div>
+        </RowActions>
       ),
     },
   ];

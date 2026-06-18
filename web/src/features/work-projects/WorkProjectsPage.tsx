@@ -28,6 +28,7 @@ import type {
 } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
@@ -132,33 +133,33 @@ export function WorkProjectsPage() {
     {
       key: "project", header: "Project", width: "minmax(210px, 0.9fr)",
       render: (project) => (
-        <div className="project-identity">
-          <Button
-            icon={expandedId === project.id ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-            theme="borderless"
-            size="small"
-            onClick={() => toggleProject(project)}
-            aria-label={`${expandedId === project.id ? "Collapse" : "Expand"} ${project.name}`}
-          />
-          <div className="resource-avatar"><FolderKanban size={18} /></div>
-          <div>
-            <strong>{project.name}</strong>
-            <span>{workProjectOwnerNames(project)} · {project.session_count} sessions</span>
-          </div>
-        </div>
+        <ResourceIdentity
+          before={(
+            <Button
+              icon={expandedId === project.id ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+              theme="borderless"
+              size="small"
+              onClick={() => toggleProject(project)}
+              aria-label={`${expandedId === project.id ? "Collapse" : "Expand"} ${project.name}`}
+            />
+          )}
+          icon={<FolderKanban size={18} />}
+          title={project.name}
+          detail={`${workProjectOwnerNames(project)} · ${project.session_count} sessions`}
+        />
       ),
     },
     { key: "type", header: "Type", width: "132px", render: (project) => <WorkProjectTypeTag project={project} /> },
     { key: "status", header: "Status", width: "104px", render: (project) => <WorkProjectStatusTag project={project} /> },
     {
       key: "records", header: "Records", width: "minmax(170px, 0.5fr)",
-      render: (project) => <div className="resource-description">{project.assets.length} assets · {project.tasks.length} tasks</div>,
+      render: (project) => <ResourceText>{project.assets.length} assets · {project.tasks.length} tasks</ResourceText>,
     },
     { key: "updated", header: "Updated", width: "minmax(150px, 0.4fr)", render: (p) => formatDateTime(p.updated_at) },
     {
       key: "actions", header: "Actions", width: "132px",
       render: (project) => (
-        <div className="row-actions">
+        <RowActions>
           <Button
             icon={<FolderOpen size={15} />}
             theme="borderless"
@@ -196,7 +197,7 @@ export function WorkProjectsPage() {
               aria-label={`Delete ${project.name}`}
             />
           </Popconfirm>
-        </div>
+        </RowActions>
       ),
     },
   ];
@@ -275,21 +276,14 @@ function WorkProjectExpanded({
       </section>
 
       <section className="work-project-detail-grid">
-        <WorkProjectPanel title="Assets" empty={project.assets.length === 0 ? "No assets." : ""} className="work-project-panel" emptyClassName="work-project-panel-empty">
-          <WorkProjectAssets project={project} className="work-project-asset-list" />
+        <WorkProjectPanel title="Assets" empty={project.assets.length === 0 ? "No assets." : ""}>
+          <WorkProjectAssets project={project} />
         </WorkProjectPanel>
-        <WorkProjectPanel title="Tasks" empty={project.tasks.length === 0 ? "No tasks." : ""} className="work-project-panel" emptyClassName="work-project-panel-empty">
-          <WorkProjectTasks project={project} className="work-project-task-list" rowClassName="work-project-task-row" showIcon />
+        <WorkProjectPanel title="Tasks" empty={project.tasks.length === 0 ? "No tasks." : ""}>
+          <WorkProjectTasks project={project} />
         </WorkProjectPanel>
-        <WorkProjectPanel title="Agent Summaries" empty={project.agent_summaries.length === 0 ? "No summaries." : ""} className="work-project-panel" emptyClassName="work-project-panel-empty">
-          <WorkProjectSummaries
-            project={project}
-            className="work-project-summary-list"
-            rowClassName="work-project-summary-row"
-            progressClassName="work-project-summary-progress"
-            blockClassName="work-project-summary-block"
-            showIcon
-          />
+        <WorkProjectPanel title="Agent Summaries" empty={project.agent_summaries.length === 0 ? "No summaries." : ""}>
+          <WorkProjectSummaries project={project} />
         </WorkProjectPanel>
       </section>
     </div>

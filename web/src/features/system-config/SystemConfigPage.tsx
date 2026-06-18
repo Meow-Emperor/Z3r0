@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import { MetricStrip } from "../../shared/components/ResourcePageShell";
+import { cx } from "../../shared/lib/className";
 import type {
   AgentConfig,
   AgentPoolConfig,
@@ -275,7 +276,7 @@ function ConfigFieldGrid<T extends object>({ compact = false, fields, values, on
   onChange: (patch: Partial<T>) => void;
 }) {
   return (
-    <div className={`config-grid${compact ? " compact" : ""}`}>
+    <div className={cx("config-grid", compact && "compact")}>
       {fields.map((field) => {
         if (field.kind === "toggle") {
           return (

@@ -5,6 +5,7 @@ import { createSystemUser, deleteSystemUser, querySystemUsers, updateSystemUser 
 import type { CreateSystemUserRequest, SystemUser, UpdateSystemUserRequest } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { ResourceIdentity, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
@@ -57,13 +58,7 @@ export function SystemUsersPage() {
     {
       key: "user", header: "User", width: "minmax(220px, 300px)",
       render: (user) => (
-        <div className="user-identity">
-          <div className="resource-avatar">{user.username.slice(0, 1).toUpperCase()}</div>
-          <div>
-            <strong>{user.username}</strong>
-            <span>{user.email || "-"}</span>
-          </div>
-        </div>
+        <ResourceIdentity icon={user.username.slice(0, 1).toUpperCase()} title={user.username} detail={user.email || "-"} />
       ),
     },
     {
@@ -75,7 +70,7 @@ export function SystemUsersPage() {
     {
       key: "actions", header: "Actions", width: "104px",
       render: (user) => (
-        <div className="row-actions">
+        <RowActions>
           <Button icon={<Pencil size={15} />} theme="borderless" aria-label={`Edit ${user.username}`}
             onClick={() => setModal({ mode: "edit", user })}
           />
@@ -84,7 +79,7 @@ export function SystemUsersPage() {
               loading={deletingUserId === user.id} aria-label={`Delete ${user.username}`}
             />
           </Popconfirm>
-        </div>
+        </RowActions>
       ),
     },
   ];

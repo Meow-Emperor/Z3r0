@@ -1,5 +1,5 @@
-import { Button, Modal, Popconfirm, Select, Table, Tag, Tooltip } from "@douyinfe/semi-ui";
-import { Boxes, Download, Eye, EyeOff, Pencil, Server, SquareTerminal, Trash2, User } from "lucide-react";
+import { Button, Modal, Popconfirm, Select, Table, Tag } from "@douyinfe/semi-ui";
+import { Boxes, Download, Pencil, Server, SquareTerminal, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createManagedHost, deleteManagedHost, listManagedHostImages, pullManagedHostImages, removeManagedHostImage, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
@@ -7,11 +7,14 @@ import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import type { ManagedHost, ManagedHostImage, SandboxImage } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import { useVisibleResourceIds } from "../../shared/hooks/useVisibleResourceIds";
 import { formatDateTime } from "../../shared/lib/date";
+import { formatBytes } from "../../shared/lib/number";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { HostFormModal } from "./HostFormModal";
@@ -25,7 +28,7 @@ export function HostsPage() {
   } = usePagedResourceList<ManagedHost>({ query: queryManagedHosts });
   const [modal, setModal] = useState<ModalState>(null);
   const [imageModalHost, setImageModalHost] = useState<ManagedHost | null>(null);
-  const [visiblePasswords, setVisiblePasswords] = useState<Set<number>>(() => new Set());
+  const secrets = useVisibleResourceIds(hosts);
   const { openHostShell } = useContainerShell();
   const { run: deleteHost, busyId: deletingHostId } = useResourceAction<ManagedHost>(
     (host) => deleteManagedHost(host.id),
@@ -47,14 +50,6 @@ export function HostsPage() {
     },
   });
 
-  useEffect(() => {
-    const hostIds = new Set(hosts.map((host) => host.id));
-    setVisiblePasswords((current) => {
-      const next = new Set([...current].filter((id) => hostIds.has(id)));
-      return next.size === current.size ? current : next;
-    });
-  }, [hosts]);
-
   const summary = useMemo(
     () => hosts.reduce(
       (acc, host) => ({
@@ -66,48 +61,22 @@ export function HostsPage() {
     [hosts],
   );
 
-  const togglePassword = (hostId: number) => {
-    setVisiblePasswords((current) => {
-      const next = new Set(current);
-      if (next.has(hostId)) next.delete(hostId);
-      else next.add(hostId);
-      return next;
-    });
-  };
-
   const columns: ResourceColumn<ManagedHost>[] = [
     {
       key: "host", header: "Host", width: "minmax(0, 0.7fr)",
       render: (host) => (
-        <div className="container-identity">
-          <div className="resource-avatar"><Server size={18} /></div>
-          <div>
-            <strong>{host.ip_address}</strong>
-            <span>SSH {host.ssh_port}</span>
-          </div>
-        </div>
+        <ResourceIdentity icon={<Server size={18} />} title={host.ip_address} detail={`SSH ${host.ssh_port}`} />
       ),
     },
     {
       key: "account", header: "Account", width: "minmax(0, 0.5fr)",
-      render: (host) => <span className="owner-cell"><User size={13} />{host.host_account}</span>,
+      render: (host) => <OwnerCell>{host.host_account}</OwnerCell>,
     },
     {
       key: "password", header: "Password", width: "minmax(0, 0.6fr)",
-      render: (host) => {
-        const visible = visiblePasswords.has(host.id);
-        return (
-          <div className="host-password-cell">
-            <code>{visible ? (host.host_password || "-") : maskPassword(host.host_password)}</code>
-            <Tooltip content={visible ? "Hide password" : "Show password"}>
-              <Button icon={visible ? <EyeOff size={14} /> : <Eye size={14} />} theme="borderless"
-                aria-label={visible ? `Hide password for ${host.ip_address}` : `Show password for ${host.ip_address}`}
-                onClick={() => togglePassword(host.id)}
-              />
-            </Tooltip>
-          </div>
-        );
-      },
+      render: (host) => (
+        <SecretCell id={host.ip_address} value={host.host_password} visible={secrets.isVisible(host.id)} onToggle={() => secrets.toggle(host.id)} />
+      ),
     },
     {
       key: "docker", header: "Docker Port", width: "110px",
@@ -125,7 +94,7 @@ export function HostsPage() {
     {
       key: "actions", header: "Actions", width: "140px",
       render: (host) => (
-        <div className="row-actions">
+        <RowActions>
           <Button icon={<SquareTerminal size={15} />} theme="borderless"
             aria-label={`Connect shell for ${host.ip_address}`} onClick={() => openHostShell(host)}
           />
@@ -140,7 +109,7 @@ export function HostsPage() {
               loading={deletingHostId === host.id} aria-label={`Delete ${host.ip_address}`}
             />
           </Popconfirm>
-        </div>
+        </RowActions>
       ),
     },
   ];
@@ -290,20 +259,4 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
       />
     </Modal>
   );
-}
-
-function maskPassword(_password: string) {
-  return "••••••••••••••";
-}
-
-function formatBytes(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "-";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = value;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-  return `${size >= 10 || unitIndex === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
 }

@@ -3,6 +3,7 @@ import { Box } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { SandboxContainer } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 
 type SandboxSelectorProps = {
@@ -34,7 +35,7 @@ export function SandboxSelector({ containers, loading, value, className = "", on
   const selectedContainer = runningContainers.find((container) => container.id === value);
 
   return (
-    <div className={`sandbox-selector${className ? ` ${className}` : ""}`}>
+    <div className={cx("sandbox-selector", className)}>
       <Select
         prefix={<Box size={15} />}
         value={value ?? undefined}

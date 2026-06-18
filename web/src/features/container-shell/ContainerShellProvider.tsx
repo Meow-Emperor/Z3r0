@@ -22,6 +22,7 @@ import { buildContainerNoVNCUrl, buildContainerShellUrl, canOpenContainerNoVNC }
 import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import { showApiError } from "../../shared/api/feedback";
 import type { ManagedHost, SandboxContainer } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 import {
   animateWindowFlight,
   buildFlight,
@@ -490,10 +491,10 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           fontFamily: "JetBrains Mono, SFMono-Regular, Consolas, monospace",
           fontSize: 13,
           theme: {
-            background: "#0b111c",
-            foreground: "#d8e1ec",
+            background: "#0b1018",
+            foreground: "#b7c6d7",
             cursor: "#ffffff",
-            selectionBackground: "#35506e",
+            selectionBackground: "rgba(59, 130, 246, 0.24)",
           },
         });
         fit = new FitAddon();
@@ -722,7 +723,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           )}
           state={shell}
         >
-            <div ref={terminalHostRef} className="shell-terminal" />
+          <div ref={terminalHostRef} className="shell-terminal" />
         </FloatingWindowLayer>
       ) : null}
       {noVNC ? (
@@ -750,9 +751,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           onRestore={restoreNoVNC}
           state={noVNC}
         >
-            <div className="novnc-body">
-              <iframe className="novnc-frame" src={noVNC.url} title={`noVNC ${noVNC.containerName}`} />
-            </div>
+          <div className="novnc-body">
+            <iframe className="novnc-frame" src={noVNC.url} title={`noVNC ${noVNC.containerName}`} />
+          </div>
         </FloatingWindowLayer>
       ) : null}
       {fileManager ? (
@@ -794,12 +795,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           )}
           state={fileManager}
         >
-            <Suspense fallback={<div className="file-manager-loading">Loading files...</div>}>
-              <ContainerFileManager
-                containerId={fileManager.containerId}
-                containerName={fileManager.containerName}
-              />
-            </Suspense>
+          <Suspense fallback={<div className="file-manager-loading">Loading files...</div>}>
+            <ContainerFileManager containerId={fileManager.containerId} />
+          </Suspense>
         </FloatingWindowLayer>
       ) : null}
     </ContainerShellContext.Provider>
@@ -922,7 +920,7 @@ function FloatingWindowHeader({
 
 function FloatingWindowFlight({ flight, frameRef, icon, style }: FloatingWindowFlightProps) {
   return (
-    <div ref={frameRef} className={`shell-flight shell-flight-${flight.direction}`} style={style}>
+    <div ref={frameRef} className={cx("shell-flight", `shell-flight-${flight.direction}`)} style={style}>
       <div className="shell-flight-header">
         {icon}
         <span>{flight.title}</span>
@@ -935,19 +933,19 @@ function FloatingWindowFlight({ flight, frameRef, icon, style }: FloatingWindowF
 
 function MinimizedWindowButton({ ariaLabel, className, icon, onClick }: MinimizedWindowButtonProps) {
   return (
-    <button className={`shell-minimized-button${className ? ` ${className}` : ""}`} type="button" onClick={onClick} aria-label={ariaLabel}>
+    <button className={cx("shell-minimized-button", className)} type="button" onClick={onClick} aria-label={ariaLabel}>
       {icon}
     </button>
   );
 }
 
 function buildWindowClassName(className: string | undefined, dockState: DockState, isMaximized: boolean) {
-  return [
+  return cx(
     "shell-window",
     className,
-    dockState === "minimized" ? "shell-window-hidden" : null,
-    isMaximized ? "shell-window-maximized" : null,
-  ].filter(Boolean).join(" ");
+    dockState === "minimized" && "shell-window-hidden",
+    isMaximized && "shell-window-maximized",
+  );
 }
 
 function beginWindowDrag(

@@ -2,6 +2,7 @@ import { Button } from "@douyinfe/semi-ui";
 import { GitBranch, X } from "lucide-react";
 import { useMemo } from "react";
 import type { AgentInfo } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 import type { ChatNode, SubagentExecutionItem } from "./chatState";
 import {
   findSubagentTarget,
@@ -40,7 +41,7 @@ export function SubagentSidePanel({
   const selectionKey = selection ?? "";
 
   return (
-    <aside className={`subagent-side-panel${open ? " subagent-side-panel-open" : ""}`} aria-hidden={!open}>
+    <aside className={cx("subagent-side-panel", open && "subagent-side-panel-open")} aria-hidden={!open}>
       <div className="subagent-side-panel-inner">
         <div className="subagent-side-header">
           <div className="subagent-side-heading">
@@ -55,7 +56,7 @@ export function SubagentSidePanel({
                   <button
                     key={tab.agentCode}
                     type="button"
-                    className={`subagent-tab${active ? " subagent-tab-active" : ""}`}
+                    className={cx("subagent-tab", active && "subagent-tab-active")}
                     role="tab"
                     aria-selected={active}
                     onClick={() => onSelect(tab.agentCode)}

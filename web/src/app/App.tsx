@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
 import {
@@ -16,18 +16,25 @@ import {
   loadWorkProjectsPage,
 } from "./routePreload";
 
-const LandingPage = lazy(() => loadLandingPage().then((module) => ({ default: module.LandingPage })));
-const LoginPage = lazy(() => loadLoginPage().then((module) => ({ default: module.LoginPage })));
-const ProtectedAdminShell = lazy(() => loadProtectedAdminShell().then((module) => ({ default: module.ProtectedAdminShell })));
-const EgressProxiesPage = lazy(() => loadEgressProxiesPage().then((module) => ({ default: module.EgressProxiesPage })));
-const HostsPage = lazy(() => loadHostsPage().then((module) => ({ default: module.HostsPage })));
-const PlaygroundPage = lazy(() => loadPlaygroundPage().then((module) => ({ default: module.PlaygroundPage })));
-const WorkProjectWorkspacePage = lazy(() => loadWorkProjectWorkspacePage().then((module) => ({ default: module.WorkProjectWorkspacePage })));
-const SandboxContainersPage = lazy(() => loadSandboxContainersPage().then((module) => ({ default: module.SandboxContainersPage })));
-const SandboxImagesPage = lazy(() => loadSandboxImagesPage().then((module) => ({ default: module.SandboxImagesPage })));
-const SystemUsersPage = lazy(() => loadSystemUsersPage().then((module) => ({ default: module.SystemUsersPage })));
-const SystemConfigPage = lazy(() => loadSystemConfigPage().then((module) => ({ default: module.SystemConfigPage })));
-const WorkProjectsPage = lazy(() => loadWorkProjectsPage().then((module) => ({ default: module.WorkProjectsPage })));
+function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends keyof TModule>(
+  loader: () => Promise<TModule>,
+  key: TKey,
+) {
+  return lazy(() => loader().then((module) => ({ default: module[key] })));
+}
+
+const LandingPage = lazyRoute(loadLandingPage, "LandingPage");
+const LoginPage = lazyRoute(loadLoginPage, "LoginPage");
+const ProtectedAdminShell = lazyRoute(loadProtectedAdminShell, "ProtectedAdminShell");
+const EgressProxiesPage = lazyRoute(loadEgressProxiesPage, "EgressProxiesPage");
+const HostsPage = lazyRoute(loadHostsPage, "HostsPage");
+const PlaygroundPage = lazyRoute(loadPlaygroundPage, "PlaygroundPage");
+const WorkProjectWorkspacePage = lazyRoute(loadWorkProjectWorkspacePage, "WorkProjectWorkspacePage");
+const SandboxContainersPage = lazyRoute(loadSandboxContainersPage, "SandboxContainersPage");
+const SandboxImagesPage = lazyRoute(loadSandboxImagesPage, "SandboxImagesPage");
+const SystemUsersPage = lazyRoute(loadSystemUsersPage, "SystemUsersPage");
+const SystemConfigPage = lazyRoute(loadSystemConfigPage, "SystemConfigPage");
+const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();

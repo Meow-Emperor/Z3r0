@@ -8,6 +8,7 @@ import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import { canOpenContainerNoVNC, queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
 import { getWorkProjectRecordSnapshot } from "../../shared/api/workProjects";
 import type { AgentInputPart, SandboxContainer } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
 import { useAgentSessionContext } from "./AgentSessionProvider";
@@ -211,7 +212,7 @@ export function PlaygroundPage() {
       <Button icon={<Plus size={16} />} theme="solid" type="primary" onClick={() => selectSession(null)}>
         New chat
       </Button>
-      <span className={`stream-status stream-status-${status}`}>
+      <span className={cx("stream-status", `stream-status-${status}`)}>
         <Activity size={14} />
         <span>{STATUS_LABEL[status] ?? "Idle"}</span>
       </span>
@@ -232,7 +233,7 @@ export function PlaygroundPage() {
   };
 
   return (
-    <div className={`playground-shell${selectedSubagent ? " playground-shell-split" : ""}`}>
+    <div className={cx("playground-shell", selectedSubagent && "playground-shell-split")}>
       <div className="playground-main">
         <div className="playground-conversation-frame">
           <div className="playground-main-column">

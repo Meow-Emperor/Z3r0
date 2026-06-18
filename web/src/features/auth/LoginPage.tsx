@@ -1,4 +1,4 @@
-import { Button, Input, Typography } from "@douyinfe/semi-ui";
+import { Button, Input } from "@douyinfe/semi-ui";
 import { Crosshair, KeyRound, Mail } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -6,8 +6,6 @@ import { login } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
 import { useAuth } from "../../shared/auth/AuthProvider";
 import z3r0Logo from "../../assets/z3r0-logo.png";
-
-const { Text } = Typography;
 
 type LoginLocationState = {
   from?: { pathname?: string };
@@ -46,7 +44,7 @@ export function LoginPage() {
         <div className="login-brand">
           <img className="brand-logo large" src={z3r0Logo} alt="" />
           <div>
-            <Text className="login-kicker">Red Team Collaboration Platform</Text>
+            <span className="login-kicker">Red Team Collaboration Platform</span>
             <h1 id="login-title">Z3r0 Console</h1>
           </div>
         </div>

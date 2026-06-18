@@ -1,9 +1,39 @@
 .playground-shell {
+  position: relative;
   display: flex;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #f4f7fb;
+  color: var(--z-text);
+  background: var(--z-page-bg);
+}
+
+.playground-shell::before,
+.playground-shell::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+}
+
+.playground-shell::before {
+  opacity: 0.18;
+  background-image:
+    linear-gradient(var(--z-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--z-grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridDrift 18s linear infinite;
+}
+
+.playground-shell::after {
+  opacity: 0.06;
+  background: linear-gradient(180deg, transparent, var(--z-scanline), transparent);
+  animation: scanline 9s ease-in-out infinite;
+}
+
+.playground-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 .session-list {
@@ -13,7 +43,7 @@
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  border-left: 1px solid rgba(159, 178, 199, 0.16);
+  border-left: 1px solid var(--z-line-soft);
 }
 
 .session-list-body {
@@ -44,7 +74,7 @@
   align-items: center;
   justify-content: center;
   padding: 18px 6px;
-  color: #6f8299;
+  color: var(--z-text-subtle);
   text-align: center;
 }
 
@@ -67,12 +97,12 @@
 }
 
 .session-row:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--z-surface-muted);
 }
 
 .session-row-active {
-  background: linear-gradient(135deg, rgba(217, 45, 58, 0.16), rgba(217, 45, 58, 0.04));
-  box-shadow: inset 2px 0 0 rgba(217, 45, 58, 0.86);
+  background: linear-gradient(135deg, var(--z-brand-glow), transparent);
+  box-shadow: inset 2px 0 0 var(--z-brand);
 }
 
 .session-row-main {
@@ -96,8 +126,8 @@
   height: 20px;
   place-items: center;
   border-radius: 5px;
-  color: #7f93ab;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--z-text-subtle);
+  background: var(--z-surface-muted);
   transition:
     color var(--motion-fast) var(--ease-standard),
     background var(--motion-fast) var(--ease-standard),
@@ -109,8 +139,8 @@
 }
 
 .session-row-project .session-row-icon {
-  color: #ffffff;
-  background: linear-gradient(135deg, #d92d3a 0%, #7f1d2d 100%);
+  color: var(--z-text-strong);
+  background: linear-gradient(135deg, var(--z-brand) 0%, var(--z-brand-dark) 100%);
 }
 
 .session-row-project-session {
@@ -122,7 +152,7 @@
 }
 
 .session-row-project-session .session-row-icon {
-  color: #87a0bb;
+  color: var(--z-text-subtle);
 }
 
 .session-project-group {
@@ -143,7 +173,7 @@
   gap: 6px;
   margin-left: 18px;
   padding: 8px 8px 8px 12px;
-  color: #7f93ab;
+  color: var(--z-text-subtle);
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -167,7 +197,7 @@
 .session-row-title {
   display: block;
   overflow: hidden;
-  color: #a9b8ca;
+  color: var(--z-text-subtle);
   font-size: 12px;
   font-weight: 650;
   line-height: 1.35;
@@ -176,7 +206,7 @@
 }
 
 .session-row-active .session-row-title {
-  color: #d8e1ec;
+  color: var(--z-text-strong);
 }
 
 .session-row .semi-button {
@@ -207,7 +237,7 @@
   overflow: hidden;
   min-width: 0;
   min-height: 0;
-  background: #f4f7fb;
+  background: transparent;
 }
 
 .playground-main-column {
@@ -217,4 +247,3 @@
   min-width: 0;
   min-height: 0;
 }
-

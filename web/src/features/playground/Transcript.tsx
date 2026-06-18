@@ -8,6 +8,7 @@ import type {
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { normalizeMarkdownForRender } from "./markdown";
 import type { SubagentSelection } from "./subagentView";
+import { cx } from "../../shared/lib/className";
 import { ToolGroup } from "./TranscriptExecutions";
 import {
   activeTextItemId,
@@ -190,7 +191,7 @@ function ThinkingGroup({
   }, [text, open]);
 
   return (
-    <div className={`thinking-block${live ? " transcript-panel-live" : ""}${active ? " thinking-block-active" : ""}`}>
+    <div className={cx("thinking-block", live && "transcript-panel-live", active && "thinking-block-active")}>
       <PanelHeader
         icon={<Brain size={13} />}
         title={active ? "Thinking..." : "Thought"}

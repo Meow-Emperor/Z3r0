@@ -5,42 +5,38 @@
   place-items: center;
   overflow: hidden;
   padding: 28px;
-  color: #f8fafc;
-  background:
-    linear-gradient(115deg, rgba(217, 45, 58, 0.18), transparent 28%),
-    linear-gradient(245deg, rgba(33, 150, 153, 0.16), transparent 32%),
-    linear-gradient(145deg, #090d16 0%, #141926 44%, #0b1018 100%);
+  color: var(--z-text);
+  background: var(--z-page-bg);
 }
 
 .login-grid {
   position: absolute;
   inset: 0;
-  opacity: 0.32;
+  opacity: 0.24;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+    linear-gradient(var(--z-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--z-grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
-  transform: perspective(900px) rotateX(58deg) scale(1.5) translateY(8%);
-  transform-origin: center bottom;
-  animation: gridDrift 15s linear infinite;
+  animation: gridDrift 18s linear infinite;
 }
 
 .login-scanline {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  animation: scanline 5s ease-in-out infinite;
+  opacity: 0.08;
+  background: linear-gradient(180deg, transparent, var(--z-scanline), transparent);
+  animation: scanline 9s ease-in-out infinite;
 }
 
 .login-panel {
   position: relative;
   width: min(100%, 430px);
   padding: 34px;
-  background: rgba(14, 20, 31, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: var(--z-surface);
+  border: 1px solid var(--z-line);
   border-radius: 8px;
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(20px);
+  box-shadow: var(--z-shadow);
+  backdrop-filter: blur(14px);
   animation: contentScaleIn 360ms var(--ease-emphasized) both;
 }
 
@@ -60,7 +56,7 @@
 }
 
 .login-kicker {
-  color: #9cc7cb !important;
+  color: var(--z-accent);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -82,52 +78,6 @@
 
 .login-form label span {
   color: inherit;
-}
-
-.login-form .semi-input-wrapper {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  transition:
-    background var(--motion-normal) var(--ease-standard),
-    border-color var(--motion-normal) var(--ease-standard),
-    box-shadow var(--motion-normal) var(--ease-standard);
-}
-
-.login-form .semi-input-wrapper__with-prefix {
-  padding-inline: 12px;
-}
-
-.login-form .semi-input-wrapper:hover,
-.login-form .semi-input-wrapper-focus {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(156, 199, 203, 0.72);
-  box-shadow: 0 0 0 4px rgba(156, 199, 203, 0.08);
-}
-
-.login-form .semi-input,
-.login-form .semi-input-prefix {
-  color: #f8fafc;
-}
-
-.login-form .semi-input-wrapper__with-prefix .semi-input {
-  padding-left: 10px;
-  padding-right: 0;
-}
-
-.login-form .semi-input-prefix {
-  flex: 0 0 auto;
-  width: 20px;
-  justify-content: center;
-}
-
-.login-form .semi-input-prefix svg {
-  display: block;
-}
-
-.login-form .semi-input::placeholder {
-  color: #b6c7d7;
-  opacity: 1;
 }
 
 @media (max-width: 560px) {

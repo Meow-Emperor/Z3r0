@@ -1,4 +1,5 @@
 import { CSSProperties, ReactNode } from "react";
+import { cx } from "../lib/className";
 
 export type ResourceColumn<T> = {
   key: string;
@@ -20,10 +21,8 @@ export function ResourceTable<T>({ ariaLabel, className, columns, rows, rowKey }
     gridTemplateColumns: columns.map((col) => col.width).join(" "),
   };
 
-  const tableClassName = className ? `resource-table ${className}` : "resource-table";
-
   return (
-    <div className={tableClassName} role="table" aria-label={ariaLabel}>
+    <div className={cx("resource-table", className)} role="table" aria-label={ariaLabel}>
       <div className="resource-table-row resource-table-head" role="row" style={gridTemplate}>
         {columns.map((col) => (
           <div key={col.key} role="columnheader">{col.header}</div>

@@ -11,6 +11,7 @@ import {
 } from "../../shared/api/workProjects";
 import type { AgentSessionSummary, WorkProject } from "../../shared/api/types";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import { cx } from "../../shared/lib/className";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
 
@@ -413,7 +414,7 @@ function SessionRow({
   onSelect,
 }: SessionRowProps) {
   const title = session.title || titleFallback;
-  const rowClassName = ["session-row", className, active ? "session-row-active" : ""].filter(Boolean).join(" ");
+  const rowClassName = cx("session-row", className, active && "session-row-active");
   const deleteButton = (
     <Button
       icon={<Trash2 size={14} />}
@@ -436,7 +437,7 @@ function SessionRow({
         icon={<Edit3 size={14} />}
         theme="borderless"
         size="small"
-      aria-label={`Edit ${session.title || session.session_id}`}
+        aria-label={`Edit ${session.title || session.session_id}`}
         onClick={onRename}
       />
       {deleteConfirm ? (

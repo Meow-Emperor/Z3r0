@@ -1,4 +1,4 @@
-import { KeyboardEvent, RefObject, TouchEvent, WheelEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { KeyboardEvent, RefObject, TouchEvent, WheelEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type UseAutoFollowScrollOptions<T extends HTMLElement> = {
   enabled?: boolean;
@@ -31,9 +31,7 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
   const followingRef = useRef(true);
   const [following, setFollowingState] = useState(true);
 
-  // Stable watch key avoids spreading an array into deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const watchKey = useMemo(() => watch.map(watchIdentityKey).join("\u001f"), watch);
+  const watchKey = watch.map(watchIdentityKey).join("\u001f");
   const onScrollToTopRef = useRef(onScrollToTop);
   onScrollToTopRef.current = onScrollToTop;
   const onUserScrollIntentRef = useRef(onUserScrollIntent);
@@ -108,7 +106,6 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
     return () => {
       container.removeEventListener("scroll", syncFollowing);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, getContainer, resetKey, setFollowing, suspendAutoFollow, triggerScrollToTop, watchKey]);
 
   useLayoutEffect(() => {
@@ -116,7 +113,6 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
     scrollTail("auto");
     const frame = window.requestAnimationFrame(() => scrollTail("auto"));
     return () => window.cancelAnimationFrame(frame);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, following, resetKey, scrollTail, suspendAutoFollow, watchKey]);
 
   const handleWheel = useCallback((event: WheelEvent<T>) => {

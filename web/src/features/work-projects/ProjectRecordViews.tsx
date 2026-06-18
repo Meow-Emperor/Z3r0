@@ -10,6 +10,7 @@ import type {
   WorkProjectGraphSnapshot,
   WorkProjectRecords,
 } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 import { formatDateTime } from "../../shared/lib/date";
 import {
   WORK_PROJECT_ASSET_ORIGIN_COLOR,
@@ -38,11 +39,10 @@ export function WorkProjectRecordTabs({
   initialTab = "assets",
   className,
 }: WorkProjectRecordTabsProps) {
-  const tabsClassName = ["project-record-tabs", className].filter(Boolean).join(" ");
   return (
     <Tabs
       type="line"
-      className={tabsClassName}
+      className={cx("project-record-tabs", className)}
       defaultActiveKey={initialTab}
     >
       <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="Assets" />} itemKey="assets">
@@ -192,7 +192,7 @@ function RecordExtension({ items }: { items: Array<[string, string | undefined]>
 }
 
 function RecordEmpty({ title }: { title: string }) {
-  return <Empty className="empty-state project-record-empty" image={<FileText size={42} />} title={title} description="" />;
+  return <Empty className="empty-state" image={<FileText size={42} />} title={title} description="" />;
 }
 
 function TabLabel({ icon, text }: { icon: ReactNode; text: string }) {

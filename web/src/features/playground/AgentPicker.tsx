@@ -1,6 +1,7 @@
 import { Bot } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { AgentInfo } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 
 type AgentPickerProps = {
   agents: AgentInfo[];
@@ -49,7 +50,7 @@ export function AgentPicker({
             aria-selected={active}
             disabled={disabled}
             title={description || agent.name}
-            className={`agent-picker-row${active ? " agent-picker-row-active" : ""}`}
+            className={cx("agent-picker-row", active && "agent-picker-row-active")}
             onMouseDown={(event) => event.preventDefault()}
             onMouseEnter={() => onHover(index)}
             onClick={() => !disabled && onSelect(agent)}

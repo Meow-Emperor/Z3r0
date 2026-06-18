@@ -20,15 +20,15 @@ import { formatWorkProjectAsset } from "./workProjectView";
 // Visual encoding. Keyed by the contract enums so a new asset type / edge category
 // fails the build here until it is given a color, instead of silently falling back.
 const ASSET_TYPE_COLOR: Record<WorkProjectAssetType, string> = {
-  [WORK_PROJECT_ASSET_TYPE.SERVICE]: "#2f6fed",
-  [WORK_PROJECT_ASSET_TYPE.DOMAIN]: "#0d9aa8",
-  [WORK_PROJECT_ASSET_TYPE.NETWORK]: "#7c5cff",
-  [WORK_PROJECT_ASSET_TYPE.BINARY]: "#e08a13",
+  [WORK_PROJECT_ASSET_TYPE.SERVICE]: "#93c5fd",
+  [WORK_PROJECT_ASSET_TYPE.DOMAIN]: "#7ddbd3",
+  [WORK_PROJECT_ASSET_TYPE.NETWORK]: "#c4b5fd",
+  [WORK_PROJECT_ASSET_TYPE.BINARY]: "#f8c56a",
 };
 
 const EDGE_CATEGORY_COLOR: Record<WorkProjectGraphEdgeCategory, string> = {
-  structural: "#5b7ba6",
-  offensive: "#d92d3a",
+  structural: "#9fb2c7",
+  offensive: "#ff9aa3",
 };
 
 const VIEW_WIDTH = 960;

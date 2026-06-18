@@ -1,24 +1,26 @@
 export const landingSeo = {
   siteUrl: "https://z3r0.fans/",
   siteName: "Z3r0",
-  title: "Z3r0 - AI-Native Red-Team Workbench for Authorized Pentesting and Vulnerability Research",
+  title: "Z3r0 - Red Team Collaboration Workbench for Authorized Security Work",
   description:
-    "Z3r0 is an AI-native red-team workbench for authorized penetration testing and vulnerability research, with specialist agents, sandboxed tooling, evidence records, relationship graphs, and replayable timelines.",
+    "Z3r0 is an open-source red team collaboration workbench with multi-agent orchestration, WorkProject evidence records, distributed Docker sandboxes, controlled egress, and replayable timelines.",
   imagePath: "assets/z3r0-logo.png",
   imageAlt: "Z3r0 logo",
   keywords: [
     "Z3r0",
-    "AI-native red-team workbench",
+    "red team collaboration workbench",
     "multi-agent red team platform",
     "authorized penetration testing",
     "authorized pentesting",
     "vulnerability research",
     "vulnerability validation",
-    "red team automation",
+    "red team orchestration",
     "attack path analysis",
     "attack path replay",
     "sandboxed security tooling",
-    "Docker sandbox pentesting",
+    "distributed Docker sandbox",
+    "controlled egress",
+    "proxy egress",
     "evidence records",
     "asset relationship graph",
     "WorkProject records",
@@ -59,7 +61,7 @@ export const structuredData = [
         name: "What is Z3r0?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Z3r0 is an AI-native red-team workbench for authorized penetration testing and vulnerability research, with specialist agents, sandboxed tooling, evidence records, relationship graphs, and replayable timelines.",
+          text: "Z3r0 is an open-source red team collaboration workbench for authorized penetration testing, vulnerability discovery, code auditing, and security research.",
         },
       },
       {
@@ -67,7 +69,7 @@ export const structuredData = [
         name: "Who is Z3r0 designed for?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Z3r0 is designed for authorized red teams, penetration testers, vulnerability researchers, internal security teams, code auditors, reverse engineers, cryptography reviewers, and controlled research or training environments.",
+          text: "Z3r0 is designed for authorized red teams, penetration testers, vulnerability researchers, internal security teams, code auditors, reverse engineers, cryptography reviewers, and controlled research environments.",
         },
       },
       {
@@ -75,7 +77,7 @@ export const structuredData = [
         name: "How does Z3r0 run security tooling?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Z3r0 binds agent tools and manual review to controlled Docker sandbox containers with shell, file, browser, noVNC, and security review tooling access.",
+          text: "Z3r0 binds agent tools and manual review workflows to controlled Docker sandbox containers with command execution, file access, shell access, browser workflows, and noVNC review.",
         },
       },
       {

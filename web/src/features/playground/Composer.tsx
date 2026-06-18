@@ -3,6 +3,7 @@ import { AtSign, ImagePlus, OctagonX, Send, Square, X } from "lucide-react";
 import { ClipboardEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentPicker } from "./AgentPicker";
 import type { AgentImageInputPart, AgentInfo, AgentInputPart } from "../../shared/api/types";
+import { cx } from "../../shared/lib/className";
 
 type ComposerProps = {
   streaming: boolean;
@@ -190,7 +191,7 @@ export function Composer({
       };
 
   return (
-    <div ref={wrapperRef} className={`composer${streaming ? " composer-streaming" : ""}`}>
+    <div ref={wrapperRef} className={cx("composer", streaming && "composer-streaming")}>
       <div className="composer-input">
         {pickerOpen ? (
           <div className="composer-picker">

@@ -2,6 +2,7 @@ import { Button, Tag } from "@douyinfe/semi-ui";
 import { ChevronDown, ChevronRight, GitBranch, PanelRightOpen, Wrench } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { NestedTranscript, SubagentExecutionItem, ToolExecutionItem } from "./chatState";
+import { cx } from "../../shared/lib/className";
 import { subagentStatusColor, subordinateStatusLabel, type SubagentSelection } from "./subagentView";
 import { emptyAgentTranscript, transcriptHasRunningExecution, transcriptItemCount, type ToolBlock } from "./transcriptView";
 
@@ -23,7 +24,7 @@ export function ToolGroup({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={`transcript-panel transcript-panel-tools${live ? " transcript-panel-live" : ""}`}>
+    <div className={cx("transcript-panel transcript-panel-tools", live && "transcript-panel-live")}>
       {header({
         icon: <Wrench size={13} />,
         title: "Tools",
@@ -90,7 +91,7 @@ function ToolExecutionBlock({
   }, [open]);
 
   return (
-    <div className={`execution-row execution-row-${status.tone}`}>
+    <div className={cx("execution-row", `execution-row-${status.tone}`)}>
       <button
         type="button"
         className="execution-row-head"
@@ -134,7 +135,7 @@ function SubagentExecutionBlock({
   onOpenSubagent?: (selection: SubagentSelection) => void;
 }) {
   return (
-    <div className={`execution-row execution-row-subagent execution-row-subagent-${item.status}${selected ? " execution-row-selected" : ""}`}>
+    <div className={cx("execution-row execution-row-subagent", `execution-row-subagent-${item.status}`, selected && "execution-row-selected")}>
       <div className="execution-row-head execution-row-head-static">
         <ExecutionName name={item.agentCode || "subagent"} />
         <SubagentStatusTag status={item.status} />
@@ -161,7 +162,7 @@ function NestedTranscriptPanel({
   if (itemCount === 0 && !task) return null;
 
   return (
-    <div className={`nested-panel${live ? " nested-panel-live" : ""}${selected ? " nested-panel-selected" : ""}`}>
+    <div className={cx("nested-panel", live && "nested-panel-live", selected && "nested-panel-selected")}>
       <div className="nested-panel-head">
         <GitBranch size={13} />
         <span className="nested-panel-title">
@@ -207,7 +208,7 @@ export function SubagentStatusTag({ status }: { status: SubagentExecutionItem["s
 
 export function ExecutionSection({ label, body, tone }: { label: string; body: string; tone?: "error" }) {
   return (
-    <div className={`execution-section${tone ? ` execution-section-${tone}` : ""}`}>
+    <div className={cx("execution-section", tone && `execution-section-${tone}`)}>
       <div className="execution-section-label">{label}</div>
       <pre className="execution-section-body">{body}</pre>
     </div>
@@ -217,7 +218,7 @@ export function ExecutionSection({ label, body, tone }: { label: string; body: s
 function JsonExecutionSection({ label, value, tone }: { label: string; value: unknown; tone?: "error" }) {
   const json = useMemo(() => tokenizeJson(stringifyJson(value)), [value]);
   return (
-    <div className={`execution-section${tone ? ` execution-section-${tone}` : ""}`}>
+    <div className={cx("execution-section", tone && `execution-section-${tone}`)}>
       <div className="execution-section-label">{label}</div>
       <pre className="execution-section-body execution-json-body">
         <code>

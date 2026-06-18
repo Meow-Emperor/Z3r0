@@ -1,6 +1,6 @@
 import { Button, Input, InputNumber, Select, Spin, Tag, TextArea } from "@douyinfe/semi-ui";
 import { FolderKanban, Plus, ScanSearch, Server, Trash2, UserRound } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   WORK_PROJECT_ASSET_ORIGIN,
   getWorkProjectAssetTypes,
@@ -9,7 +9,6 @@ import {
   isWorkProjectType,
   WORK_PROJECT_ASSET_TYPE,
 } from "../../shared/api/contract";
-import { showApiError } from "../../shared/api/feedback";
 import { queryAvailableSandboxContainers } from "../../shared/api/sandboxContainers";
 import { querySystemUsers } from "../../shared/api/systemUsers";
 import type {
@@ -20,6 +19,7 @@ import type {
   WorkProjectAssetRequest,
 } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
+import { useOptionList } from "../../shared/hooks/useOptionList";
 import {
   SANDBOX_CONTAINER_STATUS_COLOR,
   SANDBOX_CONTAINER_STATUS_LABEL,
@@ -70,35 +70,15 @@ const EMPTY: WorkProjectFormValues = {
 
 export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit }: WorkProjectFormModalProps) {
   const [values, setValues] = useState<WorkProjectFormValues>(EMPTY);
-  const [sandboxContainers, setSandboxContainers] = useState<SandboxContainer[]>([]);
-  const [users, setUsers] = useState<SystemUser[]>([]);
-  const [sandboxLoading, setSandboxLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(false);
+  const { items: sandboxContainers, loading: sandboxLoading } = useOptionList<SandboxContainer>({
+    enabled: open,
+    query: queryAvailableSandboxContainers,
+  });
+  const { items: users, loading: usersLoading } = useOptionList<SystemUser>({
+    enabled: open,
+    query: querySystemUsers,
+  });
   const editing = Boolean(project);
-
-  const loadSandboxContainers = useCallback(async () => {
-    setSandboxLoading(true);
-    try {
-      const response = await queryAvailableSandboxContainers({ page: 1, size: 100, keyword: "" });
-      setSandboxContainers(response.data?.items ?? []);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setSandboxLoading(false);
-    }
-  }, []);
-
-  const loadUsers = useCallback(async () => {
-    setUsersLoading(true);
-    try {
-      const response = await querySystemUsers({ page: 1, size: 100, keyword: "" });
-      setUsers(response.data?.items ?? []);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setUsersLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -110,9 +90,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       assets: scopeAssetsFromProject(project),
       type: project.type,
     } : { ...EMPTY, assets: [{ ...EMPTY_ASSET }] });
-    void loadSandboxContainers();
-    void loadUsers();
-  }, [loadSandboxContainers, loadUsers, open, project]);
+  }, [open, project]);
 
   const userOptionList = useMemo(() => users.map((user) => ({
     label: <UserOption user={user} />,
@@ -252,7 +230,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
                 />
               </label>
               {asset.type === WORK_PROJECT_ASSET_TYPE.BINARY ? (
-                <label className="project-asset-base-field">
+                <label>
                   <span>Path</span>
                   <Input
                     value={asset.path}

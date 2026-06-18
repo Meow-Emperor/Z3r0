@@ -4,7 +4,7 @@
   gap: 12px;
   place-content: center;
   justify-items: center;
-  color: #66758b;
+  color: var(--z-text-muted);
   text-align: center;
   animation: contentScaleIn 320ms var(--ease-emphasized) both;
 }
@@ -14,15 +14,15 @@
   width: 64px;
   height: 64px;
   place-items: center;
-  color: #ffffff;
-  background: linear-gradient(135deg, #d92d3a 0%, #7f1d2d 100%);
+  color: var(--z-text-strong);
+  background: linear-gradient(135deg, var(--z-brand) 0%, var(--z-brand-dark) 100%);
   border-radius: 18px;
   box-shadow: 0 22px 50px rgba(217, 45, 58, 0.28);
 }
 
 .chat-empty h2 {
   margin: 0;
-  color: #162033;
+  color: var(--z-text-strong);
   font-size: 22px;
 }
 
@@ -74,7 +74,7 @@
 }
 
 .message-timestamp {
-  color: #98a4b8;
+  color: var(--z-text-subtle);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.2;
@@ -84,8 +84,8 @@
 
 .user-bubble {
   padding: 12px 16px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #d92d3a 0%, #b41f33 100%);
+  color: var(--z-text-strong);
+  background: linear-gradient(135deg, var(--z-brand) 0%, var(--z-brand-dark) 100%);
   border-radius: 16px 16px 4px 16px;
   font-size: 14px;
   line-height: 1.55;
@@ -150,7 +150,7 @@
   padding: 1px 7px 1px 5px;
   background: rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  color: #ffffff;
+  color: var(--z-text-strong);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
@@ -199,7 +199,7 @@
   height: 40px;
   place-items: center;
   padding: 0;
-  color: #ffffff;
+  color: var(--z-text-strong);
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
@@ -225,7 +225,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #66758b;
+  color: var(--z-text-subtle);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -241,8 +241,7 @@
   display: inline-block;
   width: 7px;
   height: 7px;
-  background: #16a085;
+  background: var(--z-success);
   border-radius: 50%;
   animation: agentPulse 1.4s ease-in-out infinite;
 }
-

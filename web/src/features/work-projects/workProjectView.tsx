@@ -14,6 +14,8 @@ import {
   WORK_PROJECT_TYPE_LABEL,
 } from "../../shared/lib/labels";
 
+type WorkProjectViewMode = "expanded" | "info";
+
 export function workProjectOwnerNames(project: WorkProject): string {
   return project.owners.map((owner) => owner.username).join(", ") || "No owners";
 }
@@ -26,9 +28,9 @@ export function WorkProjectStatusTag({ project }: { project: WorkProject }) {
   return <Tag color={WORK_PROJECT_STATUS_COLOR[project.status]}>{WORK_PROJECT_STATUS_LABEL[project.status]}</Tag>;
 }
 
-export function WorkProjectAssets({ project, className }: { project: WorkProject; className: string }) {
+export function WorkProjectAssets({ project }: { project: WorkProject }) {
   return (
-    <div className={className}>
+    <div className="work-project-asset-list">
       {project.assets.map((asset) => (
         <div key={asset.id}>
           <strong>{formatWorkProjectAsset(asset)}</strong>
@@ -48,49 +50,42 @@ export function formatWorkProjectAsset(asset: WorkProjectAsset): string {
 
 export function WorkProjectTasks({
   project,
-  className,
-  rowClassName,
-  showIcon = false,
+  mode = "expanded",
 }: {
   project: WorkProject;
-  className: string;
-  rowClassName: string;
-  showIcon?: boolean;
+  mode?: WorkProjectViewMode;
 }) {
+  const listClassName = mode === "info" ? "project-info-scroll-list" : "work-project-task-list";
+  const rowClassName = mode === "info" ? "project-info-task-row" : "work-project-task-row";
+  const showIcon = mode === "expanded";
   return (
-    <div className={className}>
-      {project.tasks.map((task) => {
-        const taskRowClassName = showIcon ? rowClassName : `${rowClassName} work-project-task-row-no-icon`;
-        return (
-          <div key={task.id ?? task.title} className={taskRowClassName}>
-            {showIcon ? <ClipboardList size={14} /> : null}
-            <span className="work-project-task-title">{task.title}</span>
-            <Tag color={WORK_PROJECT_TASK_STATUS_COLOR[task.status]}>{WORK_PROJECT_TASK_STATUS_LABEL[task.status]}</Tag>
-            <Progress percent={task.progress} size="small" showInfo={false} />
-          </div>
-        );
-      })}
+    <div className={listClassName}>
+      {project.tasks.map((task) => (
+        <div key={task.id ?? task.title} className={rowClassName}>
+          {showIcon ? <ClipboardList size={14} /> : null}
+          <span className="work-project-task-title">{task.title}</span>
+          <Tag color={WORK_PROJECT_TASK_STATUS_COLOR[task.status]}>{WORK_PROJECT_TASK_STATUS_LABEL[task.status]}</Tag>
+          <Progress percent={task.progress} size="small" showInfo={false} />
+        </div>
+      ))}
     </div>
   );
 }
 
 export function WorkProjectSummaries({
   project,
-  className,
-  rowClassName,
-  progressClassName,
-  blockClassName,
-  showIcon = false,
+  mode = "expanded",
 }: {
   project: WorkProject;
-  className: string;
-  rowClassName: string;
-  progressClassName: string;
-  blockClassName: string;
-  showIcon?: boolean;
+  mode?: WorkProjectViewMode;
 }) {
+  const listClassName = mode === "info" ? "project-info-scroll-list" : "work-project-summary-list";
+  const rowClassName = mode === "info" ? "project-info-summary" : "work-project-summary-row";
+  const progressClassName = mode === "info" ? "project-info-summary-task" : "work-project-summary-progress";
+  const blockClassName = mode === "info" ? "project-info-summary-block" : "work-project-summary-block";
+  const showIcon = mode === "expanded";
   return (
-    <div className={className}>
+    <div className={listClassName}>
       {project.agent_summaries.map((summary) => (
         <article key={summary.agent_code} className={rowClassName}>
           <header>
@@ -119,18 +114,18 @@ export function WorkProjectSummaries({
 export function WorkProjectPanel({
   title,
   empty,
-  className,
-  emptyClassName,
+  mode = "expanded",
   icon,
   children,
 }: {
   title: string;
   empty: string;
-  className: string;
-  emptyClassName: string;
+  mode?: WorkProjectViewMode;
   icon?: ReactNode;
   children: ReactNode;
 }) {
+  const className = mode === "info" ? "project-info-panel" : "work-project-panel";
+  const emptyClassName = mode === "info" ? "project-info-empty" : "work-project-panel-empty";
   return (
     <section className={className}>
       <header>
