@@ -327,6 +327,18 @@
   height: 34px;
 }
 
+.sandbox-containers-table .container-hash {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  vertical-align: top;
+}
+
+.sandbox-containers-table .container-hash svg {
+  flex: 0 0 auto;
+}
+
 .work-projects-table .row-actions,
 .sandbox-containers-table .row-actions {
   gap: 2px;

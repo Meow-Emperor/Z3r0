@@ -103,12 +103,12 @@ export function SandboxContainersPage() {
 
   const columns: ResourceColumn<SandboxContainer>[] = [
     {
-      key: "container", header: "Container", width: "minmax(0, 0.78fr)",
+      key: "container", header: "Container", width: "minmax(0, 0.88fr)",
       render: (container) => (
         <ResourceIdentity
           icon={<Box size={18} />}
           title={container.container_name}
-          detail={<><Fingerprint size={13} />{renderContainerHash(container.container_hash)}</>}
+          detail={<span className="container-hash"><Fingerprint size={13} />{renderContainerHash(container.container_hash)}</span>}
         />
       ),
     },
