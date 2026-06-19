@@ -14,8 +14,24 @@ export interface paths {
         /** List Agent Sessions Route */
         get: operations["list_agent_sessions_route_api_agent_sessions_get"];
         put?: never;
-        /** Create Agent Session Route */
-        post: operations["create_agent_session_route_api_agent_sessions_post"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-sessions/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Agent Session Turn Route */
+        post: operations["create_agent_session_turn_route_api_agent_sessions_turns_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -39,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-sessions/{session_id}/cancel-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Agent Session Tasks Route */
+        post: operations["cancel_agent_session_tasks_route_api_agent_sessions__session_id__cancel_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-sessions/{session_id}/events": {
         parameters: {
             query?: never;
@@ -50,6 +83,23 @@ export interface paths {
         get: operations["list_agent_events_route_api_agent_sessions__session_id__events_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent-sessions/{session_id}/interrupt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Interrupt Agent Session Route */
+        post: operations["interrupt_agent_session_route_api_agent_sessions__session_id__interrupt_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -88,6 +138,23 @@ export interface paths {
         head?: never;
         /** Update Agent Session Title Route */
         patch: operations["update_agent_session_title_route_api_agent_sessions__session_id__title_patch"];
+        trace?: never;
+    };
+    "/api/agent-sessions/{session_id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Agent Session Turn Route */
+        post: operations["submit_agent_session_turn_route_api_agent_sessions__session_id__turns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/agents": {
@@ -983,38 +1050,6 @@ export interface components {
              */
             updated_at: string;
         };
-        /** AgentStreamCancelAllCommand */
-        AgentStreamCancelAllCommand: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            action: "cancel_all";
-        };
-        AgentStreamCommandSchema: components["schemas"]["AgentStreamSendCommand"] | components["schemas"]["AgentStreamInterruptCommand"] | components["schemas"]["AgentStreamCancelAllCommand"];
-        /** AgentStreamInterruptCommand */
-        AgentStreamInterruptCommand: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            action: "interrupt";
-        };
-        /** AgentStreamSendCommand */
-        AgentStreamSendCommand: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            action: "send";
-            /**
-             * Agent Code
-             * @default null
-             */
-            agent_code: string | null;
-            /** Content */
-            content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"])[];
-        };
         /**
          * AgentSubordinateStatus
          * @enum {string}
@@ -1085,6 +1120,23 @@ export interface components {
              */
             type: "text";
         };
+        /** AgentTurnRequest */
+        AgentTurnRequest: {
+            /** Agent Code */
+            agent_code: string | null;
+            /** Content */
+            content: (components["schemas"]["AgentTextInputPart"] | components["schemas"]["AgentImageInputPart"])[];
+            /** Sandbox Container Id */
+            sandbox_container_id: number | null;
+        };
+        /** AgentTurnResponse */
+        AgentTurnResponse: {
+            /** Events */
+            events: (components["schemas"]["UserMessageEvent"] | components["schemas"]["TurnBoundaryEvent"] | components["schemas"]["RunStateEvent"] | components["schemas"]["TextDeltaEvent"] | components["schemas"]["TextCompleteEvent"] | components["schemas"]["ThinkingDeltaEvent"] | components["schemas"]["ThinkingCompleteEvent"] | components["schemas"]["ToolCallEvent"] | components["schemas"]["ToolResultEvent"] | components["schemas"]["SubagentTaskEvent"] | components["schemas"]["DoneEvent"] | components["schemas"]["ErrorEvent"])[];
+            session: components["schemas"]["AgentSessionSummarySchema"];
+            /** Session Id */
+            session_id: string;
+        };
         /** Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post */
         Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post: {
             /** Files */
@@ -1129,6 +1181,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[AgentTurnResponse] */
+        CommonResponse_AgentTurnResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["AgentTurnResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[Any] */
         CommonResponse_Any_: {
             /**
@@ -1166,20 +1232,6 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["ContainerFileUploadResponse"] | null;
-            /**
-             * Message
-             * @default success
-             */
-            message: string;
-        };
-        /** CommonResponse[CreateAgentSessionResponse] */
-        CommonResponse_CreateAgentSessionResponse_: {
-            /**
-             * Code
-             * @default 200
-             */
-            code: number;
-            data?: components["schemas"]["CreateAgentSessionResponse"] | null;
             /**
              * Message
              * @default success
@@ -1698,11 +1750,6 @@ export interface components {
             content: string;
             /** Path */
             path: string;
-        };
-        /** CreateAgentSessionResponse */
-        CreateAgentSessionResponse: {
-            /** Session Id */
-            session_id: string;
         };
         /** CreateEgressProxyRequest */
         CreateEgressProxyRequest: {
@@ -2776,7 +2823,7 @@ export interface components {
         /** UpdateAgentSessionSandboxContainerRequest */
         UpdateAgentSessionSandboxContainerRequest: {
             /** Sandbox Container Id */
-            sandbox_container_id?: number | null;
+            sandbox_container_id: number | null;
         };
         /** UpdateAgentSessionTitleRequest */
         UpdateAgentSessionTitleRequest: {
@@ -3401,14 +3448,18 @@ export interface operations {
             };
         };
     };
-    create_agent_session_route_api_agent_sessions_post: {
+    create_agent_session_turn_route_api_agent_sessions_turns_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTurnRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3416,7 +3467,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommonResponse_CreateAgentSessionResponse_"];
+                    "application/json": components["schemas"]["CommonResponse_AgentTurnResponse_"];
                 };
             };
             /** @description Unauthorized */
@@ -3488,6 +3539,55 @@ export interface operations {
             };
         };
     };
+    cancel_agent_session_tasks_route_api_agent_sessions__session_id__cancel_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentTurnResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Agent session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     list_agent_events_route_api_agent_sessions__session_id__events_get: {
         parameters: {
             query?: {
@@ -3513,6 +3613,55 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    interrupt_agent_session_route_api_agent_sessions__session_id__interrupt_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentTurnResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Agent session not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3606,6 +3755,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse_AgentSessionSummarySchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Agent session not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    submit_agent_session_turn_route_api_agent_sessions__session_id__turns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTurnRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_AgentTurnResponse_"];
                 };
             };
             /** @description Unauthorized */

@@ -46,6 +46,7 @@ _SUBSCRIBER_REBASE_THRESHOLD = 512
 # the remaining work (prevents a hot relaunch loop on a persistent fault).
 _MAX_DRIVER_RELAUNCH = 5
 _DRIVER_RELAUNCH_BACKOFF_SECONDS = 0.5
+_SubscriberQueue = asyncio.Queue[AgentEventSchema | None]
 
 
 class AgentSession:
@@ -55,7 +56,7 @@ class AgentSession:
         self._start_lock = asyncio.Lock()
         self._turn_lock = asyncio.Lock()
         self._current_task: asyncio.Task | None = None
-        self._subscribers: set[asyncio.Queue[AgentEventSchema]] = set()
+        self._subscribers: set[_SubscriberQueue] = set()
         self._live_projection = LiveEventProjection()
         # per-session timeline log: monotonic seq counter + first-seen key map
         self._seq: int = 0
@@ -80,22 +81,26 @@ class AgentSession:
     async def subscribe(
         self,
         include: Callable[[AgentEventSchema], bool] | None = None,
-    ) -> asyncio.Queue[AgentEventSchema]:
+    ) -> _SubscriberQueue:
         snapshot = self._live_projection.snapshot(include)
-        queue: asyncio.Queue[AgentEventSchema] = asyncio.Queue()
+        queue: _SubscriberQueue = asyncio.Queue()
         for event in snapshot:
             queue.put_nowait(event)
         self._subscribers.add(queue)
         return queue
 
-    def unsubscribe(self, queue: asyncio.Queue[AgentEventSchema]) -> None:
+    def unsubscribe(self, queue: _SubscriberQueue) -> None:
         self._subscribers.discard(queue)
 
-    async def start_turn(self, content: list[AgentInputPart], agent_code: str, context: AgentRuntimeContext) -> None:
+    async def start_turn(
+        self,
+        content: list[AgentInputPart],
+        agent_code: str,
+        context: AgentRuntimeContext,
+    ) -> list[AgentEventSchema]:
         async with self._start_lock:
             if self.is_running():
-                await self._enqueue_user_message(content, agent_code, context)
-                return
+                return await self._enqueue_user_message(content, agent_code, context)
             await _mark_session_running(
                 self.session_id,
                 agent_code=agent_code,
@@ -103,19 +108,26 @@ class AgentSession:
                 sandbox_container_generation=context.sandbox_container_generation,
             )
             await self._ensure_timeline_loaded()
-            self._publish_run_state(True)
+            events: list[AgentEventSchema] = [self._publish_run_state(True)]
+            events.append(await self._publish(UserMessageEvent(
+                created_at=datetime.now(),
+                content=content,
+                display_text=display_text_from_content(content),
+                target_agent_code=agent_code,
+            )))
             task = asyncio.create_task(
-                self._drive(content, agent_code, context),
+                self._drive(content, agent_code, context, initial_user_event_published=True),
                 name=f"agent-turn-{self.session_id}",
             )
             self._current_task = task
+            return events
 
     async def _enqueue_user_message(
         self,
         content: list[AgentInputPart],
         agent_code: str,
         context: AgentRuntimeContext,
-    ) -> None:
+    ) -> list[AgentEventSchema]:
         # Queue a high-priority notification (instead of interrupting) so the
         # running loop preempts at its next safe point without losing state.
         target_instance = context.agent_instance_id or main_agent_instance_id(
@@ -135,12 +147,13 @@ class AgentSession:
             sandbox_skill_metadata=context.sandbox_skill_metadata,
         )
         await signal_target_notifications(target_instance)
-        await self._publish(UserMessageEvent(
+        event = await self._publish(UserMessageEvent(
             created_at=datetime.now(),
             content=content,
             display_text=display_text,
             target_agent_code=agent_code,
         ))
+        return [event]
 
     async def start_notification_recovery(self, context: AgentRuntimeContext, *, recovered: bool = True) -> bool:
         # Launch a driver that drains pending main notifications with no initial
@@ -168,10 +181,10 @@ class AgentSession:
             self._current_task = task
             return True
 
-    async def interrupt(self) -> bool:
+    async def interrupt(self) -> list[AgentEventSchema]:
         task = self._current_task
         if task is None or task.done():
-            return False
+            return []
         task.cancel()
         try:
             await task
@@ -189,10 +202,11 @@ class AgentSession:
             "Discarded by user interrupt.",
         )
         await _mark_session_stopped(self.session_id)
-        await self._publish_idle_if_inactive()
-        return True
+        event = await self._publish_idle_if_inactive()
+        return [event] if event is not None else []
 
-    async def cancel_all(self) -> bool:
+    async def cancel_all(self) -> list[AgentEventSchema]:
+        events: list[AgentEventSchema] = []
         task = self._current_task
         if task is not None and not task.done():
             task.cancel()
@@ -201,25 +215,35 @@ class AgentSession:
             except asyncio.CancelledError:
                 pass
             await _mark_session_stopped(self.session_id)
-            await self._publish(DoneEvent(created_at=datetime.now()))
-        canceled_subagents = await cancel_session_subagent_runs(self.session_id)
-        canceled_commands = await cancel_session_async_sandbox_commands(self.session_id)
-        canceled_notifications = await agent_notifications.cancel_session_notifications(
+            events.append(await self._publish(DoneEvent(created_at=datetime.now())))
+        await cancel_session_subagent_runs(self.session_id)
+        await cancel_session_async_sandbox_commands(self.session_id)
+        await agent_notifications.cancel_session_notifications(
             self.session_id,
             "Agent session tasks canceled by user.",
         )
         await _force_mark_session_stopped(self.session_id)
-        self._publish_run_state(False)
-        return canceled_subagents or canceled_commands or bool(canceled_notifications)
+        events.append(self._publish_run_state(False))
+        return events
 
     async def shutdown(self) -> None:
         await self.cancel_all()
         await self.close()
 
     async def close(self) -> None:
+        self._close_subscribers()
         await self._log_writer.stop()
         self._timeline_loaded = False
         await self._dispose_agent_graph()
+
+    def _close_subscribers(self) -> None:
+        for queue in tuple(self._subscribers):
+            queue.put_nowait(None)
+        self._subscribers.clear()
+
+    async def flush_timeline(self) -> None:
+        if self._timeline_loaded:
+            await self._log_writer.flush()
 
     def uses_sandbox_container(self, container_id: int) -> bool:
         return self._tool_snapshot is not None and self._tool_snapshot.sandbox_container_id == container_id
@@ -413,6 +437,7 @@ class AgentSession:
         *,
         attempt: int = 0,
         recovered: bool = False,
+        initial_user_event_published: bool = False,
     ) -> None:
         # The single main-session driver (true-async, non-blocking): run the
         # optional initial turn, drain ready notifications, then end. On delegation
@@ -429,7 +454,7 @@ class AgentSession:
                         context.session_id, context.user.id, agent_code,
                     )
 
-                is_initial = content is not None
+                is_initial = content is not None and not initial_user_event_published
 
                 async def _run_turn(trigger: TurnTrigger) -> Any:
                     nonlocal is_initial
@@ -509,7 +534,7 @@ class AgentSession:
             await asyncio.sleep(delay)
         await self._drive(None, agent_code, context, attempt=attempt)
 
-    def _publish_run_state(self, running: bool) -> None:
+    def _publish_run_state(self, running: bool) -> RunStateEvent:
         event = RunStateEvent(created_at=datetime.now(), running=running)
         if running:
             self._live_projection.reset(event)
@@ -519,18 +544,20 @@ class AgentSession:
             self._enqueue_or_rebase(queue, event)
         if not running:
             self._live_projection.reset(event)
+        return event
 
-    async def _publish_idle_if_inactive(self) -> None:
+    async def _publish_idle_if_inactive(self) -> RunStateEvent | None:
         # Live run-state tracks the main agent only (idle-live UX): once it ends
         # with no claimable PENDING turn, go idle even while sub-agents stream.
         if self.is_running():
-            return
+            return None
         if await agent_notifications.has_pending_main_agent_notification(session_id=self.session_id):
-            return
-        self._publish_run_state(False)
+            return None
+        return self._publish_run_state(False)
 
-    async def _publish(self, event: AgentEventSchema) -> None:
+    async def _publish(self, event: AgentEventSchema) -> AgentEventSchema:
         self.publish_external(event)
+        return event
 
     async def _ensure_timeline_loaded(self) -> None:
         """Resume the seq counter + key map from the durable log, then start the writer.
@@ -578,23 +605,23 @@ class AgentSession:
             return None
         return persist_key
 
-    def publish_external(self, event: AgentEventSchema) -> None:
+    def publish_external(self, event: AgentEventSchema) -> bool:
         """Inject an event into the session's unified event bus.
 
         Used internally by ``_publish`` and externally via ``AgentSessionPool.publish``.
-        Synchronous: projection.apply and put_nowait are non-blocking, and
-        asyncio's single-threaded model guarantees atomicity. The seq stamp and
-        the durable log enqueue are also non-blocking; the actual DB upsert runs
-        on the writer task.
+        Returns whether a persistable event was accepted by the durable writer;
+        non-persistable control/delta frames return ``True`` once delivered to
+        subscribers/projection.
         """
         persist_key = self._stamp_event(event)
         self._live_projection.apply(event)
         for queue in tuple(self._subscribers):
             self._enqueue_or_rebase(queue, event)
         if persist_key is not None and self._timeline_loaded:
-            self._log_writer.enqueue(persist_key, event.seq, event.model_dump_json(), event.created_at)
+            return self._log_writer.enqueue(persist_key, event.seq, event.model_dump_json(), event.created_at)
+        return persist_key is None
 
-    def _enqueue_or_rebase(self, queue: asyncio.Queue[AgentEventSchema], event: AgentEventSchema) -> None:
+    def _enqueue_or_rebase(self, queue: _SubscriberQueue, event: AgentEventSchema) -> None:
         if queue.qsize() < _SUBSCRIBER_REBASE_THRESHOLD:
             queue.put_nowait(event)
             return
@@ -617,6 +644,13 @@ class AgentSession:
 class _PooledSession:
     session: AgentSession
     last_used_at: float = field(default_factory=time.monotonic)
+
+
+@dataclass(frozen=True)
+class _EvictionCandidate:
+    session_id: str
+    entry: _PooledSession
+    last_used_at: float
 
 
 class AgentSessionPool:
@@ -663,9 +697,15 @@ class AgentSessionPool:
     async def get_or_create(self, session_id: str) -> AgentSession:
         async with self._lock:
             session = self._get_or_create_locked(session_id)
-            evicted = self._enforce_capacity_locked()
-        await self._close_evicted(evicted, reason="LRU")
+        await self._enforce_capacity(protected_session_id=session_id)
         return session
+
+    async def _enforce_capacity(self, *, protected_session_id: str = "") -> None:
+        async with self._lock:
+            candidates = self._capacity_candidates_locked(protected_session_id=protected_session_id)
+            overflow = max(0, len(self._pool) - self._max_size)
+        evicted = await self._claim_inactive_evictions(candidates, limit=overflow)
+        await self._close_evicted(evicted, reason="LRU")
 
     def _get_or_create_locked(self, session_id: str) -> AgentSession:
         entry = self._pool.get(session_id)
@@ -686,18 +726,31 @@ class AgentSessionPool:
         await entry.session.shutdown()
         logger.debug("agent pool discarded session=%s", session_id)
 
-    async def try_interrupt(self, session_id: str) -> bool:
+    async def invalidate_session_tool_binding(self, session_id: str) -> None:
         async with self._lock:
             entry = self._pool.get(session_id)
         if entry is None:
-            return False
+            return
+        await entry.session.invalidate_tool_binding()
+
+    async def flush_timeline(self, session_id: str) -> None:
+        async with self._lock:
+            entry = self._pool.get(session_id)
+        if entry is not None:
+            await entry.session.flush_timeline()
+
+    async def try_interrupt(self, session_id: str) -> list[AgentEventSchema]:
+        async with self._lock:
+            entry = self._pool.get(session_id)
+        if entry is None:
+            return []
         return await entry.session.interrupt()
 
     async def subscribe(
         self,
         session_id: str,
         include: Callable[[AgentEventSchema], bool] | None = None,
-    ) -> tuple[AgentSession, asyncio.Queue[AgentEventSchema]]:
+    ) -> tuple[AgentSession, _SubscriberQueue]:
         session = await self.get_or_create(session_id)
         return session, await session.subscribe(include)
 
@@ -714,8 +767,7 @@ class AgentSessionPool:
         if entry is None:
             return False
         entry.last_used_at = time.monotonic()
-        entry.session.publish_external(event)
-        return entry.session.timeline_loaded
+        return entry.session.publish_external(event)
 
     async def resume_session(self, session_id: str) -> None:
         # Main-agent arm of resume_target_instance: rebuild the runtime context
@@ -755,18 +807,18 @@ class AgentSessionPool:
         if entry is not None:
             await entry.session._publish_idle_if_inactive()
 
-    async def cancel_all(self, session_id: str) -> bool:
+    async def cancel_all(self, session_id: str) -> list[AgentEventSchema]:
         async with self._lock:
             entry = self._pool.get(session_id)
         if entry is None:
-            canceled_subagents = await cancel_session_subagent_runs(session_id)
-            canceled_commands = await cancel_session_async_sandbox_commands(session_id)
-            canceled_notifications = await agent_notifications.cancel_session_notifications(
+            await cancel_session_subagent_runs(session_id)
+            await cancel_session_async_sandbox_commands(session_id)
+            await agent_notifications.cancel_session_notifications(
                 session_id,
                 "Agent session tasks canceled by user.",
             )
             await _force_mark_session_stopped(session_id)
-            return canceled_subagents or canceled_commands or bool(canceled_notifications)
+            return []
         return await entry.session.cancel_all()
 
     async def invalidate_tool_bindings(self, container_id: int | None = None) -> None:
@@ -791,47 +843,80 @@ class AgentSessionPool:
             try:
                 await asyncio.sleep(self._sweep_interval)
                 async with self._lock:
-                    expired = self._sweep_expired_locked(time.monotonic())
+                    expired = self._sweep_expired_candidates_locked(time.monotonic())
+                expired = await self._claim_inactive_evictions(expired)
                 await self._close_evicted(expired, reason="idle")
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("agent pool sweep iteration failed")
 
-    def _sweep_expired_locked(self, now: float) -> list[tuple[str, _PooledSession]]:
+    def _sweep_expired_candidates_locked(self, now: float) -> list[_EvictionCandidate]:
         if self._ttl <= 0:
             return []
-        expired = [
-            sid for sid, entry in self._pool.items()
+        return [
+            _EvictionCandidate(sid, entry, entry.last_used_at) for sid, entry in self._pool.items()
             if (
                 not entry.session.is_running()
                 and not entry.session.has_subscribers()
                 and now - entry.last_used_at > self._ttl
             )
         ]
-        evicted: list[tuple[str, _PooledSession]] = []
-        for sid in expired:
-            entry = self._pool.pop(sid)
-            evicted.append((sid, entry))
-        return evicted
 
-    def _enforce_capacity_locked(self) -> list[tuple[str, _PooledSession]]:
+    def _capacity_candidates_locked(self, *, protected_session_id: str = "") -> list[_EvictionCandidate]:
         # only idle entries are evicted; running sessions may briefly exceed the cap
         overflow = len(self._pool) - self._max_size
         if overflow <= 0:
             return []
-        idle = sorted(
+        return sorted(
             (
-                (sid, entry)
+                _EvictionCandidate(sid, entry, entry.last_used_at)
                 for sid, entry in self._pool.items()
-                if not entry.session.is_running() and not entry.session.has_subscribers()
+                if (
+                    sid != protected_session_id
+                    and not entry.session.is_running()
+                    and not entry.session.has_subscribers()
+                )
             ),
-            key=lambda kv: kv[1].last_used_at,
+            key=lambda item: item.last_used_at,
         )
+
+    async def _claim_inactive_evictions(
+        self,
+        candidates: list[_EvictionCandidate],
+        limit: int | None = None,
+    ) -> list[tuple[str, _PooledSession]]:
+        if not candidates or limit == 0:
+            return []
+        eviction_ids: list[str] = []
+        for candidate in candidates:
+            if limit is not None and len(eviction_ids) >= limit:
+                break
+            sid = candidate.session_id
+            entry = candidate.entry
+            if entry.session.is_running() or entry.session.has_subscribers():
+                continue
+            if entry.last_used_at != candidate.last_used_at:
+                continue
+            if await agent_notifications.has_active_session_notifications(session_id=sid):
+                continue
+            eviction_ids.append(sid)
+        if not eviction_ids:
+            return []
+
+        observed_last_used = {candidate.session_id: candidate.last_used_at for candidate in candidates}
         evicted: list[tuple[str, _PooledSession]] = []
-        for sid, _ in idle[:overflow]:
-            entry = self._pool.pop(sid)
-            evicted.append((sid, entry))
+        async with self._lock:
+            for sid in eviction_ids:
+                entry = self._pool.get(sid)
+                if entry is None:
+                    continue
+                if entry.session.is_running() or entry.session.has_subscribers():
+                    continue
+                observed = observed_last_used.get(sid)
+                if observed is None or entry.last_used_at != observed:
+                    continue
+                evicted.append((sid, self._pool.pop(sid)))
         return evicted
 
     async def _close_evicted(self, evicted: list[tuple[str, _PooledSession]], *, reason: str) -> None:

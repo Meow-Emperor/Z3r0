@@ -15,7 +15,7 @@ async def recover_pending_sessions() -> None:
     if not pending:
         return
     for session in pending:
-        if not await agent_sessions.has_active_session_runtime(session.session_id):
+        if not await agent_sessions.has_outstanding_session_work(session.session_id):
             await agent_sessions.force_mark_session_stopped(
                 session.session_id,
                 error="Agent runtime was interrupted by backend restart.",

@@ -75,17 +75,19 @@ The architecture uses FastAPI as the control plane for sessions, projects, and e
 ```mermaid
 sequenceDiagram
   participant UI as Playground UI
-  participant WS as Agent WS Handler
+  participant API as Agent REST Handler
+  participant WS as Agent Event Stream
   participant Pool as AgentSessionPool
   participant Sess as AgentSession
   participant SDK as Runner + Z3r0Session
   participant Tool as Mounted Tools
   participant DB as PostgreSQL
 
-  UI->>WS: SEND / INTERRUPT / CANCEL_ALL
-  WS->>Pool: submit_turn(session_id)
+  UI->>API: POST turn / interrupt / cancel-all
+  API->>Pool: submit_turn(session_id)
   Pool->>Sess: start_turn()
   Sess->>DB: mark running + load timeline
+  UI->>WS: subscribe(session_id)
   Sess->>SDK: Runner.run_streamed()
 
   SDK->>Tool: tool_call

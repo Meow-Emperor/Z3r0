@@ -69,7 +69,7 @@ async def ensure_chat_session_meta(
 ) -> str:
     # resolution: override > sticky > default
     valid = set(get_agent_registry().codes())
-    override = requested_agent_code if requested_agent_code in valid else None
+    override = requested_agent_code
 
     async with get_async_session() as session:
         meta = await session.get(AgentSessionMeta, session_id)
@@ -280,7 +280,7 @@ async def update_session_sandbox_container(
 
 
 async def mark_session_stopped(session_id: str, *, error: str = "") -> None:
-    if await has_active_session_runtime(session_id):
+    if await has_outstanding_session_work(session_id):
         return
     await finish_session_run(session_id, error=error)
 
@@ -302,7 +302,7 @@ async def mark_sessions_stopped(session_ids: list[str], *, error: str = "") -> N
         return
     active_session_ids = {
         session_id for session_id in session_ids
-        if await has_active_session_runtime(session_id)
+        if await has_outstanding_session_work(session_id)
     }
     async with get_async_session() as session:
         metas = (await session.exec(
@@ -330,7 +330,7 @@ async def force_mark_session_stopped(session_id: str, *, error: str = "") -> Non
         await session.commit()
 
 
-async def has_active_session_runtime(session_id: str) -> bool:
+async def has_outstanding_session_work(session_id: str) -> bool:
     # Single source of truth: every background task (sub-agent / async job)
     # registers an outstanding notification obligation for its whole lifetime,
     # so the notification table alone reflects session liveness.
@@ -368,6 +368,8 @@ async def replay_session_events_page(
     async with get_async_session() as session:
         if not await _can_access_session(session, session_id, user_id, user_role):
             return None
+
+    await get_agent_pool().flush_timeline(session_id)
 
     items, has_more, next_before_seq = await fetch_timeline_page(
         session_id,

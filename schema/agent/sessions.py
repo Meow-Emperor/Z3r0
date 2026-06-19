@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from schema.agent.events import AgentContentEventSchema
+from schema.agent.events import AgentContentEventSchema, AgentEventSchema, AgentInputPart, validate_agent_input_content
 
 
 # canonical agent session type; reused by the model and by the public schema
@@ -49,9 +49,22 @@ class ListAgentEventsResponse(BaseModel):
     next_before_seq: int | None = None
 
 
-# create agent session response schema (server-allocated session_id)
-class CreateAgentSessionResponse(BaseModel):
+class AgentTurnRequest(BaseModel):
+    content: list[AgentInputPart] = Field(min_length=1, max_length=8)
+    agent_code: str | None = Field(min_length=1, max_length=32)
+    sandbox_container_id: int | None = Field(gt=0)
+
+    @field_validator("content", mode="after")
+    @classmethod
+    def validate_content(cls, value: list[AgentInputPart]) -> list[AgentInputPart]:
+        validate_agent_input_content(value)
+        return value
+
+
+class AgentTurnResponse(BaseModel):
     session_id: str
+    session: AgentSessionSummarySchema
+    events: list[AgentEventSchema]
 
 
 class UpdateAgentSessionTitleRequest(BaseModel):
@@ -66,7 +79,7 @@ class UpdateAgentSessionTitleRequest(BaseModel):
 
 
 class UpdateAgentSessionSandboxContainerRequest(BaseModel):
-    sandbox_container_id: int | None = Field(default=None, gt=0)
+    sandbox_container_id: int | None = Field(gt=0)
 
 
 # one available agent; surfaced to the @-mention picker in the chat input

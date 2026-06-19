@@ -179,10 +179,6 @@ def _register_extra_schemas(schema: dict[str, Any]) -> None:
     """publish ws contracts as OpenAPI components so the frontend can derive types"""
     from pydantic import TypeAdapter
     from schema.agent.events import (
-        AgentStreamCancelAllCommand,
-        AgentStreamCommandSchema,
-        AgentStreamInterruptCommand,
-        AgentStreamSendCommand,
         AgentEventSchema,
         DoneEvent,
         RunStateEvent,
@@ -201,10 +197,6 @@ def _register_extra_schemas(schema: dict[str, Any]) -> None:
         "DoneEvent": DoneEvent,
         "RunStateEvent": RunStateEvent,
         "AgentEventSchema": AgentEventSchema,
-        "AgentStreamSendCommand": AgentStreamSendCommand,
-        "AgentStreamInterruptCommand": AgentStreamInterruptCommand,
-        "AgentStreamCancelAllCommand": AgentStreamCancelAllCommand,
-        "AgentStreamCommandSchema": AgentStreamCommandSchema,
         "AgentSubordinateTaskToolItem": AgentSubordinateTaskToolItem,
         "AgentSubordinateTaskToolResult": AgentSubordinateTaskToolResult,
         "ToolResultSchema": ToolResultSchema,

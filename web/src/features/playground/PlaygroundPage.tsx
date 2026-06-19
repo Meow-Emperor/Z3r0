@@ -256,9 +256,10 @@ export function PlaygroundPage() {
 
   const handleSend = async (content: AgentInputPart[]) => {
     try {
-      await send(content, activeSessionId, { sandboxContainerId });
-    } catch (error) {
-      showApiError(error);
+      await send(content, activeSessionId, sandboxContainerId);
+      return true;
+    } catch {
+      return false;
     }
   };
 
@@ -280,14 +281,14 @@ export function PlaygroundPage() {
               watch={[chatState.nodes, chatState.streaming]}
             >
               {(tailRef) => (
-                  <ChatStream
-                    nodes={chatState.nodes}
-                    streaming={chatState.streaming}
-                    agents={agents}
-                    selectedSubagent={selectedSubagent}
-                    tailRef={tailRef}
-                    onOpenSubagent={setSelectedSubagent}
-                  />
+                <ChatStream
+                  nodes={chatState.nodes}
+                  streaming={chatState.streaming}
+                  agents={agents}
+                  selectedSubagent={selectedSubagent}
+                  tailRef={tailRef}
+                  onOpenSubagent={setSelectedSubagent}
+                />
               )}
             </MessageScrollPanel>
             <div className="playground-composer">
@@ -299,7 +300,7 @@ export function PlaygroundPage() {
                 agentSwitchDisabled={agentSwitchDisabled}
                 canCancelAll={hasRunningSubagents}
                 onPickAgent={setActiveAgentCode}
-                onSend={(content) => void handleSend(content)}
+                onSend={handleSend}
                 onInterrupt={() => void interrupt()}
                 onCancelAll={() => void cancelAll()}
               />

@@ -3,7 +3,7 @@ from datetime import datetime
 import base64
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 from schema.agent.subordinates import AgentSubordinateStatus
 
@@ -21,12 +21,6 @@ class AgentEventTypeSchema(StrEnum):
     SUBAGENT_TASK = "subagent_task"
     DONE = "done"
     ERROR = "error"
-
-
-class AgentStreamActionSchema(StrEnum):
-    SEND = "send"
-    INTERRUPT = "interrupt"
-    CANCEL_ALL = "cancel_all"
 
 
 class AgentInputPartTypeSchema(StrEnum):
@@ -220,35 +214,10 @@ AgentEventSchema = Annotated[
 ]
 
 
-class AgentStreamSendCommand(BaseModel):
-    action: Literal[AgentStreamActionSchema.SEND] = AgentStreamActionSchema.SEND
-    content: list[AgentInputPart] = Field(min_length=1, max_length=8)
-    # optional @-mention override; null => keep the session's sticky agent
-    agent_code: str | None = Field(default=None)
-
-    @model_validator(mode="after")
-    def validate_content(self) -> "AgentStreamSendCommand":
-        image_count = sum(1 for part in self.content if isinstance(part, AgentImageInputPart))
-        if image_count > 4:
-            raise ValueError("at most 4 images are allowed in one message")
-        image_bytes = sum(len(part.data) for part in self.content if isinstance(part, AgentImageInputPart))
-        if image_bytes > _MAX_MESSAGE_BASE64_LENGTH:
-            raise ValueError("image payload is too large")
-        return self
-
-
-class AgentStreamInterruptCommand(BaseModel):
-    action: Literal[AgentStreamActionSchema.INTERRUPT] = AgentStreamActionSchema.INTERRUPT
-
-
-class AgentStreamCancelAllCommand(BaseModel):
-    action: Literal[AgentStreamActionSchema.CANCEL_ALL] = AgentStreamActionSchema.CANCEL_ALL
-
-
-AgentStreamCommandSchema = Annotated[
-    AgentStreamSendCommand | AgentStreamInterruptCommand | AgentStreamCancelAllCommand,
-    Field(discriminator="action"),
-]
-
-
-agent_stream_command_adapter: TypeAdapter[AgentStreamCommandSchema] = TypeAdapter(AgentStreamCommandSchema)
+def validate_agent_input_content(content: list[AgentInputPart]) -> None:
+    image_count = sum(1 for part in content if isinstance(part, AgentImageInputPart))
+    if image_count > 4:
+        raise ValueError("at most 4 images are allowed in one message")
+    image_bytes = sum(len(part.data) for part in content if isinstance(part, AgentImageInputPart))
+    if image_bytes > _MAX_MESSAGE_BASE64_LENGTH:
+        raise ValueError("image payload is too large")

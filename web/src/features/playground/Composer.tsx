@@ -13,7 +13,7 @@ type ComposerProps = {
   agentSwitchDisabled?: boolean;
   canCancelAll?: boolean;
   onPickAgent: (code: string) => void;
-  onSend: (content: AgentInputPart[]) => void;
+  onSend: (content: AgentInputPart[]) => Promise<boolean>;
   onInterrupt: () => void;
   onCancelAll: () => void;
 };
@@ -75,14 +75,15 @@ export function Composer({
     wrapperRef.current?.querySelector("textarea")?.focus();
   }, []);
 
-  const submit = () => {
+  const submit = async () => {
     const trimmed = text.trim();
     if ((!trimmed && images.length === 0) || streaming || disabled) return;
     const content: AgentInputPart[] = [
       ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
       ...images,
     ];
-    onSend(content);
+    const sent = await onSend(content);
+    if (!sent) return;
     setText("");
     setImages([]);
     closePicker();
@@ -176,7 +177,7 @@ export function Composer({
     if (streaming) {
       onInterrupt();
     } else {
-      submit();
+      void submit();
     }
   };
 
@@ -186,7 +187,7 @@ export function Composer({
         icon: <Send size={16} />,
         type: "primary" as const,
         title: "Send",
-        onClick: submit,
+        onClick: () => void submit(),
         disabled: disabled || (!text.trim() && images.length === 0),
       };
 

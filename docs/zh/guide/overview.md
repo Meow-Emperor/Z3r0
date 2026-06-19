@@ -75,17 +75,19 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant UI as 前端工作台
-  participant WS as 会话 WebSocket
+  participant API as 会话 REST 接口
+  participant WS as 会话事件流
   participant Pool as 会话池
   participant Sess as 智能体会话驱动
   participant SDK as Runner + 会话记忆
   participant Tool as 挂载工具
   participant DB as PostgreSQL
 
-  UI->>WS: 发送 / 中断 / 取消
-  WS->>Pool: 提交会话输入
+  UI->>API: 提交 turn / 中断 / 取消
+  API->>Pool: 提交会话输入
   Pool->>Sess: 启动或恢复 turn
   Sess->>DB: 标记运行 + 加载事件历史
+  UI->>WS: 订阅会话事件
   Sess->>SDK: 流式运行智能体
 
   SDK->>Tool: 调用工具

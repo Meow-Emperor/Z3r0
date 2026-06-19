@@ -1,9 +1,13 @@
 import { apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
 import type {
-  CreateAgentSessionResponse,
+  AgentTurnRequest,
+  CancelAllAgentSessionTasksResponse,
+  CreateAgentSessionTurnResponse,
   DeleteAgentSessionResponse,
+  InterruptAgentSessionResponse,
   ListAgentEventsResponse,
   ListAgentSessionsResponse,
+  SubmitAgentSessionTurnResponse,
   UpdateAgentSessionSandboxContainerRequest,
   UpdateAgentSessionSandboxContainerResponse,
   UpdateAgentSessionTitleRequest,
@@ -16,8 +20,27 @@ export function listAgentSessions(limit = 100) {
   return apiGet<ListAgentSessionsResponse>(`${AGENT_SESSIONS_PATH}?limit=${limit}`);
 }
 
-export function createAgentSession() {
-  return apiPost<CreateAgentSessionResponse>(AGENT_SESSIONS_PATH);
+export function createAgentSessionTurn(payload: AgentTurnRequest) {
+  return apiPost<CreateAgentSessionTurnResponse>(`${AGENT_SESSIONS_PATH}/turns`, payload);
+}
+
+export function submitAgentSessionTurn(sessionId: string, payload: AgentTurnRequest) {
+  return apiPost<SubmitAgentSessionTurnResponse>(
+    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/turns`,
+    payload,
+  );
+}
+
+export function interruptAgentSession(sessionId: string) {
+  return apiPost<InterruptAgentSessionResponse>(
+    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/interrupt`,
+  );
+}
+
+export function cancelAllAgentSessionTasks(sessionId: string) {
+  return apiPost<CancelAllAgentSessionTasksResponse>(
+    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/cancel-all`,
+  );
 }
 
 export function listAgentEvents(

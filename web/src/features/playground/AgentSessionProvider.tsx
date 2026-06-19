@@ -11,10 +11,13 @@ import {
 import { listAgents } from "../../shared/api/agents";
 import {
   buildAgentStreamUrl,
-  createAgentSession,
+  cancelAllAgentSessionTasks,
+  createAgentSessionTurn,
   deleteAgentSession,
+  interruptAgentSession,
   listAgentEvents,
   listAgentSessions,
+  submitAgentSessionTurn,
   updateAgentSessionSandboxContainer,
 } from "../../shared/api/agentSessions";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
@@ -23,8 +26,8 @@ import type {
   AgentInfo,
   AgentInputPart,
   AgentSessionSummary,
-  AgentStreamCommand,
   AgentStreamEvent,
+  AgentTurnData,
 } from "../../shared/api/types";
 import type { ChatState } from "./chatState";
 import {
@@ -34,7 +37,6 @@ import {
   ingestEvents,
   type TimelineStore,
 } from "./timelineStore";
-import { waitOpen } from "./agentStream";
 
 type ConnectionStatus = "idle" | "connecting" | "open" | "closed";
 
@@ -51,20 +53,20 @@ type SessionRuntime = {
   agentCodeOverride: string;
 };
 
-const INITIAL_STORE = emptyTimelineStore();
-const INITIAL_STATE = deriveChatState(INITIAL_STORE);
-
-const DEFAULT_RUNTIME: SessionRuntime = {
-  store: INITIAL_STORE,
-  state: INITIAL_STATE,
-  status: "idle",
-  historyLoading: false,
-  historyPrepending: false,
-  historyHasMore: false,
-  historyBeforeSeq: null,
-  historyVersion: 0,
-  agentCodeOverride: "",
-};
+function createSessionRuntime(): SessionRuntime {
+  const store = emptyTimelineStore();
+  return {
+    store,
+    state: deriveChatState(store),
+    status: "idle",
+    historyLoading: false,
+    historyPrepending: false,
+    historyHasMore: false,
+    historyBeforeSeq: null,
+    historyVersion: 0,
+    agentCodeOverride: "",
+  };
+}
 
 const IDLE_CLOSE_MS = 5 * 60 * 1000;
 const DELETED_SESSION_TOMBSTONE_MS = 30 * 1000;
@@ -75,7 +77,7 @@ type AgentSessionContextValue = {
   sessions: AgentSessionSummary[];
   sessionsLoading: boolean;
   refreshSessions: () => Promise<void>;
-  syncSessions: (items: AgentSessionSummary[]) => void;
+  syncSessionSummaries: (items: AgentSessionSummary[]) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   dropSessionRuntime: (sessionId: string) => void;
 
@@ -94,9 +96,8 @@ type AgentSessionContextValue = {
   defaultAgentCode: string;
   activeAgentCode: string;
   setActiveAgentCode: (code: string) => void;
-  getSessionAgentCode: (sessionId: string | null) => string;
 
-  send: (content: AgentInputPart[], sessionId?: string | null, options?: { sandboxContainerId?: number | null }) => Promise<void>;
+  send: (content: AgentInputPart[], sessionId: string | null, sandboxContainerId: number | null) => Promise<void>;
   updateSelectedSandboxContainer: (sessionId: string, sandboxContainerId: number | null) => Promise<AgentSessionSummary | null>;
   interrupt: (sessionId?: string | null) => Promise<void>;
   cancelAll: (sessionId?: string | null) => Promise<void>;
@@ -113,7 +114,7 @@ export function useAgentSessionContext(): AgentSessionContextValue {
 
 export function AgentSessionProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<AgentSessionSummary[]>([]);
-  const [knownSessions, setKnownSessions] = useState<Map<string, AgentSessionSummary>>(() => new Map());
+  const [sessionSummaries, setSessionSummaries] = useState<Map<string, AgentSessionSummary>>(() => new Map());
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [runtimes, setRuntimes] = useState<Map<string, SessionRuntime>>(() => new Map());
@@ -125,23 +126,24 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   // sockets + timers live outside react state because their identity does not
   // drive rendering; one ws per session is kept alive across session switches
   const socketsRef = useRef<Map<string, WebSocket>>(new Map());
+  const socketCleanupRef = useRef<Map<string, () => void>>(new Map());
   const idleTimersRef = useRef<Map<string, number>>(new Map());
+  const deletedMarkerTimersRef = useRef<Map<string, number>>(new Map());
   const ensuredRef = useRef<Set<string>>(new Set());
   const loadingHistoryRef = useRef<Set<string>>(new Set());
   const deletedSessionsRef = useRef<Set<string>>(new Set());
   const liveFlushTimersRef = useRef<Map<string, number>>(new Map());
   const liveFrameEventsRef = useRef<Map<string, AgentStreamEvent[]>>(new Map());
-  const pendingSendRef = useRef<{
-    sessionId: string;
-    content: AgentInputPart[];
-    agentCode: string;
-  } | null>(null);
   const manualBlankSessionRef = useRef(false);
 
   const clearDeletedMarkerLater = useCallback((sessionId: string) => {
-    window.setTimeout(() => {
+    const existing = deletedMarkerTimersRef.current.get(sessionId);
+    if (existing != null) window.clearTimeout(existing);
+    const timer = window.setTimeout(() => {
       deletedSessionsRef.current.delete(sessionId);
+      deletedMarkerTimersRef.current.delete(sessionId);
     }, DELETED_SESSION_TOMBSTONE_MS);
+    deletedMarkerTimersRef.current.set(sessionId, timer);
   }, []);
 
   // ---------------------------------------------------------------- helpers
@@ -149,14 +151,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     setRuntimes((prev) => {
       if (prev.has(sessionId)) return prev;
       const next = new Map(prev);
-      next.set(sessionId, DEFAULT_RUNTIME);
+      next.set(sessionId, createSessionRuntime());
       return next;
     });
   }, []);
 
   const updateRuntime = useCallback((sessionId: string, fn: (r: SessionRuntime) => SessionRuntime) => {
     setRuntimes((prev) => {
-      const current = prev.get(sessionId) ?? DEFAULT_RUNTIME;
+      const current = prev.get(sessionId) ?? createSessionRuntime();
       const next = new Map(prev);
       next.set(sessionId, fn(current));
       return next;
@@ -179,7 +181,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       next.delete(sessionId);
       return next;
     });
-    setKnownSessions((prev) => {
+    setSessionSummaries((prev) => {
       if (!prev.has(sessionId)) return prev;
       const next = new Map(prev);
       next.delete(sessionId);
@@ -187,7 +189,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     });
     ensuredRef.current.delete(sessionId);
     loadingHistoryRef.current.delete(sessionId);
-    if (!options.keepDeletedMarker) deletedSessionsRef.current.delete(sessionId);
+    if (!options.keepDeletedMarker) {
+      deletedSessionsRef.current.delete(sessionId);
+      const deletedTimer = deletedMarkerTimersRef.current.get(sessionId);
+      if (deletedTimer != null) {
+        window.clearTimeout(deletedTimer);
+        deletedMarkerTimersRef.current.delete(sessionId);
+      }
+    }
     liveFrameEventsRef.current.delete(sessionId);
     const timer = liveFlushTimersRef.current.get(sessionId);
     if (timer != null) {
@@ -196,9 +205,9 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const syncSessions = useCallback((items: AgentSessionSummary[]) => {
+  const syncSessionSummaries = useCallback((items: AgentSessionSummary[]) => {
     if (!items.length) return;
-    setKnownSessions((prev) => {
+    setSessionSummaries((prev) => {
       const next = new Map(prev);
       for (const session of items) next.set(session.session_id, session);
       return next;
@@ -206,13 +215,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const syncSession = useCallback((item: AgentSessionSummary) => {
-    setKnownSessions((prev) => {
+    setSessionSummaries((prev) => {
       const next = new Map(prev);
       next.set(item.session_id, item);
       return next;
     });
     setSessions((prev) => {
-      if (!prev.some((session) => session.session_id === item.session_id)) return prev;
+      if (item.session_type !== "chat") return prev.filter((session) => session.session_id !== item.session_id);
+      if (!prev.some((session) => session.session_id === item.session_id)) return [item, ...prev];
       return prev.map((session) => session.session_id === item.session_id ? item : session);
     });
   }, []);
@@ -234,13 +244,13 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       const response = await listAgentSessions();
       const items = response.data?.items ?? [];
       setSessions(items);
-      syncSessions(items);
+      syncSessionSummaries(items);
     } catch (error) {
       if (!silent) showApiError(error);
     } finally {
       if (!silent) setSessionsLoading(false);
     }
-  }, [syncSessions]);
+  }, [syncSessionSummaries]);
 
   const refreshSessionsRef = useRef(refreshSessions);
   refreshSessionsRef.current = refreshSessions;
@@ -263,6 +273,8 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     const socket = socketsRef.current.get(sessionId);
     if (!socket) return;
     socketsRef.current.delete(sessionId);
+    socketCleanupRef.current.get(sessionId)?.();
+    socketCleanupRef.current.delete(sessionId);
     socket.close();
     updateRuntime(sessionId, (r) => {
       const store = endStreaming(r.store);
@@ -337,21 +349,22 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     initRuntime(sessionId);
     updateRuntime(sessionId, (r) => ({ ...r, status: "connecting" }));
 
-    socket.addEventListener("open", () => {
+    const onOpen = () => {
       if (socketsRef.current.get(sessionId) !== socket) return;
       updateRuntime(sessionId, (r) => ({ ...r, status: "open" }));
       markActivity(sessionId);
       // a reconnect may have missed frames; the live projection covers the
       // current turn, this merges anything persisted while we were away
       if (ensuredRef.current.has(sessionId)) mergeLatestHistory(sessionId);
-    });
+    };
+    socket.addEventListener("open", onOpen);
 
     const onTerminate = (event: CloseEvent | Event) => {
       if (socketsRef.current.get(sessionId) !== socket) return;
       socketsRef.current.delete(sessionId);
+      socketCleanupRef.current.get(sessionId)?.();
+      socketCleanupRef.current.delete(sessionId);
       clearIdleTimer(sessionId);
-      socket.removeEventListener("close", onTerminate);
-      socket.removeEventListener("error", onTerminate);
       if (deletedSessionsRef.current.has(sessionId)) return;
       updateRuntime(sessionId, (r) => {
         if (!r.store.streaming) {
@@ -374,7 +387,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     socket.addEventListener("close", onTerminate);
     socket.addEventListener("error", onTerminate);
 
-    socket.addEventListener("message", (event) => {
+    const onMessage = (event: MessageEvent) => {
       if (socketsRef.current.get(sessionId) !== socket) return;
       markActivity(sessionId);
       try {
@@ -384,18 +397,27 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       } catch {
         // backend only emits json frames; swallow malformed payloads defensively
       }
+    };
+    socket.addEventListener("message", onMessage);
+    socketCleanupRef.current.set(sessionId, () => {
+      socket.removeEventListener("open", onOpen);
+      socket.removeEventListener("close", onTerminate);
+      socket.removeEventListener("error", onTerminate);
+      socket.removeEventListener("message", onMessage);
     });
     return socket;
   }, [clearIdleTimer, enqueueStreamEvent, initRuntime, markActivity, mergeLatestHistory, updateRuntime]);
 
-  const sendCommand = useCallback(async (sessionId: string, command: AgentStreamCommand) => {
-    const socket = connectFor(sessionId);
-    if (socket.readyState !== WebSocket.OPEN) {
-      await waitOpen(socket);
+  const tryConnectFor = useCallback((sessionId: string): boolean => {
+    try {
+      connectFor(sessionId);
+      return true;
+    } catch (error) {
+      showApiError(error);
+      updateRuntime(sessionId, (r) => ({ ...r, status: "closed" }));
+      return false;
     }
-    markActivity(sessionId);
-    socket.send(JSON.stringify(command));
-  }, [connectFor, markActivity]);
+  }, [connectFor, updateRuntime]);
 
   // ---------------------------------------------------------- history load
   const loadHistory = useCallback((sessionId: string, markEnsured: boolean) => {
@@ -403,8 +425,12 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     if (loadingHistoryRef.current.has(sessionId)) return;
     initRuntime(sessionId);
     loadingHistoryRef.current.add(sessionId);
-    connectForRef.current(sessionId);
     updateRuntime(sessionId, (r) => ({ ...r, historyLoading: true }));
+    if (!tryConnectFor(sessionId)) {
+      loadingHistoryRef.current.delete(sessionId);
+      updateRuntime(sessionId, (r) => ({ ...r, historyLoading: false }));
+      return;
+    }
 
     listAgentEvents(sessionId, { limit: HISTORY_PAGE_SIZE })
       .then((response) => {
@@ -433,12 +459,21 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
         showApiError(error);
         updateRuntime(sessionId, (r) => ({ ...r, historyLoading: false }));
       });
-  }, [initRuntime, updateRuntime]);
+  }, [initRuntime, tryConnectFor, updateRuntime]);
 
   const ensureHistoryLoaded = useCallback((sessionId: string) => {
     if (ensuredRef.current.has(sessionId)) return;
     loadHistory(sessionId, true);
   }, [loadHistory]);
+
+  const openLiveSession = useCallback((sessionId: string) => {
+    initRuntime(sessionId);
+    ensuredRef.current.add(sessionId);
+    manualBlankSessionRef.current = false;
+    setActiveSessionId(sessionId);
+    tryConnectFor(sessionId);
+    mergeLatestHistory(sessionId);
+  }, [initRuntime, mergeLatestHistory, tryConnectFor]);
 
   const runtimesRef = useRef(runtimes);
   runtimesRef.current = runtimes;
@@ -474,16 +509,8 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSessionId, updateRuntime]);
 
-  const connectForRef = useRef<(sessionId: string) => WebSocket>(() => {
-    throw new Error("agent stream connector is not ready");
-  });
-  connectForRef.current = connectFor;
-
   // ----------------------------------------------------------- selection
   const selectSession = useCallback((sessionId: string | null, options: { navigateBlank?: boolean } = {}) => {
-    if (!sessionId || pendingSendRef.current?.sessionId !== sessionId) {
-      pendingSendRef.current = null;
-    }
     if (sessionId) {
       initRuntime(sessionId);
     }
@@ -494,14 +521,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!activeSessionId) return;
     if (ensuredRef.current.has(activeSessionId)) {
-      connectFor(activeSessionId);
+      tryConnectFor(activeSessionId);
       return;
     }
     ensureHistoryLoaded(activeSessionId);
-  }, [activeSessionId, connectFor, ensureHistoryLoaded]);
+  }, [activeSessionId, ensureHistoryLoaded, tryConnectFor]);
 
   useEffect(() => {
-    const runningSessions = Array.from(knownSessions.values()).filter((session) => session.is_running);
+    const runningSessions = sessions.filter((session) => session.is_running);
     if (!runningSessions.length) return;
 
     if (!activeSessionId && !manualBlankSessionRef.current) {
@@ -511,20 +538,20 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
 
     for (const session of runningSessions) {
       if (ensuredRef.current.has(session.session_id)) {
-        connectFor(session.session_id);
+        tryConnectFor(session.session_id);
         continue;
       }
       ensureHistoryLoaded(session.session_id);
     }
-  }, [activeSessionId, connectFor, ensureHistoryLoaded, knownSessions]);
+  }, [activeSessionId, ensureHistoryLoaded, sessions, tryConnectFor]);
 
   // ------------------------------------------------------------- agentCode
   const sessionAgentCode = useCallback(
     (sessionId: string | null): string => {
       if (!sessionId) return "";
-      return knownSessions.get(sessionId)?.agent_code ?? "";
+      return sessionSummaries.get(sessionId)?.agent_code ?? "";
     },
-    [knownSessions],
+    [sessionSummaries],
   );
 
   const activeAgentCode = useMemo(() => {
@@ -561,79 +588,73 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     return summary;
   }, [syncSession]);
 
-  // drain a queued send once the lazy-created session has loaded its history
-  useEffect(() => {
-    const queued = pendingSendRef.current;
-    if (!queued || queued.sessionId !== activeSessionId) return;
-    const runtime = runtimes.get(activeSessionId);
-    if (!runtime || runtime.historyLoading) return;
-    pendingSendRef.current = null;
-    setPendingAgentCode("");
-    sendCommand(activeSessionId, {
-      action: "send",
-      content: queued.content,
-      agent_code: queued.agentCode || null,
-    }).catch(showApiError);
-  }, [activeSessionId, runtimes, sendCommand]);
+  const applyTurnEvents = useCallback((sessionId: string, events: readonly AgentStreamEvent[]) => {
+    if (events.length) applyStore(sessionId, (store) => ingestEvents(store, events));
+  }, [applyStore]);
 
   const send = useCallback(async (
     content: AgentInputPart[],
-    sessionId: string | null = activeSessionId,
-    options: { sandboxContainerId?: number | null } = {},
+    sessionId: string | null,
+    sandboxContainerId: number | null,
   ) => {
     const agentCode = getSessionAgentCode(sessionId);
-    if (sessionId) {
-      if ("sandboxContainerId" in options) {
-        const requestedSandboxContainerId = options.sandboxContainerId ?? null;
-        const currentSandboxContainerId = knownSessions.get(sessionId)?.selected_sandbox_container_id ?? null;
-        if (requestedSandboxContainerId !== currentSandboxContainerId) {
-          await updateSelectedSandboxContainer(sessionId, requestedSandboxContainerId);
-        }
+    try {
+      if (sessionId) {
+        const response = await submitAgentSessionTurn(sessionId, {
+          content,
+          agent_code: agentCode || null,
+          sandbox_container_id: sandboxContainerId,
+        });
+        const data = requireTurnData(response.data);
+        syncSession(data.session);
+        applyTurnEvents(sessionId, data.events);
+        tryConnectFor(sessionId);
+        return;
       }
-      await sendCommand(sessionId, {
-        action: "send",
+
+      const response = await createAgentSessionTurn({
         content,
         agent_code: agentCode || null,
+        sandbox_container_id: sandboxContainerId,
       });
-      return;
-    }
-    // lazy-create path: defer the actual send until activeSessionId + history settle
-    try {
-      const response = await createAgentSession();
-      const id = response.data?.session_id ?? null;
-      if (!id) return;
-      initRuntime(id);
-      const sandboxContainerId = "sandboxContainerId" in options ? options.sandboxContainerId ?? null : null;
-      if (sandboxContainerId !== null) {
-        await updateSelectedSandboxContainer(id, sandboxContainerId);
-      }
-      pendingSendRef.current = { sessionId: id, content, agentCode };
-      manualBlankSessionRef.current = false;
-      setActiveSessionId(id);
+      const data = requireTurnData(response.data);
+      syncSession(data.session);
+      applyTurnEvents(data.session_id, data.events);
+      openLiveSession(data.session_id);
+      setPendingAgentCode("");
     } catch (error) {
       showApiError(error);
+      throw error;
     }
-  }, [activeSessionId, getSessionAgentCode, initRuntime, knownSessions, sendCommand, updateSelectedSandboxContainer]);
+  }, [applyTurnEvents, getSessionAgentCode, openLiveSession, syncSession, tryConnectFor]);
 
   const interrupt = useCallback(async (sessionId: string | null = activeSessionId) => {
     const targetSessionId = sessionId ?? activeSessionId;
     if (!targetSessionId) return;
     try {
-      await sendCommand(targetSessionId, { action: "interrupt" });
+      const response = await interruptAgentSession(targetSessionId);
+      const data = requireTurnData(response.data);
+      syncSession(data.session);
+      applyTurnEvents(targetSessionId, data.events);
+      tryConnectFor(targetSessionId);
     } catch (error) {
       showApiError(error);
     }
-  }, [activeSessionId, sendCommand]);
+  }, [activeSessionId, applyTurnEvents, syncSession, tryConnectFor]);
 
   const cancelAll = useCallback(async (sessionId: string | null = activeSessionId) => {
     const targetSessionId = sessionId ?? activeSessionId;
     if (!targetSessionId) return;
     try {
-      await sendCommand(targetSessionId, { action: "cancel_all" });
+      const response = await cancelAllAgentSessionTasks(targetSessionId);
+      const data = requireTurnData(response.data);
+      syncSession(data.session);
+      applyTurnEvents(targetSessionId, data.events);
+      tryConnectFor(targetSessionId);
     } catch (error) {
       showApiError(error);
     }
-  }, [activeSessionId, sendCommand]);
+  }, [activeSessionId, applyTurnEvents, syncSession, tryConnectFor]);
 
   const deleteSession = useCallback(async (sessionId: string) => {
     deletedSessionsRef.current.add(sessionId);
@@ -656,10 +677,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => {
       for (const socket of socketsRef.current.values()) socket.close();
+      for (const cleanup of socketCleanupRef.current.values()) cleanup();
       for (const timer of idleTimersRef.current.values()) window.clearTimeout(timer);
+      for (const timer of deletedMarkerTimersRef.current.values()) window.clearTimeout(timer);
       for (const timer of liveFlushTimersRef.current.values()) window.clearTimeout(timer);
       socketsRef.current.clear();
+      socketCleanupRef.current.clear();
       idleTimersRef.current.clear();
+      deletedMarkerTimersRef.current.clear();
       liveFlushTimersRef.current.clear();
       ensuredRef.current.clear();
       loadingHistoryRef.current.clear();
@@ -669,10 +694,11 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // -------------------------------------------------------------- derived
-  const activeRuntime = activeSessionId ? runtimes.get(activeSessionId) ?? DEFAULT_RUNTIME : DEFAULT_RUNTIME;
-  const activeSessionSummary = activeSessionId ? knownSessions.get(activeSessionId) ?? null : null;
+  const defaultRuntime = useMemo(createSessionRuntime, []);
+  const activeRuntime = activeSessionId ? runtimes.get(activeSessionId) ?? defaultRuntime : defaultRuntime;
+  const activeSessionSummary = activeSessionId ? sessionSummaries.get(activeSessionId) ?? null : null;
   const value = useMemo<AgentSessionContextValue>(() => ({
-    sessions, sessionsLoading, refreshSessions, syncSessions, deleteSession,
+    sessions, sessionsLoading, refreshSessions, syncSessionSummaries, deleteSession,
     dropSessionRuntime,
     activeSessionId, activeSessionSummary, selectSession,
     chatState: activeRuntime.state,
@@ -682,15 +708,13 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     historyHasMore: activeRuntime.historyHasMore,
     historyVersion: activeRuntime.historyVersion,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
-    getSessionAgentCode,
     send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   }), [
-    sessions, sessionsLoading, refreshSessions, syncSessions, deleteSession,
+    sessions, sessionsLoading, refreshSessions, syncSessionSummaries, deleteSession,
     dropSessionRuntime,
     activeSessionId, activeSessionSummary, selectSession,
     activeRuntime,
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
-    getSessionAgentCode,
     send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   ]);
 
@@ -706,4 +730,9 @@ function websocketCloseMessage(event: CloseEvent | Event): string {
     }
   }
   return "Agent stream connection closed before the model returned output";
+}
+
+function requireTurnData(data: AgentTurnData | null | undefined): AgentTurnData {
+  if (!data) throw new Error("agent session turn response missing data");
+  return data;
 }

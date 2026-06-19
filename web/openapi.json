@@ -415,101 +415,6 @@
         "title": "AgentSessionSummarySchema",
         "type": "object"
       },
-      "AgentStreamCancelAllCommand": {
-        "properties": {
-          "action": {
-            "const": "cancel_all",
-            "default": "cancel_all",
-            "title": "Action",
-            "type": "string"
-          }
-        },
-        "title": "AgentStreamCancelAllCommand",
-        "type": "object"
-      },
-      "AgentStreamCommandSchema": {
-        "discriminator": {
-          "mapping": {
-            "cancel_all": "#/components/schemas/AgentStreamCancelAllCommand",
-            "interrupt": "#/components/schemas/AgentStreamInterruptCommand",
-            "send": "#/components/schemas/AgentStreamSendCommand"
-          },
-          "propertyName": "action"
-        },
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/AgentStreamSendCommand"
-          },
-          {
-            "$ref": "#/components/schemas/AgentStreamInterruptCommand"
-          },
-          {
-            "$ref": "#/components/schemas/AgentStreamCancelAllCommand"
-          }
-        ]
-      },
-      "AgentStreamInterruptCommand": {
-        "properties": {
-          "action": {
-            "const": "interrupt",
-            "default": "interrupt",
-            "title": "Action",
-            "type": "string"
-          }
-        },
-        "title": "AgentStreamInterruptCommand",
-        "type": "object"
-      },
-      "AgentStreamSendCommand": {
-        "properties": {
-          "action": {
-            "const": "send",
-            "default": "send",
-            "title": "Action",
-            "type": "string"
-          },
-          "agent_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Agent Code"
-          },
-          "content": {
-            "items": {
-              "discriminator": {
-                "mapping": {
-                  "image": "#/components/schemas/AgentImageInputPart",
-                  "text": "#/components/schemas/AgentTextInputPart"
-                },
-                "propertyName": "type"
-              },
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/AgentTextInputPart"
-                },
-                {
-                  "$ref": "#/components/schemas/AgentImageInputPart"
-                }
-              ]
-            },
-            "maxItems": 8,
-            "minItems": 1,
-            "title": "Content",
-            "type": "array"
-          }
-        },
-        "required": [
-          "content"
-        ],
-        "title": "AgentStreamSendCommand",
-        "type": "object"
-      },
       "AgentSubordinateStatus": {
         "enum": [
           "running",
@@ -634,6 +539,144 @@
         "title": "AgentTextInputPart",
         "type": "object"
       },
+      "AgentTurnRequest": {
+        "properties": {
+          "agent_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Code"
+          },
+          "content": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "image": "#/components/schemas/AgentImageInputPart",
+                  "text": "#/components/schemas/AgentTextInputPart"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AgentTextInputPart"
+                },
+                {
+                  "$ref": "#/components/schemas/AgentImageInputPart"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          },
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
+          }
+        },
+        "required": [
+          "content",
+          "agent_code",
+          "sandbox_container_id"
+        ],
+        "title": "AgentTurnRequest",
+        "type": "object"
+      },
+      "AgentTurnResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "done": "#/components/schemas/DoneEvent",
+                  "error": "#/components/schemas/ErrorEvent",
+                  "run_state": "#/components/schemas/RunStateEvent",
+                  "subagent_task": "#/components/schemas/SubagentTaskEvent",
+                  "text_complete": "#/components/schemas/TextCompleteEvent",
+                  "text_delta": "#/components/schemas/TextDeltaEvent",
+                  "thinking_complete": "#/components/schemas/ThinkingCompleteEvent",
+                  "thinking_delta": "#/components/schemas/ThinkingDeltaEvent",
+                  "tool_call": "#/components/schemas/ToolCallEvent",
+                  "tool_result": "#/components/schemas/ToolResultEvent",
+                  "turn_boundary": "#/components/schemas/TurnBoundaryEvent",
+                  "user_message": "#/components/schemas/UserMessageEvent"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/UserMessageEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/TurnBoundaryEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/RunStateEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/TextDeltaEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/TextCompleteEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ThinkingDeltaEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ThinkingCompleteEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolCallEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolResultEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/SubagentTaskEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/DoneEvent"
+                },
+                {
+                  "$ref": "#/components/schemas/ErrorEvent"
+                }
+              ]
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "session": {
+            "$ref": "#/components/schemas/AgentSessionSummarySchema"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "session",
+          "events"
+        ],
+        "title": "AgentTurnResponse",
+        "type": "object"
+      },
       "Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post": {
         "properties": {
           "files": {
@@ -712,6 +755,32 @@
         "title": "CommonResponse[AgentSessionSummarySchema]",
         "type": "object"
       },
+      "CommonResponse_AgentTurnResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentTurnResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[AgentTurnResponse]",
+        "type": "object"
+      },
       "CommonResponse_Any_": {
         "properties": {
           "code": {
@@ -781,32 +850,6 @@
           }
         },
         "title": "CommonResponse[ContainerFileUploadResponse]",
-        "type": "object"
-      },
-      "CommonResponse_CreateAgentSessionResponse_": {
-        "properties": {
-          "code": {
-            "default": 200,
-            "title": "Code",
-            "type": "integer"
-          },
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CreateAgentSessionResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "message": {
-            "default": "success",
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "title": "CommonResponse[CreateAgentSessionResponse]",
         "type": "object"
       },
       "CommonResponse_CreateWorkProjectSessionResponse_": {
@@ -1841,19 +1884,6 @@
           "content"
         ],
         "title": "ContainerFileWriteRequest",
-        "type": "object"
-      },
-      "CreateAgentSessionResponse": {
-        "properties": {
-          "session_id": {
-            "title": "Session Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "session_id"
-        ],
-        "title": "CreateAgentSessionResponse",
         "type": "object"
       },
       "CreateEgressProxyRequest": {
@@ -3957,6 +3987,9 @@
             "title": "Sandbox Container Id"
           }
         },
+        "required": [
+          "sandbox_container_id"
+        ],
         "title": "UpdateAgentSessionSandboxContainerRequest",
         "type": "object"
       },
@@ -5323,15 +5356,27 @@
         "tags": [
           "agent-sessions"
         ]
-      },
+      }
+    },
+    "/api/agent-sessions/turns": {
       "post": {
-        "operationId": "create_agent_session_route_api_agent_sessions_post",
+        "operationId": "create_agent_session_turn_route_api_agent_sessions_turns_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_CreateAgentSessionResponse_"
+                  "$ref": "#/components/schemas/CommonResponse_AgentTurnResponse_"
                 }
               }
             },
@@ -5363,7 +5408,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Create Agent Session Route",
+        "summary": "Create Agent Session Turn Route",
         "tags": [
           "agent-sessions"
         ]
@@ -5431,6 +5476,73 @@
           }
         ],
         "summary": "Delete Agent Session Route",
+        "tags": [
+          "agent-sessions"
+        ]
+      }
+    },
+    "/api/agent-sessions/{session_id}/cancel-all": {
+      "post": {
+        "operationId": "cancel_agent_session_tasks_route_api_agent_sessions__session_id__cancel_all_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentTurnResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Agent session not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Cancel Agent Session Tasks Route",
         "tags": [
           "agent-sessions"
         ]
@@ -5517,6 +5629,73 @@
           }
         ],
         "summary": "List Agent Events Route",
+        "tags": [
+          "agent-sessions"
+        ]
+      }
+    },
+    "/api/agent-sessions/{session_id}/interrupt": {
+      "post": {
+        "operationId": "interrupt_agent_session_route_api_agent_sessions__session_id__interrupt_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentTurnResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Agent session not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Interrupt Agent Session Route",
         "tags": [
           "agent-sessions"
         ]
@@ -5671,6 +5850,83 @@
           }
         ],
         "summary": "Update Agent Session Title Route",
+        "tags": [
+          "agent-sessions"
+        ]
+      }
+    },
+    "/api/agent-sessions/{session_id}/turns": {
+      "post": {
+        "operationId": "submit_agent_session_turn_route_api_agent_sessions__session_id__turns_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_AgentTurnResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Agent session not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Submit Agent Session Turn Route",
         "tags": [
           "agent-sessions"
         ]

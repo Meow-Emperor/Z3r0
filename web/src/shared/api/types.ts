@@ -191,8 +191,12 @@ export type ListAgentsData = NonNullable<ListAgentsResponse["data"]>;
 export type ListAgentSessionsResponse = JsonResponse<paths["/api/agent-sessions"]["get"]>;
 export type ListAgentSessionsData = NonNullable<ListAgentSessionsResponse["data"]>;
 
-export type CreateAgentSessionResponse = JsonResponse<paths["/api/agent-sessions"]["post"]>;
-export type CreateAgentSessionData = NonNullable<CreateAgentSessionResponse["data"]>;
+export type AgentTurnRequest = JsonRequestBody<paths["/api/agent-sessions/turns"]["post"]>;
+export type AgentTurnData = components["schemas"]["AgentTurnResponse"];
+export type CreateAgentSessionTurnResponse = JsonResponse<paths["/api/agent-sessions/turns"]["post"]>;
+export type SubmitAgentSessionTurnResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/turns"]["post"]>;
+export type InterruptAgentSessionResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/interrupt"]["post"]>;
+export type CancelAllAgentSessionTasksResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/cancel-all"]["post"]>;
 
 export type ListAgentEventsResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/events"]["get"]>;
 export type ListAgentEventsData = NonNullable<ListAgentEventsResponse["data"]>;
@@ -221,5 +225,3 @@ export type AgentImageInputPart = components["schemas"]["AgentImageInputPart"];
 
 export type AgentContentEvent = ListAgentEventsData["items"][number];
 export type AgentStreamEvent = components["schemas"]["AgentEventSchema"];
-
-export type AgentStreamCommand = components["schemas"]["AgentStreamCommandSchema"];

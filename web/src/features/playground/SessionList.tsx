@@ -26,7 +26,7 @@ type SessionListProps = {
   onDelete: (sessionId: string) => void;
   onRefreshSessions: () => Promise<void>;
   onDropRuntime: (sessionId: string) => void;
-  onSyncSessions: (items: AgentSessionSummary[]) => void;
+  onSyncSessionSummaries: (items: AgentSessionSummary[]) => void;
 };
 
 type ProjectSessionState = {
@@ -84,7 +84,7 @@ export function SessionList({
   onDelete,
   onRefreshSessions,
   onDropRuntime,
-  onSyncSessions,
+  onSyncSessionSummaries,
 }: SessionListProps) {
   const [projects, setProjects] = useState<WorkProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
@@ -122,7 +122,7 @@ export function SessionList({
         loading: false,
         items,
       }));
-      onSyncSessions(items);
+      onSyncSessionSummaries(items);
     } catch (error) {
       if (!silent) showApiError(error);
       if (!silent) {
@@ -132,7 +132,7 @@ export function SessionList({
         }));
       }
     }
-  }, [onSyncSessions]);
+  }, [onSyncSessionSummaries]);
 
   useEffect(() => {
     void loadProjects();

@@ -47,7 +47,7 @@ export function AdminLayout() {
     deleteSession,
     refreshSessions,
     dropSessionRuntime,
-    syncSessions,
+    syncSessionSummaries,
   } = useAgentSessionContext();
 
   const setHeaderActions = useCallback((actions: ReactNode) => {
@@ -115,7 +115,7 @@ export function AdminLayout() {
                 onDelete={deleteSession}
                 onRefreshSessions={refreshSessions}
                 onDropRuntime={dropSessionRuntime}
-                onSyncSessions={syncSessions}
+                onSyncSessionSummaries={syncSessionSummaries}
               />
             </div>
           </div>

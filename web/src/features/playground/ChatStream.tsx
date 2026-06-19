@@ -46,28 +46,12 @@ export function ChatStream({
     });
   };
 
-  if (nodes.length === 0) {
-    return (
-      <div className="chat-empty">
-        <div className="chat-empty-mark">
-          <Sparkles size={28} />
-        </div>
-        <h2>Start a new conversation</h2>
-        <p>
-          Ask the security operations agent anything
-          <br />
-          - penetration tests, code audits, or threat triage.
-        </p>
-      </div>
-    );
-  }
-
   const lastIndex = nodes.length - 1;
   const lastNode = nodes[lastIndex];
 
   return (
     <div className="chat-stream">
-      {renderedNodes.map((item) => {
+      {nodes.length === 0 ? <ChatEmptyState /> : renderedNodes.map((item) => {
         if (item.kind === "user") {
           return (
             <UserBubble
@@ -103,6 +87,22 @@ export function ChatStream({
       ) : null}
       <div ref={tailRef} className="chat-tail" />
       <ImagePreview preview={preview} onClose={() => setPreview(null)} />
+    </div>
+  );
+}
+
+function ChatEmptyState() {
+  return (
+    <div className="chat-empty">
+      <div className="chat-empty-mark">
+        <Sparkles size={28} />
+      </div>
+      <h2>Start a new conversation</h2>
+      <p>
+        Ask the security operations agent anything
+        <br />
+        - penetration tests, code audits, or threat triage.
+      </p>
     </div>
   );
 }

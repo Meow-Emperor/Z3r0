@@ -1,6 +1,5 @@
 import asyncio
 import shlex
-from datetime import datetime
 
 from core.runtime.context import AgentRuntimeContext, AgentUserContext, main_agent_instance_id
 from core.runtime.input_items import display_text_from_content
@@ -9,8 +8,8 @@ from core.tools.knowledge import current_knowledge_generation
 from core.tools.sandbox import SANDBOX_SKILLS_DIR
 from logger import get_logger
 from middleware.auth import AuthUser
-from schema.agent.events import DoneEvent, ErrorEvent
-from schema.agent.events import AgentInputPart
+from schema.agent.events import AgentEventSchema, AgentInputPart
+from schema.agent.sessions import AgentSessionSummarySchema
 from service.agent import sessions as agent_sessions
 from service.sandbox.commands import execute_sandbox_container_command
 from service.sandbox.status import (
@@ -29,18 +28,52 @@ class SessionNotRunnableError(PermissionError):
     pass
 
 
-async def submit_turn(
+class SessionBusyError(RuntimeError):
+    pass
+
+
+class SandboxContainerUnavailableError(ValueError):
+    pass
+
+
+class AgentUnavailableError(ValueError):
+    pass
+
+
+async def submit_user_turn(
     *,
     session_id: str,
     content: list[AgentInputPart],
     user: AuthUser,
     sandbox_container_id: int | None,
     requested_agent_code: str | None,
-) -> None:
+) -> list[AgentEventSchema]:
+    await apply_turn_sandbox_selection(
+        session_id=session_id,
+        sandbox_container_id=sandbox_container_id,
+        user=user,
+    )
+    return await submit_turn(
+        session_id=session_id,
+        content=content,
+        user=user,
+        requested_agent_code=requested_agent_code,
+    )
+
+
+async def submit_turn(
+    *,
+    session_id: str,
+    content: list[AgentInputPart],
+    user: AuthUser,
+    requested_agent_code: str | None,
+) -> list[AgentEventSchema]:
     if not await agent_sessions.can_access_session(session_id, user.id, user.role):
         raise PermissionError("agent session not found")
     if not await can_run_work_project_session(session_id, user.id, user.role):
         raise SessionNotRunnableError("work project is canceled")
+    if requested_agent_code is not None and not get_agent_pool().registry.has(requested_agent_code):
+        raise AgentUnavailableError("agent is not available")
     display_text = display_text_from_content(content)
     agent_code = await agent_sessions.ensure_chat_session_meta(
         session_id,
@@ -49,31 +82,114 @@ async def submit_turn(
         user_id=user.id,
         user_role=user.role,
     )
-    context = await build_runtime_context(session_id, user, sandbox_container_id, agent_code)
+    context = await build_runtime_context(session_id, user, None, agent_code)
     runtime = await get_agent_pool().get_or_create(session_id)
-    await runtime.start_turn(content, agent_code, context)
+    return await runtime.start_turn(content, agent_code, context)
 
 
-async def interrupt_turn(*, session_id: str, user: AuthUser) -> bool:
+async def submit_new_chat_turn(
+    *,
+    content: list[AgentInputPart],
+    user: AuthUser,
+    sandbox_container_id: int | None,
+    requested_agent_code: str | None,
+) -> tuple[str, list[AgentEventSchema]]:
+    session_id = await agent_sessions.create_session(user_id=user.id)
+    try:
+        events = await submit_user_turn(
+            session_id=session_id,
+            content=content,
+            user=user,
+            sandbox_container_id=sandbox_container_id,
+            requested_agent_code=requested_agent_code,
+        )
+    except Exception:
+        await agent_sessions.delete_session(
+            session_id,
+            user_id=user.id,
+            user_role=user.role,
+        )
+        raise
+    return session_id, events
+
+
+async def apply_turn_sandbox_selection(
+    *,
+    session_id: str,
+    sandbox_container_id: int | None,
+    user: AuthUser,
+) -> None:
+    meta = await agent_sessions.get_session_meta(session_id)
+    if meta is None:
+        raise PermissionError("agent session not found")
+    current_id = meta.selected_sandbox_container_id
+    if current_id == sandbox_container_id:
+        return
+    await update_selected_sandbox_container(
+        session_id=session_id,
+        sandbox_container_id=sandbox_container_id,
+        user=user,
+        require_idle=True,
+    )
+
+
+async def update_selected_sandbox_container(
+    *,
+    session_id: str,
+    sandbox_container_id: int | None,
+    user: AuthUser,
+    require_idle: bool = True,
+) -> AgentSessionSummarySchema:
+    if not await agent_sessions.can_access_session(session_id, user.id, user.role):
+        raise PermissionError("agent session not found")
+    meta = await agent_sessions.get_session_meta(session_id)
+    if meta is None:
+        raise PermissionError("agent session not found")
+    if require_idle and (meta.is_running or await agent_sessions.has_outstanding_session_work(session_id)):
+        raise SessionBusyError("stop running tasks before switching sandbox container")
+    generation = 0
+    if sandbox_container_id is not None:
+        if meta.project_id is not None:
+            allowed = await work_project_allows_sandbox_container(
+                project_id=meta.project_id,
+                sandbox_container_id=sandbox_container_id,
+                user_id=user.id,
+                user_role=user.role,
+            )
+            if not allowed:
+                raise SandboxContainerUnavailableError("sandbox container is not available for this project")
+            binding = await resolve_project_sandbox_container_tool_binding(sandbox_container_id)
+        else:
+            binding = await resolve_sandbox_container_tool_binding(
+                id=sandbox_container_id,
+                user_id=user.id,
+                user_role=user.role,
+            )
+        if binding is None:
+            raise SandboxContainerUnavailableError("sandbox container is not available")
+        generation = binding.generation
+
+    session = await agent_sessions.update_session_sandbox_container(
+        session_id=session_id,
+        sandbox_container_id=sandbox_container_id,
+        sandbox_container_generation=generation,
+        user_id=user.id,
+        user_role=user.role,
+    )
+    if session is None:
+        raise PermissionError("agent session not found")
+    await get_agent_pool().invalidate_session_tool_binding(session_id)
+    return session
+
+
+async def interrupt_turn(*, session_id: str, user: AuthUser) -> list[AgentEventSchema]:
     await _raise_unless_can_access(session_id, user)
     return await get_agent_pool().try_interrupt(session_id)
 
 
-async def cancel_all_tasks(*, session_id: str, user: AuthUser) -> bool:
+async def cancel_all_tasks(*, session_id: str, user: AuthUser) -> list[AgentEventSchema]:
     await _raise_unless_can_access(session_id, user)
     return await get_agent_pool().cancel_all(session_id)
-
-
-def not_found_error() -> ErrorEvent:
-    return ErrorEvent(created_at=datetime.now(), message="agent session not found", code="not_found")
-
-
-def not_runnable_error() -> ErrorEvent:
-    return ErrorEvent(created_at=datetime.now(), message="work project is canceled", code="bad_request")
-
-
-def done_event() -> DoneEvent:
-    return DoneEvent(created_at=datetime.now())
 
 
 async def _raise_unless_can_access(session_id: str, user: AuthUser) -> None:
