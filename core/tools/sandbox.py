@@ -17,7 +17,10 @@ from utils.markdown import markdown_body_without_front_matter
 
 
 _SKILL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
-SANDBOX_SKILLS_DIR = "/root/.agents/skills"
+SANDBOX_SKILLS_DIR = ".agents/skills"
+_SKILL_RESOURCE_FILES_MARKER = "__Z3R0_SKILL_RESOURCE_FILES__"
+_SKILL_RESOURCE_FILES_TRUNCATED_MARKER = "__Z3R0_SKILL_RESOURCE_FILES_TRUNCATED__"
+_MAX_SKILL_RESOURCE_FILES = 200
 _SYNC_COMMAND_TIMEOUT_SECONDS = 30
 _ASYNC_COMMAND_TIMEOUT_SECONDS = 300
 _ASYNC_COMMAND_CONCURRENCY_LIMIT = 3
@@ -232,15 +235,87 @@ def _skill_result(status: ToolResultStatusSchema, output: str) -> str:
     ).model_dump_json()
 
 
+def _skill_root(skill_name: str) -> str:
+    return f"{SANDBOX_SKILLS_DIR}/{skill_name}"
+
+
+def _load_skill_command(skill_name: str) -> str:
+    skill_root = _skill_root(skill_name)
+    return f"""
+skill_root={shlex.quote(skill_root)}
+skill_file="$skill_root/SKILL.md"
+test -f "$skill_file" || exit 1
+cat "$skill_file"
+printf '\\n%s\\n' {shlex.quote(_SKILL_RESOURCE_FILES_MARKER)}
+find "$skill_root" -mindepth 1 -type f | sort | awk -v prefix="$skill_root/" -v max={_MAX_SKILL_RESOURCE_FILES} -v truncated={shlex.quote(_SKILL_RESOURCE_FILES_TRUNCATED_MARKER)} '
+  index($0, prefix) == 1 {{
+    rel = substr($0, length(prefix) + 1)
+    if (rel == "SKILL.md") next
+    count += 1
+    if (count <= max) print rel
+    else {{ print truncated; exit }}
+  }}
+'
+""".strip()
+
+
+def _parse_loaded_skill_output(output: str) -> tuple[str, tuple[str, ...], bool]:
+    markdown, separator, resources = output.rpartition(f"\n{_SKILL_RESOURCE_FILES_MARKER}\n")
+    if not separator:
+        return output, (), False
+
+    files: list[str] = []
+    truncated = False
+    for line in resources.splitlines():
+        entry = line.strip()
+        if not entry:
+            continue
+        if entry == _SKILL_RESOURCE_FILES_TRUNCATED_MARKER:
+            truncated = True
+            continue
+        files.append(entry)
+    return markdown, tuple(files), truncated
+
+
+def _loaded_skill_body(
+    skill_name: str,
+    markdown: str,
+    resource_files: tuple[str, ...] = (),
+    resource_files_truncated: bool = False,
+) -> str:
+    skill_root = _skill_root(skill_name)
+    body = markdown_body_without_front_matter(markdown).strip()
+    parts = [
+        (
+            "## Skill Resource Root\n\n"
+            f"`{skill_root}`\n\n"
+            "Use sandbox command tools for reads, inspection, execution, and other file operations under this root."
+        ),
+        _skill_resource_files_section(resource_files, resource_files_truncated),
+    ]
+    if body:
+        parts.append(body)
+    return "\n\n".join(parts)
+
+
+def _skill_resource_files_section(files: tuple[str, ...], truncated: bool) -> str:
+    if not files:
+        return "## Skill Resource Files\n\nNone."
+    lines = [f"- `{path}`" for path in files]
+    if truncated:
+        lines.append(f"- ... truncated after {_MAX_SKILL_RESOURCE_FILES} files")
+    return "## Skill Resource Files\n\nPaths are relative to `Skill Resource Root`:\n\n" + "\n".join(lines)
+
+
 @function_tool
 async def load_skill(ctx: RunContextWrapper[AgentRuntimeContext], name: str) -> str:
     """Load the body of a named skill from the selected sandbox container.
 
     Args:
-        name: str skill directory name under /root/.agents/skills.
+        name: str skill directory name under .agents/skills.
 
     Returns:
-        JSON status with the skill detail markdown body without YAML Front Matter.
+        JSON status with the skill body, sandbox-relative skill root, and resource file list.
     """
     container_id = ctx.context.sandbox_container_id
     if container_id is None:
@@ -253,12 +328,10 @@ async def load_skill(ctx: RunContextWrapper[AgentRuntimeContext], name: str) -> 
             "Skill name must contain only letters, numbers, dot, underscore, or dash.",
         )
 
-    skill_path = f"{SANDBOX_SKILLS_DIR}/{skill_name}/SKILL.md"
-    command = f"test -f {shlex.quote(skill_path)} && cat {shlex.quote(skill_path)}"
     try:
         result = await execute_sandbox_container_command(
             id=container_id,
-            command=command,
+            command=_load_skill_command(skill_name),
             timeout_seconds=_SYNC_COMMAND_TIMEOUT_SECONDS,
         )
     except asyncio.CancelledError:
@@ -271,6 +344,8 @@ async def load_skill(ctx: RunContextWrapper[AgentRuntimeContext], name: str) -> 
     if result.exit_code != 0:
         return _skill_result(ToolResultStatusSchema.ERROR, f"Skill not found: {skill_name}")
 
+    markdown, resource_files, resource_files_truncated = _parse_loaded_skill_output(result.output)
     return _skill_result(
-        ToolResultStatusSchema.SUCCESS, markdown_body_without_front_matter(result.output),
+        ToolResultStatusSchema.SUCCESS,
+        _loaded_skill_body(skill_name, markdown, resource_files, resource_files_truncated),
     )

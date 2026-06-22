@@ -24,6 +24,7 @@ logger = get_logger(__name__)
 
 _COMMAND_CANCEL_JOIN_TIMEOUT_SECONDS = 3
 _COMMAND_TERMINATE_TIMEOUT_SECONDS = 5
+_COMMAND_WORKDIR = "/root"
 
 
 class _SandboxCommandCancelled(RuntimeError):
@@ -175,6 +176,7 @@ def _execute_container_command_sync(
             container=container.id,
             cmd=["/bin/sh", "-lc", _wrap_cancellable_command(command, marker_path)],
             environment=environment or None,
+            workdir=_COMMAND_WORKDIR,
             stdout=True,
             stderr=True,
             stdin=False,

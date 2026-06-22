@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-skills_dir="${1:-/root/.agents/skills}"
+skills_dir="${1:-.agents/skills}"
 
 fail() {
   echo "validate-skills: $*" >&2
@@ -30,25 +30,17 @@ echo "$skill_files" | while IFS= read -r skill_file; do
   description=$(awk -F': *' 'NR > 1 && $1 == "description" { print $2; exit }' "$skill_file")
   [ -n "$description" ] || fail "$skill_file: missing front matter description"
   [ "${#description}" -le 320 ] || fail "$skill_file: description is too long"
+  if grep -Fq '/root/.agents/skills/' "$skill_file"; then
+    fail "$skill_file: use .agents/skills paths for skill resources"
+  fi
 
-  if [ -d "$skill_dir/scripts" ]; then
-    grep -q '^## Sandbox Paths$' "$skill_file" || fail "$skill_file: scripts require a Sandbox Paths section"
-    grep -q '^## Custom Script$' "$skill_file" || fail "$skill_file: scripts require a Custom Script section"
-
-    find "$skill_dir/scripts" -name '*.sh' -type f | sort | while IFS= read -r script; do
+  shell_scripts=$(find "$skill_dir" -mindepth 1 -name '*.sh' -type f | sort)
+  if [ -n "$shell_scripts" ]; then
+    echo "$shell_scripts" | while IFS= read -r script; do
       if sed -n '1p' "$script" | grep -q 'bash'; then
         bash -n "$script" || fail "$script: bash syntax check failed"
       else
         sh -n "$script" || fail "$script: shell syntax check failed"
-      fi
-      script_base=$(basename "$script")
-      abs_script="/root/.agents/skills/$skill_name/scripts/$script_base"
-      grep -Fq "$abs_script" "$skill_file" || fail "$skill_file: missing custom script path $abs_script"
-      if grep -q "\`$script_base -" "$skill_file" || grep -q "\`$script_base [^<]" "$skill_file"; then
-        fail "$skill_file: use absolute path for custom script $script_base"
-      fi
-      if grep -q "\`\./scripts/$script_base" "$skill_file" || grep -q "\`scripts/$script_base" "$skill_file"; then
-        fail "$skill_file: use absolute path for custom script $script_base"
       fi
     done
   fi

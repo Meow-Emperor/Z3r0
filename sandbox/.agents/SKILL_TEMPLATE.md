@@ -15,19 +15,19 @@ Use this section for direct CLI skills whose installed help output should be the
 tool --help
 ```
 
-## Sandbox Paths
+## Resource Paths
 
-Use this section when the skill ships custom files.
+Use this section when the skill ships files under its skill root. `load_skill` lists shipped resource files automatically; reference files with `.agents/skills/<skill-name>/...` paths when commands need them.
 
-- Wrapper script: `/root/.agents/skills/example-skill/scripts/example-skill.sh`
-- Supporting files: `/root/.agents/skills/example-skill/scripts/support`
+- Wrapper script: `.agents/skills/example-skill/scripts/example-skill.sh`
+- Supporting files: `.agents/skills/example-skill/scripts/support`
 
-## Custom Script
+## Usage
 
-Use this section when the skill ships a wrapper script. Always call custom scripts by absolute path.
+Use this section when the skill ships a wrapper script, reference file, template, dataset, or other resource. Read, inspect, or execute shipped resources with sandbox commands.
 
 ```sh
-/root/.agents/skills/example-skill/scripts/example-skill.sh [options] <input>
+.agents/skills/example-skill/scripts/example-skill.sh [options] <input>
 ```
 
 ## Common Commands
@@ -36,7 +36,7 @@ Provide bounded examples that match the sandbox command model.
 
 ```sh
 tool --help
-/root/.agents/skills/example-skill/scripts/example-skill.sh --help
+.agents/skills/example-skill/scripts/example-skill.sh --help
 ```
 
 ## Output

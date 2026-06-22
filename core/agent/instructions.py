@@ -134,6 +134,8 @@ def _build_sandbox_skill_instructions(skill_metadata: tuple[str, ...]) -> str:
         "- Before executing any command, first call `load_skill` for `sandbox-shell` if it is listed.\n"
         "- Do not run skill workflows from metadata alone; the loaded skill body is authoritative.\n"
         "- After loading a skill, follow its workflow and constraints exactly.\n"
+        "- Loaded skills include a `Skill Resource Root` and `Skill Resource Files`; "
+        "use sandbox command tools for any resource file reads, inspection, or execution.\n"
     )
     return (
         "# Sandbox Skill Index\n\n"

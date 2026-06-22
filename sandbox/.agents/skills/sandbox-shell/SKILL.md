@@ -64,10 +64,10 @@ Dispatching `execute_async_command` ends the current turn immediately.
 - File/firmware: `file`, `binwalk`
 - Browser: `agent-browser-cli`
 
-## Custom Scripts
+## Skill Resource Paths
 
-Call custom skill scripts by absolute path:
+Use `.agents/skills/<skill-name>/...` paths in sandbox commands for skill-shipped files:
 
-- Ghidra wrapper: `/root/.agents/skills/ghidra/scripts/ghidra-analyze.sh`
+- Ghidra wrapper: `.agents/skills/ghidra/scripts/ghidra-analyze.sh`
 
 Report only meaningful results: changed files, commands run, relevant output, and failures that affect completion.

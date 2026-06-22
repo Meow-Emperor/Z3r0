@@ -109,14 +109,18 @@ RUN set -eux; \
 # the final sandbox image.
 FROM debian:trixie-slim AS skills-validator
 
-COPY .agents /tmp/.agents
+WORKDIR /tmp
+
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends bash; \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*; \
-    find /tmp/.agents/skills -path '*/scripts/*.sh' -type f -exec chmod 755 '{}' +; \
-    chmod 755 /tmp/.agents/validate-skills.sh; \
-    /tmp/.agents/validate-skills.sh /tmp/.agents/skills
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/tmp/*
+
+COPY .agents .agents
+RUN set -eux; \
+    find .agents/skills -mindepth 2 -name '*.sh' -type f -exec chmod 755 '{}' +; \
+    chmod 755 .agents/validate-skills.sh; \
+    .agents/validate-skills.sh .agents/skills
 
 # Final sandbox runtime image.
 FROM debian:trixie-slim
@@ -131,6 +135,8 @@ ENV HOME=/root \
     UV_TOOL_DIR=/opt/uv/tools \
     UV_TOOL_BIN_DIR=/usr/local/bin \
     PATH=/opt/jadx/bin:/opt/ghidra:/opt/ghidra/support:/usr/lib/jvm/java-21-openjdk-amd64/bin:$PATH
+
+WORKDIR /root
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG OBSERVER_WARD_VERSION
@@ -248,7 +254,7 @@ RUN set -eux; \
     test -x /opt/jadx/bin/jadx
 
 COPY --from=proxy-builder --chmod=755 /sandbox-proxy /usr/local/bin/sandbox-proxy
-COPY --from=skills-validator /tmp/.agents/skills /root/.agents/skills
+COPY --from=skills-validator /tmp/.agents/skills .agents/skills
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
 COPY supervisord.conf /supervisord.conf
 
