@@ -55,6 +55,9 @@
   --z-scrollbar: rgba(183, 198, 215, 0.34);
   --z-scrollbar-hover: rgba(156, 199, 203, 0.56);
   --z-shadow: 0 22px 60px rgba(0, 0, 0, 0.2);
+  --z-select-prefix-padding: 12px;
+  --z-select-prefix-size: 16px;
+  --z-select-prefix-gap: 10px;
   --z-page-bg:
     radial-gradient(circle at 12% 14%, rgba(190, 64, 78, 0.16), transparent 30%),
     radial-gradient(circle at 82% 18%, rgba(88, 156, 160, 0.14), transparent 32%),
@@ -475,13 +478,30 @@ a,
   justify-content: center;
 }
 
+.semi-select-prefix:not(.semi-select-prefix-text) {
+  flex-basis: var(--z-select-prefix-size);
+  width: var(--z-select-prefix-size);
+  margin: 0;
+  margin-inline-start: var(--z-select-prefix-padding);
+  margin-inline-end: var(--z-select-prefix-gap);
+}
+
 .semi-input-prefix svg,
 .semi-select-prefix svg {
   display: block;
 }
 
+.semi-select-prefix:not(.semi-select-prefix-text) svg {
+  width: var(--z-select-prefix-size);
+  height: var(--z-select-prefix-size);
+}
+
 .semi-select-with-prefix .semi-select-selection {
-  margin-left: 10px;
+  margin-inline-start: 0;
+}
+
+.semi-select-with-prefix .semi-select-content-wrapper-empty {
+  margin-inline-start: 0;
 }
 
 .semi-input::placeholder,

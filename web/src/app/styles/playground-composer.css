@@ -20,21 +20,6 @@
 
 .sandbox-selector .semi-select {
   width: 100%;
-  padding-inline: 12px;
-}
-
-.sandbox-selector .semi-select-prefix {
-  flex: 0 0 auto;
-  width: 20px;
-  justify-content: center;
-}
-
-.sandbox-selector .semi-select-prefix svg {
-  display: block;
-}
-
-.sandbox-selector .semi-select-with-prefix .semi-select-selection {
-  margin-left: 10px;
 }
 
 .sandbox-container-actions {
