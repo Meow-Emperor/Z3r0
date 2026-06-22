@@ -138,6 +138,7 @@ export function WorkProjectsPage() {
             <Button
               icon={expandedId === project.id ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
               theme="borderless"
+              type="tertiary"
               size="small"
               onClick={() => toggleProject(project)}
               aria-label={`${expandedId === project.id ? "Collapse" : "Expand"} ${project.name}`}
@@ -163,18 +164,21 @@ export function WorkProjectsPage() {
           <Button
             icon={<FolderOpen size={15} />}
             theme="borderless"
+            type="tertiary"
             aria-label={`Open workspace for ${project.name}`}
             onClick={() => navigate(`/work-projects/${project.id}`)}
           />
           <Button
             icon={<Edit3 size={15} />}
             theme="borderless"
+            type="tertiary"
             aria-label={`Edit ${project.name}`}
             onClick={() => { setEditingProject(project); setModalOpen(true); }}
           />
           <Button
             icon={<Ban size={15} />}
             theme="borderless"
+            type="danger"
             disabled={!project.can_cancel}
             loading={adminAction?.id === project.id && adminAction.type === "cancel"}
             aria-label={`Cancel ${project.name}`}
@@ -183,6 +187,7 @@ export function WorkProjectsPage() {
           <Button
             icon={<RotateCcw size={15} />}
             theme="borderless"
+            type="tertiary"
             disabled={!project.can_retry}
             loading={adminAction?.id === project.id && adminAction.type === "retry"}
             aria-label={`Retry ${project.name}`}

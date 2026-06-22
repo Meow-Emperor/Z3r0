@@ -248,28 +248,28 @@ export function ContainerFileManager({ containerId }: Props) {
   return (
     <div className="file-manager-body">
       <div className="file-manager-toolbar">
-        <Button icon={<ArrowLeft size={15} />} theme="borderless" disabled={historyIndex <= 0 || toolbarDisabled} onClick={goBack} aria-label="Back" />
-        <Button icon={<ArrowRight size={15} />} theme="borderless" disabled={historyIndex >= pathHistory.length - 1 || toolbarDisabled} onClick={goForward} aria-label="Forward" />
-        <Button icon={<ArrowUp size={15} />} theme="borderless" disabled={path === "/" || toolbarDisabled} onClick={goUp} aria-label="Up" />
-        <Button icon={<RefreshCw size={15} />} theme="borderless" disabled={toolbarDisabled} onClick={refresh} aria-label="Refresh" />
+        <Button icon={<ArrowLeft size={15} />} theme="borderless" type="tertiary" disabled={historyIndex <= 0 || toolbarDisabled} onClick={goBack} aria-label="Back" />
+        <Button icon={<ArrowRight size={15} />} theme="borderless" type="tertiary" disabled={historyIndex >= pathHistory.length - 1 || toolbarDisabled} onClick={goForward} aria-label="Forward" />
+        <Button icon={<ArrowUp size={15} />} theme="borderless" type="tertiary" disabled={path === "/" || toolbarDisabled} onClick={goUp} aria-label="Up" />
+        <Button icon={<RefreshCw size={15} />} theme="borderless" type="tertiary" disabled={toolbarDisabled} onClick={refresh} aria-label="Refresh" />
         <span className="file-manager-separator" />
-        <Button icon={<FilePlus size={15} />} theme="borderless" disabled={toolbarDisabled || createType !== null} onClick={() => startCreate("file")} aria-label="New file" />
-        <Button icon={<FolderPlus size={15} />} theme="borderless" disabled={toolbarDisabled || createType !== null} onClick={() => startCreate("dir")} aria-label="New folder" />
+        <Button icon={<FilePlus size={15} />} theme="borderless" type="tertiary" disabled={toolbarDisabled || createType !== null} onClick={() => startCreate("file")} aria-label="New file" />
+        <Button icon={<FolderPlus size={15} />} theme="borderless" type="tertiary" disabled={toolbarDisabled || createType !== null} onClick={() => startCreate("dir")} aria-label="New folder" />
         <Tooltip content="Upload files">
-          <Button icon={<Upload size={15} />} theme="borderless" disabled={toolbarDisabled} onClick={handleUploadClick} aria-label="Upload files" />
+          <Button icon={<Upload size={15} />} theme="borderless" type="tertiary" disabled={toolbarDisabled} onClick={handleUploadClick} aria-label="Upload files" />
         </Tooltip>
         <Tooltip content="Download selected">
-          <Button icon={<Download size={15} />} theme="borderless" disabled={!hasSelection || toolbarDisabled} onClick={() => void handleDownload()} aria-label="Download selected" />
+          <Button icon={<Download size={15} />} theme="borderless" type="tertiary" disabled={!hasSelection || toolbarDisabled} onClick={() => void handleDownload()} aria-label="Download selected" />
         </Tooltip>
         <span className="file-manager-separator" />
         <Tooltip content="Copy selected">
-          <Button icon={<Copy size={15} />} theme="borderless" disabled={!hasSelection || toolbarDisabled} onClick={handleCopy} aria-label="Copy" />
+          <Button icon={<Copy size={15} />} theme="borderless" type="tertiary" disabled={!hasSelection || toolbarDisabled} onClick={handleCopy} aria-label="Copy" />
         </Tooltip>
         <Tooltip content="Cut selected">
-          <Button icon={<Scissors size={15} />} theme="borderless" disabled={!hasSelection || toolbarDisabled} onClick={handleCut} aria-label="Cut" />
+          <Button icon={<Scissors size={15} />} theme="borderless" type="tertiary" disabled={!hasSelection || toolbarDisabled} onClick={handleCut} aria-label="Cut" />
         </Tooltip>
         <Tooltip content={canPaste ? `Paste ${clipboard?.paths.length ?? 0} item(s)` : "Nothing to paste"}>
-          <Button icon={<ClipboardPaste size={15} />} theme="borderless" disabled={!canPaste || toolbarDisabled} onClick={() => void handlePaste()} aria-label="Paste" />
+          <Button icon={<ClipboardPaste size={15} />} theme="borderless" type="tertiary" disabled={!canPaste || toolbarDisabled} onClick={() => void handlePaste()} aria-label="Paste" />
         </Tooltip>
         <Popconfirm title="Delete selected items" content={`Delete ${selectedPaths.size} selected item(s)?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void handleDelete()}>
           <Button icon={<Trash2 size={15} />} theme="borderless" type="danger" disabled={!hasSelection || toolbarDisabled} aria-label="Delete" />

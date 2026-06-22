@@ -142,12 +142,12 @@ export function FileViewer({ containerId, file, onClose }: Props) {
         </span>
         <span className="fv-spacer" />
         {viewerType === "text" && !editing && (
-          <Button icon={<Edit3 size={14} />} theme="borderless" size="small" onClick={handleEdit}>Edit</Button>
+          <Button icon={<Edit3 size={14} />} theme="borderless" type="tertiary" size="small" onClick={handleEdit}>Edit</Button>
         )}
         {!editing && (
-          <Button icon={<Download size={14} />} theme="borderless" size="small" onClick={() => void handleDownload()}>Download</Button>
+          <Button icon={<Download size={14} />} theme="borderless" type="tertiary" size="small" onClick={() => void handleDownload()}>Download</Button>
         )}
-        <Button icon={<X size={14} />} theme="borderless" size="small" type="danger" onClick={onClose}>Close</Button>
+        <Button icon={<X size={14} />} theme="borderless" size="small" type="tertiary" onClick={onClose}>Close</Button>
       </div>
 
       {loading ? (
@@ -176,7 +176,7 @@ export function FileViewer({ containerId, file, onClose }: Props) {
             </div>
             <div className="fv-editor-actions">
               <Button icon={<Save size={14} />} size="small" type="primary" loading={saving} onClick={() => void handleSave()}>Save</Button>
-              <Button icon={<X size={14} />} size="small" disabled={saving} onClick={handleCancelEdit}>Cancel</Button>
+              <Button icon={<X size={14} />} size="small" type="tertiary" disabled={saving} onClick={handleCancelEdit}>Cancel</Button>
             </div>
           </div>
         ) : (

@@ -71,7 +71,7 @@ export function SystemUsersPage() {
       key: "actions", header: "Actions", width: "104px",
       render: (user) => (
         <RowActions>
-          <Button icon={<Pencil size={15} />} theme="borderless" aria-label={`Edit ${user.username}`}
+          <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary" aria-label={`Edit ${user.username}`}
             onClick={() => setModal({ mode: "edit", user })}
           />
           <Popconfirm title="Delete user" content={`Delete ${user.username}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteUser(user)}>

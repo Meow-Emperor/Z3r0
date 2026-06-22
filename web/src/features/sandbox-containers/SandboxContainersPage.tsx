@@ -145,19 +145,19 @@ export function SandboxContainersPage() {
       key: "actions", header: "Actions", width: "150px",
       render: (container) => (
         <RowActions>
-          <Button icon={<FolderOpen size={15} />} theme="borderless"
+          <Button icon={<FolderOpen size={15} />} theme="borderless" type="tertiary"
             disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
             aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
           />
-          <Button icon={<SquareTerminal size={15} />} theme="borderless"
+          <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
             disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
             aria-label={`Connect shell for ${container.container_name}`} onClick={() => openShell(container)}
           />
-          <Button icon={<Monitor size={15} />} theme="borderless"
+          <Button icon={<Monitor size={15} />} theme="borderless" type="tertiary"
             disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || !canOpenContainerNoVNC(container)}
             aria-label={`Connect screen for ${container.container_name}`} onClick={() => openNoVNC(container)}
           />
-          <Button icon={<Network size={15} />} theme="borderless"
+          <Button icon={<Network size={15} />} theme="borderless" type="tertiary"
             disabled={container.control_proxy_host_port <= 0}
             aria-label={`Set egress for ${container.container_name}`} onClick={() => setEgressModalContainer(container)}
           />
@@ -166,7 +166,7 @@ export function SandboxContainersPage() {
             loading={startingId === container.id}
             aria-label={`Start ${container.container_name}`} onClick={() => void startContainer(container)}
           />
-          <Button icon={<Square size={15} />} theme="borderless"
+          <Button icon={<Square size={15} />} theme="borderless" type="danger"
             disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={stoppingId === container.id}
             aria-label={`Stop ${container.container_name}`} onClick={() => void stopContainer(container)}
           />
@@ -291,6 +291,7 @@ function ContainerEgressModal({
       cancelText={UI_TEXT.cancel}
       confirmLoading={saving}
       okButtonProps={{
+        type: "primary",
         disabled: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !selectedProxyId,
       }}
       onOk={() => void save()}

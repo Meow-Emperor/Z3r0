@@ -858,11 +858,11 @@ function WindowControls({
 }: WindowControlsProps) {
   return (
     <>
-      <Button icon={<Minus size={14} />} theme="borderless" onClick={onMinimize} aria-label={minimizeAriaLabel} />
+      <Button icon={<Minus size={14} />} theme="borderless" type="tertiary" onClick={onMinimize} aria-label={minimizeAriaLabel} />
       {onMaximize ? (
-        <Button icon={isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />} theme="borderless" onClick={onMaximize} aria-label={isMaximized ? restoreAriaLabel : maximizeAriaLabel} />
+        <Button icon={isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />} theme="borderless" type="tertiary" onClick={onMaximize} aria-label={isMaximized ? restoreAriaLabel : maximizeAriaLabel} />
       ) : null}
-      <Button icon={<X size={14} />} theme="borderless" type="danger" onClick={onClose} aria-label={closeAriaLabel} />
+      <Button icon={<X size={14} />} theme="borderless" type="tertiary" onClick={onClose} aria-label={closeAriaLabel} />
     </>
   );
 }

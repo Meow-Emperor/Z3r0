@@ -336,6 +336,7 @@ function SandboxActionButton({ ariaLabel, disabled, icon, onClick, tooltip }: Sa
           disabled={disabled}
           icon={icon}
           theme="borderless"
+          type="tertiary"
           onClick={onClick}
         />
       </span>

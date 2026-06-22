@@ -28,7 +28,7 @@ export function WorkProjectWorkspacePage() {
   return (
     <section className="work-project-workspace">
       <div className="workspace-back-row">
-        <Button icon={<ArrowLeft size={15} />} theme="borderless" onClick={() => navigate("/work-projects")}>
+        <Button icon={<ArrowLeft size={15} />} theme="borderless" type="tertiary" onClick={() => navigate("/work-projects")}>
           Back
         </Button>
       </div>

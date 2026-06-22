@@ -151,7 +151,7 @@ export function AdminLayout() {
             {headerActions ? <div className="topbar-resource-actions">{headerActions}</div> : null}
             <div className="topbar-session-actions">
               <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
-              <Button icon={<LogOut size={16} />} theme="borderless" onClick={handleSignOut} aria-label="Sign out" />
+              <Button icon={<LogOut size={16} />} theme="borderless" type="tertiary" onClick={handleSignOut} aria-label="Sign out" />
             </div>
           </div>
         </header>

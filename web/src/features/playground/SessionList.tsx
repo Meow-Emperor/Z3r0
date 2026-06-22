@@ -264,7 +264,7 @@ export function SessionList({
         okText={UI_TEXT.save}
         cancelText={UI_TEXT.cancel}
         confirmLoading={renaming}
-        okButtonProps={{ disabled: !renameTitle.trim() }}
+        okButtonProps={{ type: "primary", disabled: !renameTitle.trim() }}
         onOk={() => void saveRename()}
         onCancel={() => setRenameTarget(null)}
       >
@@ -324,6 +324,7 @@ function ProjectGroup({
         <Button
           icon={<Info size={14} />}
           theme="borderless"
+          type="tertiary"
           size="small"
           aria-label={`View ${project.name} details`}
           onClick={() => onShowInfo(project)}
@@ -436,6 +437,7 @@ function SessionRow({
       <Button
         icon={<Edit3 size={14} />}
         theme="borderless"
+        type="tertiary"
         size="small"
         aria-label={`Edit ${session.title || session.session_id}`}
         onClick={onRename}

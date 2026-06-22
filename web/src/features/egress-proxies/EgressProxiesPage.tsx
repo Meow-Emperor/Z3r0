@@ -102,13 +102,13 @@ export function EgressProxiesPage() {
       render: (proxy) => (
         <RowActions>
           <Tooltip content="Test proxy">
-            <Button icon={<Wifi size={15} />} theme="borderless"
+            <Button icon={<Wifi size={15} />} theme="borderless" type="tertiary"
               loading={testingId === proxy.id}
               aria-label={`Test ${proxy.proxy_host}`}
               onClick={() => void testProxy(proxy)}
             />
           </Tooltip>
-          <Button icon={<Pencil size={15} />} theme="borderless"
+          <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
             aria-label={`Edit ${proxy.proxy_host}`} onClick={() => setModal({ mode: "edit", proxy })}
           />
           <Popconfirm title="Delete egress proxy" content={`Delete ${proxy.proxy_host}:${proxy.proxy_port}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteProxy(proxy)}>

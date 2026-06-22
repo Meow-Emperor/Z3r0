@@ -79,7 +79,7 @@ export function LoginPage() {
           <Button
             htmlType="submit"
             theme="solid"
-            type="danger"
+            type="primary"
             size="large"
             block
             loading={submitting}

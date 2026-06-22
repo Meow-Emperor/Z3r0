@@ -80,8 +80,8 @@ export function ResourcePageShell({
             Page {page} · {rangeStart}-{rangeEnd} of {total}
           </span>
           <div>
-            <Button disabled={!canGoBack || loading} onClick={onPrevious}>Previous</Button>
-            <Button disabled={!canGoNext || loading} onClick={onNext}>Next</Button>
+            <Button type="tertiary" disabled={!canGoBack || loading} onClick={onPrevious}>Previous</Button>
+            <Button type="tertiary" disabled={!canGoNext || loading} onClick={onNext}>Next</Button>
           </div>
         </div>
       </div>

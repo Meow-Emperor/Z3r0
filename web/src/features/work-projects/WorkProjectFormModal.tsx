@@ -212,6 +212,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             icon={<Plus size={14} />}
             size="small"
             theme="borderless"
+            type="tertiary"
             onClick={() => setValues((v) => ({ ...v, assets: [...v.assets, { ...EMPTY_ASSET }] }))}
           >
             Add Asset

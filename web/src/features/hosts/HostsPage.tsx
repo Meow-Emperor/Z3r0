@@ -95,13 +95,13 @@ export function HostsPage() {
       key: "actions", header: "Actions", width: "140px",
       render: (host) => (
         <RowActions>
-          <Button icon={<SquareTerminal size={15} />} theme="borderless"
+          <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
             aria-label={`Connect shell for ${host.ip_address}`} onClick={() => openHostShell(host)}
           />
-          <Button icon={<Boxes size={15} />} theme="borderless"
+          <Button icon={<Boxes size={15} />} theme="borderless" type="tertiary"
             aria-label={`Manage images for ${host.ip_address}`} onClick={() => setImageModalHost(host)}
           />
-          <Button icon={<Pencil size={15} />} theme="borderless"
+          <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
             aria-label={`Edit ${host.ip_address}`} onClick={() => setModal({ mode: "edit", host })}
           />
           <Popconfirm title="Delete host" content={`Delete ${host.ip_address}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteHost(host)}>
@@ -230,7 +230,7 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
           optionList={systemImages.map((image) => ({ label: image.image_name, value: image.image_name }))}
           onChange={(value) => setSelectedImageNames(Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [])}
         />
-        <Button icon={<Download size={15} />} theme="solid" type="danger" loading={pulling} disabled={selectedImageNames.length === 0} onClick={() => void pullSelected()}>
+        <Button icon={<Download size={15} />} theme="solid" type="primary" loading={pulling} disabled={selectedImageNames.length === 0} onClick={() => void pullSelected()}>
           Pull
         </Button>
       </div>

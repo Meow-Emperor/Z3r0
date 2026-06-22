@@ -31,8 +31,10 @@
   --z-brand-tint: rgba(217, 45, 58, 0.12);
   --z-brand-glow: rgba(217, 45, 58, 0.16);
   --z-danger: #ff9aa3;
-  --z-danger-bg: rgba(217, 45, 58, 0.18);
-  --z-danger-border: rgba(217, 45, 58, 0.42);
+  --z-danger-strong: #ef4444;
+  --z-danger-dark: #b91c1c;
+  --z-danger-bg: rgba(239, 68, 68, 0.18);
+  --z-danger-border: rgba(239, 68, 68, 0.42);
   --z-warning: #f8c56a;
   --z-warning-bg: rgba(245, 158, 11, 0.16);
   --z-warning-border: rgba(245, 158, 11, 0.36);
@@ -108,9 +110,9 @@ body {
   --semi-color-primary: var(--z-brand);
   --semi-color-primary-hover: var(--z-brand-strong);
   --semi-color-primary-active: var(--z-brand-dark);
-  --semi-color-primary-light-default: var(--z-danger-bg);
-  --semi-color-primary-light-hover: rgba(217, 45, 58, 0.24);
-  --semi-color-primary-light-active: rgba(217, 45, 58, 0.32);
+  --semi-color-primary-light-default: var(--z-brand-tint);
+  --semi-color-primary-light-hover: var(--z-brand-glow);
+  --semi-color-primary-light-active: rgba(217, 45, 58, 0.24);
   --semi-color-secondary: var(--z-info);
   --semi-color-secondary-hover: #bfdbfe;
   --semi-color-secondary-active: #60a5fa;
@@ -138,12 +140,12 @@ body {
   --semi-color-success-light-default: var(--z-success-bg);
   --semi-color-success-light-hover: rgba(22, 163, 74, 0.22);
   --semi-color-success-light-active: rgba(22, 163, 74, 0.3);
-  --semi-color-danger: var(--z-brand);
-  --semi-color-danger-hover: var(--z-brand-strong);
-  --semi-color-danger-active: var(--z-brand-dark);
+  --semi-color-danger: var(--z-danger-strong);
+  --semi-color-danger-hover: #f87171;
+  --semi-color-danger-active: var(--z-danger-dark);
   --semi-color-danger-light-default: var(--z-danger-bg);
-  --semi-color-danger-light-hover: rgba(217, 45, 58, 0.24);
-  --semi-color-danger-light-active: rgba(217, 45, 58, 0.32);
+  --semi-color-danger-light-hover: rgba(239, 68, 68, 0.24);
+  --semi-color-danger-light-active: rgba(239, 68, 68, 0.32);
   --semi-color-warning: var(--z-warning);
   --semi-color-warning-hover: #fbd38d;
   --semi-color-warning-active: #d97706;
@@ -405,11 +407,11 @@ a,
 
 .semi-button-danger:not(.semi-button-borderless):not(.semi-button-light):not(.semi-button-outline) {
   color: #ffffff;
-  background: var(--z-brand);
+  background: var(--z-danger-strong);
 }
 
 .semi-button-danger:not(.semi-button-borderless):not(.semi-button-light):not(.semi-button-outline):hover {
-  background: var(--z-brand-strong);
+  background: #dc2626;
 }
 
 .semi-button-danger.semi-button-borderless,

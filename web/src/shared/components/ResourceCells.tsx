@@ -60,6 +60,7 @@ export function SecretCell({
         <Button
           icon={visible ? <EyeOff size={14} /> : <Eye size={14} />}
           theme="borderless"
+          type="tertiary"
           aria-label={label}
           onClick={onToggle}
         />

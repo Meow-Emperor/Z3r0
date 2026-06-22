@@ -205,7 +205,7 @@ export function SystemConfigPage() {
 
   const headerActions = useMemo(() => (
     <>
-      <Button icon={<X size={16} />} disabled={!savedValues || saving || loading} onClick={handleCancel}>
+      <Button icon={<X size={16} />} type="tertiary" disabled={!savedValues || saving || loading} onClick={handleCancel}>
         Cancel
       </Button>
       <Button icon={<Save size={16} />} theme="solid" type="primary" loading={saving} disabled={!values} onClick={handleSave}>

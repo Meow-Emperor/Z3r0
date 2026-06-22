@@ -45,8 +45,8 @@ export function ResourceModal({
       <form className="resource-form" onSubmit={handleSubmit}>
         {children}
         <div className="modal-actions">
-          <Button onClick={onCancel} disabled={saving}>{UI_TEXT.cancel}</Button>
-          <Button htmlType="submit" theme="solid" type="danger" loading={saving} disabled={submitDisabled}>{submitLabel}</Button>
+          <Button type="tertiary" onClick={onCancel} disabled={saving}>{UI_TEXT.cancel}</Button>
+          <Button htmlType="submit" theme="solid" type="primary" loading={saving} disabled={submitDisabled}>{submitLabel}</Button>
         </div>
       </form>
     </Modal>

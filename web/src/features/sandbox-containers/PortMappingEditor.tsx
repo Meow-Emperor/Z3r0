@@ -40,7 +40,7 @@ export function PortMappingEditor({
       <div className="port-mapping-heading">
         <span>Port Mappings</span>
         <div className="port-mapping-actions">
-          <Button icon={<Plus size={14} />} theme="borderless" onClick={onAdd}>
+          <Button icon={<Plus size={14} />} theme="borderless" type="tertiary" onClick={onAdd}>
             Add
           </Button>
         </div>

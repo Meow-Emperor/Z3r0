@@ -269,6 +269,7 @@ export function Composer({
                 className="composer-action-button"
                 icon={<ImagePlus size={16} />}
                 theme="borderless"
+                type="tertiary"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled || streaming || images.length >= MAX_IMAGES}
                 aria-label="Attach image"
