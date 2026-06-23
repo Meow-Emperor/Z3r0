@@ -35,6 +35,10 @@ git clone https://github.com/yv1ing/Z3r0.git && cd Z3r0
 
 Z3r0's capabilities are deeply tied to the sandbox environment, so you need to build the corresponding sandbox image:
 
+> :warning: Architecture Limitation
+>
+> The sandbox image build currently supports only the x64/amd64 architecture. arm64/Apple Silicon, including Apple Silicon Macs, is not supported. Run this step on an x64 host or in an x64 build environment.
+
 ```bash
 cd sandbox && bash build.sh
 ```

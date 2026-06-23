@@ -35,6 +35,10 @@ git clone https://github.com/yv1ing/Z3r0.git && cd Z3r0
 
 Z3r0 的能力与沙盒环境深度绑定，因此需要构建对应的沙盒镜像：
 
+> :warning: 架构限制
+>
+> Sandbox 镜像构建目前仅支持 x64/amd64 架构，不支持 arm64/Apple Silicon（包括 Apple Silicon Mac）。请在 x64 主机或 x64 构建环境中执行该步骤。
+
 ```bash
 cd sandbox && bash build.sh
 ```
