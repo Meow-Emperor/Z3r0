@@ -41,7 +41,7 @@ class SystemConfig(StrictConfigModel):
 # database config
 class DatabaseConfig(StrictConfigModel):
     host: str = Field(default="127.0.0.1")
-    port: int = Field(default=5433)
+    port: int = Field(default=5432)
     database: str = Field(default="z3r0")
     username: str = Field(default="")
     password: str = Field(default="")
