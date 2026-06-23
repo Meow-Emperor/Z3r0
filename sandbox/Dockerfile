@@ -223,6 +223,7 @@ RUN set -eux; \
     apktool --version; \
     binwalk --help >/dev/null; \
     dig -v; \
+    file --version; \
     g++ --version; \
     gcc --version; \
     git --version; \
