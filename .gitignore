@@ -14,7 +14,9 @@ cache
 node_modules
 
 *.log
-config.json
+.z3r0/app.log.*
+.z3r0/tiktoken_cache
+.z3r0/config.json
 
 web/node_modules
 web/dist
