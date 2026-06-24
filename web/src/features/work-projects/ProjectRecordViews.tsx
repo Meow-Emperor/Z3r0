@@ -24,6 +24,7 @@ import {
   WORK_PROJECT_FINDING_STATUS_LABEL,
 } from "../../shared/lib/labels";
 import { ProjectGraphCanvas } from "./ProjectGraphCanvas";
+import { filledDetailItems, type DetailItem } from "./workProjectDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
 
 export type ProjectRecordTab = "assets" | "findings" | "attack-paths" | "graph";
@@ -74,8 +75,8 @@ export function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
               <Tag color={WORK_PROJECT_ASSET_ORIGIN_COLOR[asset.origin]}>{WORK_PROJECT_ASSET_ORIGIN_LABEL[asset.origin]}</Tag>
             </div>
           </header>
-          <RecordMeta items={assetBaseMeta(asset)} />
-          <RecordExtension items={[
+          <RecordDetails items={assetBaseMeta(asset)} />
+          <RecordDetails className="project-record-details-extension" items={[
             ["Banner", asset.extra?.banner],
           ]} />
         </article>
@@ -99,7 +100,7 @@ export function FindingList({ findings, assets }: { findings: WorkProjectFinding
             </div>
           </header>
           <p>{finding.description || finding.impact || "No description"}</p>
-          <RecordMeta items={[
+          <RecordDetails items={[
             ["Asset", finding.asset_id ? assetLabels.get(finding.asset_id) ?? `#${finding.asset_id}` : undefined],
             ["Substantiates edge", finding.edge_id ? `#${finding.edge_id}` : undefined],
             ["Updated", formatDateTime(finding.updated_at)],
@@ -157,11 +158,11 @@ function edgeLabel(edge: WorkProjectGraphEdge | undefined, assetLabels: Map<numb
   return `${source} → ${target}`;
 }
 
-function RecordMeta({ items }: { items: Array<[string, string | undefined]> }) {
-  const visible = items.filter(([, value]) => value);
+function RecordDetails({ className, items }: { className?: string; items: DetailItem[] }) {
+  const visible = filledDetailItems(items);
   if (!visible.length) return null;
   return (
-    <div className="project-record-meta">
+    <div className={cx("project-record-details", className)}>
       {visible.map(([label, value]) => (
         <span key={label}><strong>{label}</strong>{value}</span>
       ))}
@@ -169,26 +170,14 @@ function RecordMeta({ items }: { items: Array<[string, string | undefined]> }) {
   );
 }
 
-function assetBaseMeta(asset: WorkProjectAsset): Array<[string, string | undefined]> {
+function assetBaseMeta(asset: WorkProjectAsset): DetailItem[] {
   if (asset.type === WORK_PROJECT_ASSET_TYPE.BINARY) {
     return [["Path", asset.path]];
   }
-  return ([
+  return [
     ["Host", asset.host],
     ["Port", asset.port?.toString()],
-  ] as Array<[string, string | undefined]>).filter(([, value]) => value);
-}
-
-function RecordExtension({ items }: { items: Array<[string, string | undefined]> }) {
-  const visible = items.filter(([, value]) => value);
-  if (!visible.length) return null;
-  return (
-    <div className="project-record-extension">
-      {visible.map(([label, value]) => (
-        <span key={label}><strong>{label}</strong>{value}</span>
-      ))}
-    </div>
-  );
+  ];
 }
 
 function RecordEmpty({ title }: { title: string }) {

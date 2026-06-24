@@ -287,9 +287,7 @@
 .agent-config-card-header svg,
 .project-assets-editor svg,
 .work-project-panel > header svg,
-.project-info-panel > header svg,
-.project-record-meta svg,
-.project-record-extension svg {
+.project-info-panel > header svg {
   color: currentColor;
   stroke: currentColor;
 }
@@ -949,8 +947,7 @@
 }
 
 .project-record-row header > div,
-.project-record-meta,
-.project-record-extension {
+.project-record-details {
   display: flex;
   flex-wrap: wrap;
 }
@@ -978,25 +975,22 @@
   margin: 0;
 }
 
-.project-record-meta,
-.project-record-extension {
+.project-record-details {
   gap: 6px 12px;
   color: var(--z-text-subtle);
   font-size: 12px;
 }
 
-.project-record-meta span,
-.project-record-extension span {
+.project-record-details span {
   display: inline-flex;
   gap: 5px;
 }
 
-.project-record-meta strong,
-.project-record-extension strong {
+.project-record-details strong {
   color: var(--z-text);
 }
 
-.project-record-extension {
+.project-record-details-extension {
   padding-top: 4px;
   border-top: 1px dashed var(--z-line);
 }
@@ -1019,7 +1013,7 @@
   min-height: 320px;
   overflow: hidden;
   background:
-    radial-gradient(circle, rgba(156, 199, 203, 0.16) 1px, transparent 1px) 0 0 / 22px 22px,
+    radial-gradient(circle, rgba(156, 199, 203, 0.15) 1px, transparent 1px) 0 0 / 22px 22px,
     var(--z-bg-deep);
   border: 1px solid var(--z-line);
   border-radius: 8px;
@@ -1028,43 +1022,13 @@
 .project-graph-canvas {
   width: 100%;
   height: 100%;
+  min-height: inherit;
   touch-action: none;
   cursor: grab;
 }
 
 .project-graph-canvas:active {
   cursor: grabbing;
-}
-
-.project-graph-edge {
-  pointer-events: none;
-}
-
-.project-graph-edge-hit {
-  stroke: transparent;
-  stroke-width: 12;
-  cursor: pointer;
-}
-
-.project-graph-node circle {
-  stroke: var(--z-text-strong);
-  cursor: grab;
-  transition: filter 0.12s ease;
-}
-
-.project-graph-node circle:hover {
-  filter: brightness(1.05) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
-}
-
-.project-graph-node text {
-  fill: var(--z-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-anchor: middle;
-  pointer-events: none;
-  paint-order: stroke;
-  stroke: var(--z-bg-deep);
-  stroke-width: 3px;
 }
 
 .project-graph-legend,
@@ -1081,11 +1045,13 @@
   position: absolute;
   top: 12px;
   left: 12px;
+  max-width: min(620px, calc(100% - 72px));
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
   font-size: 12px;
+  pointer-events: none;
 }
 
 .project-graph-legend-group {
@@ -1111,15 +1077,26 @@
 }
 
 .project-graph-legend-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--graph-color);
   border-radius: 50%;
 }
 
 .project-graph-legend-line {
   width: 16px;
   height: 3px;
+  background-color: var(--graph-color);
   border-radius: 2px;
+}
+
+.project-graph-legend-line-offensive {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--graph-color) 0 5px,
+    transparent 5px 8px
+  );
 }
 
 .project-graph-controls {
