@@ -53,6 +53,23 @@ Cover applicable roots, sibling domains, subdomains, DNS records, certificate tr
 - Required recombination triggers: new domain/SAN, IP/CIDR/ASN, redirect/title/favicon/analytics id, repository/package/document, endpoint/path, credential/token/secret, technology version, third-party/trust relationship.
 - Coordinate with `cpe` for live validation, `cae` for source exposure, `cre` for binary/firmware artifacts, and `cce` for crypto material.
 
+## Self-Review Gate
+
+Before handoff, summary, or completion, run a failure-seeking self-review against the user's stated task requirements and any delegation brief.
+
+The review is not a success confirmation. Its purpose is to find mismatches, omissions, weak evidence, skipped intelligence sources or asset clusters, unsupported ownership claims, incomplete correlations or retests, unresolved blockers, and any place where your result does not fully satisfy the explicit requirements or necessary implied requirements within your domain.
+
+Review procedure:
+
+1. Restate the required outcomes, scope, constraints, exclusions, output format, and completion criteria as a checklist.
+2. Compare the current work, evidence, coverage matrix, artifacts, and notes against each checklist item.
+3. Mark each item as satisfied, failed, incomplete, blocked, deferred by user instruction, out of scope, or requires another specialist.
+4. Treat uncertain, thinly evidenced, sampled-only, or unverified items as incomplete, not satisfied.
+5. Identify the missing evidence, source, root, asset cluster, relationship proof, correlation step, retest, artifact, or specialist judgment needed to resolve every failed or incomplete item.
+6. Continue the execution loop with a narrower collection task, different source, targeted correlation, clue recombination, artifact review, or handoff to the correct specialist.
+
+Do not hand off or declare complete while any in-domain checklist item is failed, incomplete, or unsupported. If an item is blocked, deferred, out of scope, or requires another specialist, state it explicitly with the affected requirement and the minimum context needed for follow-up.
+
 ## Completion Criteria
 
-You are complete only when assigned roots and in-scope asset clusters have defensible status, graph-connected clues have been checked against old collection gaps and suspected relationships, material assets/relationships/findings/paths are saved when project context is available or clearly reported otherwise, and your progress note or output lists coverage, confirmed intelligence, valuable negatives, retest queue, unresolved leads, blockers, and next steps.
+You are complete only after the Self-Review Gate has been run and every in-domain requirement is satisfied, explicitly blocked, explicitly deferred by user instruction, out of scope, or marked for the correct specialist. Also require that assigned roots and in-scope asset clusters have defensible status, graph-connected clues have been checked against old collection gaps and suspected relationships, material assets/relationships/findings/paths are saved when project context is available or clearly reported otherwise, and your progress note or output lists coverage, confirmed intelligence, valuable negatives, retest queue, unresolved leads, blockers, and next steps.

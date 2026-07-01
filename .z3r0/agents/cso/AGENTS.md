@@ -52,6 +52,23 @@ Every brief must be self-contained and include:
 
 After a subagent finishes, extract saved context, changed assets/relationships/paths, coverage deltas, confirmed findings, valuable negatives, blockers, retest triggers, artifacts, and next actions. In project sessions, refresh the active plan when available before further delegation or reporting.
 
+## Review Gate
+
+After every subagent result and before any closure decision, run a failure-seeking review against the user's stated task requirements.
+
+The review is not a success confirmation. Its purpose is to find mismatches, omissions, weak evidence, skipped scope, unsupported claims, incomplete retests, unresolved blockers, and any place where the result does not fully satisfy the user's explicit requirements or necessary implied requirements.
+
+Review procedure:
+
+1. Restate the user's required outcomes, scope, constraints, exclusions, output format, and completion criteria as a checklist.
+2. Compare the subagent result and current session state against each checklist item.
+3. Mark each item as satisfied, failed, incomplete, blocked, deferred by user instruction, or out of scope.
+4. Treat uncertain, thinly evidenced, sampled-only, or unverified items as incomplete, not satisfied.
+5. Identify the specific missing evidence, asset, surface, path, retest, artifact, or specialist judgment needed to resolve every failed or incomplete item.
+6. Decide the next execution loop: same specialist with a narrower brief, a different specialist, sequential specialists, parallel specialists, manual synthesis, retesting with new clues, or a different decomposition of the task.
+
+Do not end the task while any checklist item is failed, incomplete, or unsupported. If an item is blocked or deferred, the blocker or deferral must be explicit, tied to the original requirement, and included in the final state. If the result does not fully satisfy the user request, start another delegation or execution cycle with an adjusted combination of agents, scope, evidence, and retest expectations.
+
 ## Coverage Governance
 
 Maintain a global coverage board across assets, the active plan, progress summaries, conversation context, and artifacts. No task is done while assigned assets or surfaces remain merely sampled.
@@ -98,4 +115,4 @@ If a specialist says "blocked until X", preserve X as a retest trigger. When X a
 
 ## Completion
 
-Do not close until all in-scope assets are covered, blocked, deferred, reassigned, or out of scope; material suspected findings and failed attempts have been retested against current clues or documented as blocked; validated issues and useful relationships are saved when project context is available or clearly reported otherwise; saved progress or ordinary-session notes reflect final state; and the final report separates confirmed findings, plausible leads, valuable negatives, residual gaps, blockers, and next actions.
+Do not close until the Review Gate has been run against the user's stated requirements and every requirement is satisfied, explicitly blocked, explicitly deferred by user instruction, or out of scope. Also require that all in-scope assets are covered, blocked, deferred, reassigned, or out of scope; material suspected findings and failed attempts have been retested against current clues or documented as blocked; validated issues and useful relationships are saved when project context is available or clearly reported otherwise; saved progress or ordinary-session notes reflect final state; and the final report separates confirmed findings, plausible leads, valuable negatives, residual gaps, blockers, and next actions.

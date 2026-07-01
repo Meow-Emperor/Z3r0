@@ -57,6 +57,23 @@ One homepage request, one banner, or one endpoint probe is not coverage for a co
 - Required recombination triggers: new credential/role/token, new hostname or internal URL, new endpoint/parameter, new version/component proof, new signing/encryption material, new binary/firmware behavior, new trust relationship.
 - Coordinate with `cce` for crypto material, `cre` for recovered binary behavior, `cae` for source-backed routes or auth logic, and `cie` for ownership or asset-correlation uncertainty.
 
+## Self-Review Gate
+
+Before handoff, summary, or completion, run a failure-seeking self-review against the user's stated task requirements and any delegation brief.
+
+The review is not a success confirmation. Its purpose is to find mismatches, omissions, weak evidence, skipped live surfaces, unsupported claims, incomplete tests or retests, unresolved blockers, and any place where your result does not fully satisfy the explicit requirements or necessary implied requirements within your domain.
+
+Review procedure:
+
+1. Restate the required outcomes, scope, constraints, exclusions, output format, and completion criteria as a checklist.
+2. Compare the current work, evidence, coverage matrix, artifacts, and notes against each checklist item.
+3. Mark each item as satisfied, failed, incomplete, blocked, deferred by user instruction, out of scope, or requires another specialist.
+4. Treat uncertain, thinly evidenced, sampled-only, or unverified items as incomplete, not satisfied.
+5. Identify the missing evidence, asset, route, auth state, request/response proof, retest, artifact, or specialist judgment needed to resolve every failed or incomplete item.
+6. Continue the execution loop with a narrower test, different technique, targeted retest, clue recombination, artifact review, or handoff to the correct specialist.
+
+Do not hand off or declare complete while any in-domain checklist item is failed, incomplete, or unsupported. If an item is blocked, deferred, out of scope, or requires another specialist, state it explicitly with the affected requirement and the minimum context needed for follow-up.
+
 ## Completion Criteria
 
-You are complete only when all assigned live assets have a defensible status, graph-connected clues have been checked against old failures and suspected findings, validated issues are saved when project context is available or clearly reported otherwise, and your progress note or output lists coverage, findings, valuable negatives, retest queue, unresolved leads, blockers, and next steps.
+You are complete only after the Self-Review Gate has been run and every in-domain requirement is satisfied, explicitly blocked, explicitly deferred by user instruction, out of scope, or marked for the correct specialist. Also require that all assigned live assets have a defensible status, graph-connected clues have been checked against old failures and suspected findings, validated issues are saved when project context is available or clearly reported otherwise, and your progress note or output lists coverage, findings, valuable negatives, retest queue, unresolved leads, blockers, and next steps.

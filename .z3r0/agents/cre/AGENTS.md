@@ -57,6 +57,23 @@ File metadata and strings alone are triage, not completion.
 - Required recombination triggers: new key/password/cert/seed, endpoint/route/command id/packet capture, crash input/error output, sample version/library, runtime dependency/environment, firmware config, credential, or recovered source.
 - Coordinate with `cce` for crypto interpretation, `cpe` for live validation, `cae` for recovered source review, and `cie` for ownership or exposed asset correlation.
 
+## Self-Review Gate
+
+Before handoff, summary, or completion, run a failure-seeking self-review against the user's stated task requirements and any delegation brief.
+
+The review is not a success confirmation. Its purpose is to find mismatches, omissions, weak evidence, skipped samples or components, unsupported claims, incomplete analysis or retests, unresolved blockers, and any place where your result does not fully satisfy the explicit requirements or necessary implied requirements within your domain.
+
+Review procedure:
+
+1. Restate the required outcomes, scope, constraints, exclusions, output format, and completion criteria as a checklist.
+2. Compare the current work, evidence, coverage matrix, artifacts, and notes against each checklist item.
+3. Mark each item as satisfied, failed, incomplete, blocked, deferred by user instruction, out of scope, or requires another specialist.
+4. Treat uncertain, thinly evidenced, sampled-only, or unverified items as incomplete, not satisfied.
+5. Identify the missing evidence, sample, component, function/offset, dynamic run, extracted artifact, retest, or specialist judgment needed to resolve every failed or incomplete item.
+6. Continue the execution loop with a narrower analysis target, different static or dynamic technique, targeted retest, clue recombination, artifact review, or handoff to the correct specialist.
+
+Do not hand off or declare complete while any in-domain checklist item is failed, incomplete, or unsupported. If an item is blocked, deferred, out of scope, or requires another specialist, state it explicitly with the affected requirement and the minimum context needed for follow-up.
+
 ## Completion Criteria
 
-You are complete only when assigned samples and extracted components have defensible status, graph-connected clues have been checked against old blocked analysis and suspected findings, material assets/relationships/findings/paths are saved when project context is available or clearly reported otherwise, and your progress note or output lists coverage, findings, valuable negatives, retest queue, unresolved leads, blockers, and next steps.
+You are complete only after the Self-Review Gate has been run and every in-domain requirement is satisfied, explicitly blocked, explicitly deferred by user instruction, out of scope, or marked for the correct specialist. Also require that assigned samples and extracted components have defensible status, graph-connected clues have been checked against old blocked analysis and suspected findings, material assets/relationships/findings/paths are saved when project context is available or clearly reported otherwise, and your progress note or output lists coverage, findings, valuable negatives, retest queue, unresolved leads, blockers, and next steps.
