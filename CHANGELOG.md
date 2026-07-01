@@ -2,6 +2,29 @@
 
 All notable changes to Z3r0 are documented in this file.
 
+## [0.2.1] - 2026-07-01
+
+### Added
+
+- Added host management with SSH terminal access and Docker TLS certificate support for managed hosts.
+- Added dynamic sandbox egress proxy management, Tor-only sandbox egress, image-scoped sandbox control ports, and proxied noVNC access with container ownership control.
+- Added bilingual product documentation and a manual GitHub Pages deployment script.
+- Added sandbox artifact triage skills and a quick-open action for sub-agent messages.
+
+### Changed
+
+- Reworked the sandbox proxy into a modular Go proxy with shell, files, WebSocket, entry proxy, egress proxy, and PTY resize handling.
+- Replaced the WorkProject graph renderer with Cytoscape.
+- Strengthened coordinator and specialist agent instructions around coverage, retesting, MITRE ATT&CK-aligned methodology, and failure-seeking completion review.
+- Refined frontend layout, resource styling, playground streaming behavior, sandbox controls, and admin resource interactions.
+
+### Fixed
+
+- Fixed the default database port mismatch between runtime configuration and Docker Compose.
+- Fixed first-message playground streaming so REST-submitted turns render immediately.
+- Fixed host password field display, sandbox container hash display, Select prefix icon spacing, and Semi UI button usage.
+- Hardened git ignore coverage and normalized sandbox skill resource path handling.
+
 ## [0.2.0] - 2026-06-10
 
 ### Added
