@@ -120,7 +120,6 @@
 .agent-text p,
 .agent-text li,
 .agent-text blockquote {
-  white-space: pre-line;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -139,6 +138,23 @@
 .agent-text pre,
 .agent-text blockquote {
   margin: 8px 0;
+}
+
+.agent-text li > p {
+  margin: 4px 0;
+}
+
+.agent-text li > p:first-child {
+  margin-top: 0;
+}
+
+.agent-text li > p:last-child {
+  margin-bottom: 0;
+}
+
+.agent-text li > ul,
+.agent-text li > ol {
+  margin: 4px 0 0;
 }
 
 .agent-text code {
