@@ -10,6 +10,7 @@ import {
   lazy,
   MutableRefObject,
   useMemo,
+  useLayoutEffect,
   PointerEvent as ReactPointerEvent,
   useRef,
   useState,
@@ -174,6 +175,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   const [noVNCFlight, setNoVNCFlight] = useState<FlightState | null>(null);
   const [fileManager, setFileManager] = useState<FileManagerWindowState | null>(null);
   const [fileManagerFlight, setFileManagerFlight] = useState<FlightState | null>(null);
+  const shellRef = useRef<ShellWindowState | null>(null);
+  const noVNCRef = useRef<NoVNCWindowState | null>(null);
+  const fileManagerRef = useRef<FileManagerWindowState | null>(null);
   const terminalHostRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -193,6 +197,18 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   const activeShellUrl = shell?.shellUrl ?? null;
   const activeConnectionKey = shell?.connectionKey ?? null;
 
+  useLayoutEffect(() => {
+    shellRef.current = shell;
+  }, [shell]);
+
+  useLayoutEffect(() => {
+    noVNCRef.current = noVNC;
+  }, [noVNC]);
+
+  useLayoutEffect(() => {
+    fileManagerRef.current = fileManager;
+  }, [fileManager]);
+
   const disposeShellResources = useCallback(() => {
     closeSocket(socketRef.current);
     socketRef.current = null;
@@ -205,6 +221,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     cancelFlightFrame(shellFlightFrameRef);
     setShellFlight(null);
     disposeShellResources();
+    shellRef.current = null;
     setShell(null);
   }, [disposeShellResources]);
 
@@ -260,18 +277,22 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, [shell]);
 
   const openShellTarget = useCallback((target: ShellTarget) => {
-    const currentShell = shell;
+    const currentShell = shellRef.current;
     if (currentShell?.targetKey === target.key && isSocketActive(socketRef.current)) {
       const preserveGeometry = currentShell.dockState === "minimized";
       cancelFlightFrame(shellFlightFrameRef);
       setShellFlight(null);
       fitWithoutSnapRef.current = preserveGeometry;
-      setShell((current) => current ? {
-        ...current,
-        title: target.title,
-        shellUrl: target.url,
-        dockState: "normal",
-      } : current);
+      setShell((current) => {
+        const next: ShellWindowState | null = current ? {
+          ...current,
+          title: target.title,
+          shellUrl: target.url,
+          dockState: "normal",
+        } : current;
+        shellRef.current = next;
+        return next;
+      });
       window.setTimeout(() => {
         fitTerminal({ snapHeight: !preserveGeometry });
         terminalRef.current?.focus();
@@ -283,7 +304,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     setShellFlight(null);
     disposeShellResources();
 
-    setShell({
+    const nextShell: ShellWindowState = {
       connectionKey: connectionKeyRef.current + 1,
       shellUrl: target.url,
       targetKey: target.key,
@@ -296,9 +317,11 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       y: Math.max(92, window.innerHeight - DEFAULT_WINDOW_HEIGHT - 36),
       width: DEFAULT_WINDOW_WIDTH,
       height: DEFAULT_WINDOW_HEIGHT,
-    });
+    };
+    shellRef.current = nextShell;
+    setShell(nextShell);
     connectionKeyRef.current += 1;
-  }, [disposeShellResources, fitTerminal, shell]);
+  }, [disposeShellResources, fitTerminal]);
 
   const openShell = useCallback((container: SandboxContainer) => {
     if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
@@ -322,6 +345,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     cancelFlightFrame(noVNCFlightFrameRef);
     noVNCDragRef.current = null;
     setNoVNCFlight(null);
+    noVNCRef.current = null;
     setNoVNC(null);
   }, []);
 
@@ -345,10 +369,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       setNoVNCFlight(null);
       setNoVNC((current) => {
         if (current?.containerId === container.id && current.url === url) {
-          return { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
+          const next: NoVNCWindowState = { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
+          noVNCRef.current = next;
+          return next;
         }
 
-        return {
+        const next: NoVNCWindowState = {
           containerId: container.id,
           title: container.container_name,
           containerName: container.container_name,
@@ -356,6 +382,8 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           url,
           ...getInitialNoVNCRect(),
         };
+        noVNCRef.current = next;
+        return next;
       });
     } catch (error) {
       showApiError(error);
@@ -366,6 +394,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     cancelFlightFrame(fileManagerFlightFrameRef);
     fileManagerDragRef.current = null;
     setFileManagerFlight(null);
+    fileManagerRef.current = null;
     setFileManager(null);
   }, []);
 
@@ -410,10 +439,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     setFileManagerFlight(null);
     setFileManager((current) => {
       if (current?.containerId === container.id) {
-        return { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
+        const next: FileManagerWindowState = { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
+        fileManagerRef.current = next;
+        return next;
       }
 
-      return {
+      const next: FileManagerWindowState = {
         containerId: container.id,
         title: container.container_name,
         containerName: container.container_name,
@@ -422,11 +453,17 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         restoreRect: null,
         ...getInitialFileManagerRect(),
       };
+      fileManagerRef.current = next;
+      return next;
     });
   }, []);
 
   const syncContainerWindows = useCallback((container: SandboxContainer | null) => {
-    if (shell?.targetKey.startsWith("container:")) {
+    const currentShell = shellRef.current;
+    const currentFileManager = fileManagerRef.current;
+    const currentNoVNC = noVNCRef.current;
+
+    if (currentShell?.targetKey.startsWith("container:")) {
       if (container && container.status === SANDBOX_CONTAINER_STATUS.RUNNING && container.control_proxy_host_port > 0) {
         openShell(container);
       } else {
@@ -434,7 +471,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    if (fileManager) {
+    if (currentFileManager) {
       if (container && container.status === SANDBOX_CONTAINER_STATUS.RUNNING && container.control_proxy_host_port > 0) {
         openFileManager(container);
       } else {
@@ -442,14 +479,14 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    if (noVNC) {
+    if (currentNoVNC) {
       if (container && canOpenContainerNoVNC(container)) {
         openNoVNC(container);
       } else {
         closeNoVNC();
       }
     }
-  }, [closeFileManager, closeNoVNC, closeShell, fileManager, noVNC, openFileManager, openNoVNC, openShell, shell]);
+  }, [closeFileManager, closeNoVNC, closeShell, openFileManager, openNoVNC, openShell]);
 
   useEffect(() => {
     if (!activeShellUrl || activeConnectionKey === null || terminalRef.current || !terminalHostRef.current) return;

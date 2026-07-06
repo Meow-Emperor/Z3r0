@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatState } from "./chatState";
 import {
   collectSubagentTabs,
@@ -51,19 +51,19 @@ export function useSubagentPanel(chatState: ChatState, scopeKey: string | null) 
     }
   }, [selectedSubagent, tabs]);
 
-  const closeSubagentPanel = () => {
+  const closeSubagentPanel = useCallback(() => {
     const latestRunning = latestRunningTab(tabs);
     const runId = latestRunning ? latestRunId(latestRunning) : null;
     if (runId) suppressedAutoOpenRunIdsRef.current.add(runId);
     setSelectedSubagent(null);
-  };
+  }, [tabs]);
 
-  return {
+  return useMemo(() => ({
     selectedSubagent,
     setSelectedSubagent,
     subagentTabs: tabs,
     closeSubagentPanel,
-  };
+  }), [closeSubagentPanel, selectedSubagent, tabs]);
 }
 
 function latestRunningTab(tabs: SubagentTab[]): SubagentTab | null {

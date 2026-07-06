@@ -372,15 +372,6 @@ export function PlaygroundPage() {
             />
           </span>
         </Popconfirm>
-        {activeProjectId ? (
-          <SandboxActionButton
-            ariaLabel="Open project records"
-            disabled={false}
-            icon={<FolderKanban size={15} />}
-            tooltip="Project records"
-            onClick={openProjectRecords}
-          />
-        ) : null}
         <SandboxActionButton
           ariaLabel={`Open terminal for ${selectedSandboxName}`}
           disabled={Boolean(shellUnavailableReason)}
@@ -402,6 +393,15 @@ export function PlaygroundPage() {
           tooltip={shellUnavailableReason ?? `Browse files for ${selectedSandboxName}`}
           onClick={openSelectedFileManager}
         />
+        {activeProjectId ? (
+          <SandboxActionButton
+            ariaLabel="Open project info"
+            disabled={false}
+            icon={<FolderKanban size={15} />}
+            tooltip="Project info"
+            onClick={openProjectRecords}
+          />
+        ) : null}
         <SandboxActionButton
           ariaLabel="Open subagent panel"
           disabled={subagentTabs.length === 0}

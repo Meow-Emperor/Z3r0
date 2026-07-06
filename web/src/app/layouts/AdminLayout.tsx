@@ -1,6 +1,6 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
 import { Box, Boxes, FolderKanban, LogOut, MessageSquareCode, Network, Server, Settings, Users } from "lucide-react";
-import { ReactNode, Suspense, useCallback, useEffect, useState } from "react";
+import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
 import { useAgentSessionContext } from "../../features/playground/AgentSessionProvider";
@@ -51,7 +51,7 @@ export function AdminLayout() {
   } = useAgentSessionContext();
 
   const setHeaderActions = useCallback((actions: ReactNode) => {
-    setHeaderActionsState(() => actions);
+    setHeaderActionsState((current) => (Object.is(current, actions) ? current : actions));
   }, []);
 
   useEffect(() => {
@@ -70,7 +70,10 @@ export function AdminLayout() {
     }
   }, [location.pathname, navigate, selectSession]);
 
-  const outletContext: AdminLayoutContext = { setHeaderActions, refreshWorkProjects };
+  const outletContext = useMemo<AdminLayoutContext>(
+    () => ({ setHeaderActions, refreshWorkProjects }),
+    [refreshWorkProjects, setHeaderActions],
+  );
 
   const handleSignOut = () => {
     signOut();
