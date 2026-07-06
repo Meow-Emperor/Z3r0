@@ -1,6 +1,6 @@
 import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -8,8 +8,9 @@ from sqlmodel import select
 
 from database import get_async_session
 from logger import get_logger
-from model.sandbox.containers import SandboxContainer
 from model.host.hosts import ManagedHost
+from model.sandbox.containers import SandboxContainer
+from model.work_project.projects import WorkProjectSandboxContainer
 from schema.sandbox.containers import SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from service.sandbox.docker_ops import (
@@ -18,7 +19,11 @@ from service.sandbox.docker_ops import (
     inspect_container_state_sync,
 )
 from service.sandbox.records import load_sandbox_container_record
-from service.sandbox.types import SandboxContainerRecord, SandboxContainerToolBinding
+from service.sandbox.types import (
+    SandboxContainerRecord,
+    SandboxContainerSelection,
+    SandboxContainerToolBinding,
+)
 
 
 logger = get_logger(__name__)
@@ -28,6 +33,8 @@ _TOOL_BINDING_INSPECT_TTL_SECONDS = 3
 _status_monitor_task: asyncio.Task[None] | None = None
 _tool_invalidation_tasks: set[asyncio.Task[None]] = set()
 _tool_binding_state_cache: dict[int, "DockerStateCacheEntry"] = {}
+_AgentToolBindingInvalidator = Callable[[int | None], Awaitable[None]]
+_agent_tool_binding_invalidator: _AgentToolBindingInvalidator | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +52,11 @@ class DockerStateCacheEntry:
     generation: int
     state: DockerContainerState
     expires_at: float
+
+
+def set_agent_tool_binding_invalidator(callback: _AgentToolBindingInvalidator | None) -> None:
+    global _agent_tool_binding_invalidator
+    _agent_tool_binding_invalidator = callback
 
 
 async def save_sandbox_container_status(
@@ -126,9 +138,8 @@ def _schedule_agent_tool_invalidation(container_id: int) -> None:
 async def invalidate_agent_tool_bindings(container_id: int) -> None:
     _clear_tool_binding_state_cache(container_id)
     try:
-        from core.runtime.session import get_agent_pool
-
-        await get_agent_pool().invalidate_tool_bindings(container_id)
+        if _agent_tool_binding_invalidator is not None:
+            await _agent_tool_binding_invalidator(container_id)
     except Exception:
         logger.exception("agent tool binding invalidation failed: %s", container_id)
 
@@ -138,16 +149,21 @@ async def _invalidate_all_agent_tool_bindings() -> None:
     if _tool_invalidation_tasks:
         await asyncio.gather(*tuple(_tool_invalidation_tasks), return_exceptions=True)
     try:
-        from core.runtime.session import get_agent_pool
-
-        await get_agent_pool().invalidate_tool_bindings()
+        if _agent_tool_binding_invalidator is not None:
+            await _agent_tool_binding_invalidator(None)
     except Exception:
         logger.exception("agent tool binding invalidation failed")
 
 
 async def _load_container_status_snapshots() -> list[ContainerStatusSnapshot]:
-    statement = select(SandboxContainer.id, SandboxContainer.host_id, SandboxContainer.container_hash, SandboxContainer.status).where(
-        SandboxContainer.container_hash != ""
+    statement = (
+        select(
+            SandboxContainer.id,
+            SandboxContainer.host_id,
+            SandboxContainer.container_hash,
+            SandboxContainer.status,
+        )
+        .where(SandboxContainer.container_hash != "")
     )
     async with get_async_session() as session:
         result = await session.exec(statement)
@@ -245,18 +261,56 @@ async def resolve_sandbox_container_tool_binding(
             user_role == SystemUserRole.ADMIN
             or container.owner_id == user_id
         ),
+        allow_project_bound=False,
     )
+
+
+async def resolve_sandbox_container_selection(
+    id: int,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> SandboxContainerSelection | None:
+    async with get_async_session() as session:
+        sandbox_container = await session.get(SandboxContainer, id)
+        if sandbox_container is None:
+            return None
+        if user_role != SystemUserRole.ADMIN and sandbox_container.owner_id != user_id:
+            return None
+        if await _sandbox_container_has_project_binding(session, id):
+            return None
+        return SandboxContainerSelection(
+            id=id,
+            generation=status_generation(sandbox_container),
+        )
+
+
+async def resolve_project_sandbox_container_selection(
+    id: int,
+) -> SandboxContainerSelection | None:
+    async with get_async_session() as session:
+        sandbox_container = await session.get(SandboxContainer, id)
+        if sandbox_container is None:
+            return None
+        return SandboxContainerSelection(
+            id=id,
+            generation=status_generation(sandbox_container),
+        )
 
 
 async def resolve_project_sandbox_container_tool_binding(
     id: int,
 ) -> SandboxContainerToolBinding | None:
-    return await _resolve_sandbox_container_tool_binding(id=id, can_use=lambda _: True)
+    return await _resolve_sandbox_container_tool_binding(
+        id=id,
+        can_use=lambda _: True,
+        allow_project_bound=True,
+    )
 
 
 async def _resolve_sandbox_container_tool_binding(
     id: int,
     can_use: Callable[[SandboxContainer], bool],
+    allow_project_bound: bool,
 ) -> SandboxContainerToolBinding | None:
     async with get_async_session() as session:
         sandbox_container = await session.get(SandboxContainer, id)
@@ -265,6 +319,8 @@ async def _resolve_sandbox_container_tool_binding(
         if sandbox_container.status != SandboxContainerStatus.RUNNING:
             return None
         if not can_use(sandbox_container):
+            return None
+        if not allow_project_bound and await _sandbox_container_has_project_binding(session, id):
             return None
         container_hash = sandbox_container.container_hash
         host_id = sandbox_container.host_id
@@ -287,6 +343,15 @@ async def _resolve_sandbox_container_tool_binding(
         return None
 
     return SandboxContainerToolBinding(id=id, generation=generation)
+
+
+async def _sandbox_container_has_project_binding(session, id: int) -> bool:
+    result = await session.exec(
+        select(WorkProjectSandboxContainer.project_id)
+        .where(WorkProjectSandboxContainer.sandbox_container_id == id)
+        .limit(1)
+    )
+    return result.first() is not None
 
 
 async def _load_host(host_id: int) -> ManagedHost | None:

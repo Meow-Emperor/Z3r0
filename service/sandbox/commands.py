@@ -7,15 +7,16 @@ import docker
 
 from database import get_async_session
 from logger import get_logger
-from model.sandbox.containers import SandboxContainer
 from model.host.hosts import ManagedHost
+from model.sandbox.containers import SandboxContainer
 from schema.sandbox.containers import SandboxContainerStatus
+from service.host.docker import docker_client_for_host
+from service.sandbox import close_docker_response_sync as _close_response_sync
+from service.sandbox.control_proxy import resolve_container_egress_environment
 from service.sandbox.docker_ops import (
     docker_status_to_sandbox_status,
     inspect_container_state_sync,
 )
-from service.sandbox import close_docker_response_sync as _close_response_sync
-from service.sandbox.control_proxy import resolve_container_egress_environment
 from service.sandbox.status import save_sandbox_container_status
 from service.sandbox.types import SandboxContainerCommandResult
 
@@ -164,8 +165,6 @@ def _execute_container_command_sync(
     cancel_requested: threading.Event,
     running_command: _RunningContainerCommand,
 ) -> SandboxContainerCommandResult:
-    from service.host.docker import docker_client_for_host
-
     client = docker_client_for_host(host)
     stream: object | None = None
     try:
@@ -218,8 +217,6 @@ def _execute_container_command_sync(
 
 
 def _terminate_container_command_sync(host: ManagedHost, container_hash: str, marker_path: str) -> None:
-    from service.host.docker import docker_client_for_host
-
     client = docker_client_for_host(host, timeout=_COMMAND_TERMINATE_TIMEOUT_SECONDS)
     try:
         container = client.containers.get(container_hash)

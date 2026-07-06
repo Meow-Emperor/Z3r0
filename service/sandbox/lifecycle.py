@@ -5,38 +5,42 @@ import socket
 from datetime import datetime
 
 import docker
+from sqlalchemy import or_, update
 from sqlmodel import select
 
 from database import get_async_session
-from model.egress_proxy.proxies import EgressProxy
 from logger import get_logger
+from model.agent.sessions import AgentSessionMeta
+from model.egress_proxy.proxies import EgressProxy
+from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
-from model.host.hosts import ManagedHost
+from model.work_project.projects import WorkProjectSandboxContainer
 from schema.sandbox.containers import (
     SandboxContainerEgressMode,
     SandboxContainerPortMapping,
     SandboxContainerStatus,
 )
+from service.host.docker import inspect_image_on_host_sync
+from service.sandbox.control_proxy import apply_container_egress
 from service.sandbox.docker_ops import (
     create_container_sync,
+    pause_container_sync,
+    remove_container_sync,
+    resume_container_sync,
     start_container_sync,
     stop_container_sync,
-    remove_container_sync,
 )
-from service.sandbox.records import load_sandbox_container_record
 from service.sandbox.egress import SandboxEgressSelection, sandbox_egress_container_environment
-from service.sandbox.control_proxy import apply_container_egress
+from service.sandbox.records import load_sandbox_container_record
 from service.sandbox.status import (
     ContainerStatusSnapshot,
+    invalidate_agent_tool_bindings,
     save_sandbox_container_status,
     sync_container_status,
-    invalidate_agent_tool_bindings,
 )
-from service.sandbox.types import (
-    SandboxContainerMutationResult,
-)
+from service.sandbox.types import SandboxContainerMutationResult
 
 
 logger = get_logger(__name__)
@@ -374,6 +378,117 @@ async def stop_sandbox_container(id: int) -> SandboxContainerMutationResult:
     )
 
 
+async def pause_sandbox_container(id: int) -> SandboxContainerMutationResult:
+    record = await load_sandbox_container_record(id)
+    if record is None:
+        return SandboxContainerMutationResult(
+            record=None,
+            succeeded=False,
+            message="sandbox container not found",
+            not_found=True,
+        )
+    if record.container.status != SandboxContainerStatus.RUNNING:
+        return SandboxContainerMutationResult(
+            record=record,
+            succeeded=False,
+            message="only running sandbox containers can be paused",
+        )
+
+    try:
+        host = await _load_container_host(record.container.host_id)
+        if host is None:
+            return SandboxContainerMutationResult(record=record, succeeded=False, message="managed host not found")
+        await asyncio.to_thread(pause_container_sync, host, record.container.container_hash)
+    except docker.errors.NotFound:
+        logger.debug("sandbox container instance not found while pausing: %s", id)
+        return SandboxContainerMutationResult(
+            record=await save_sandbox_container_status(id, SandboxContainerStatus.ERROR),
+            succeeded=False,
+            message="sandbox container instance not found",
+        )
+    except Exception:
+        logger.exception("sandbox container pause failed: %s", id)
+        return SandboxContainerMutationResult(
+            record=await save_sandbox_container_status(id, SandboxContainerStatus.ERROR),
+            succeeded=False,
+            message="failed to pause sandbox container",
+        )
+
+    logger.info("sandbox container paused: %s", id)
+    return SandboxContainerMutationResult(
+        record=await save_sandbox_container_status(id, SandboxContainerStatus.PAUSED),
+        succeeded=True,
+        message="sandbox container paused",
+    )
+
+
+async def resume_sandbox_container(id: int) -> SandboxContainerMutationResult:
+    record = await load_sandbox_container_record(id)
+    if record is None:
+        return SandboxContainerMutationResult(
+            record=None,
+            succeeded=False,
+            message="sandbox container not found",
+            not_found=True,
+        )
+    if record.container.status != SandboxContainerStatus.PAUSED:
+        return SandboxContainerMutationResult(
+            record=record,
+            succeeded=False,
+            message="only paused sandbox containers can be resumed",
+        )
+
+    try:
+        host = await _load_container_host(record.container.host_id)
+        if host is None:
+            return SandboxContainerMutationResult(record=record, succeeded=False, message="managed host not found")
+        await asyncio.to_thread(resume_container_sync, host, record.container.container_hash)
+        await sync_container_status(ContainerStatusSnapshot(
+            id=record.container.id or id,
+            host_id=record.container.host_id,
+            container_hash=record.container.container_hash,
+            status=record.container.status,
+        ))
+        next_record = await load_sandbox_container_record(id)
+        if (
+            next_record is not None
+            and next_record.container.status == SandboxContainerStatus.RUNNING
+            and next_record.container.control_proxy_host_port > 0
+        ):
+            try:
+                await apply_container_egress(id)
+            except Exception:
+                logger.warning("sandbox container resumed, but egress refresh failed: %s", id, exc_info=True)
+    except docker.errors.NotFound:
+        logger.debug("sandbox container instance not found while resuming: %s", id)
+        return SandboxContainerMutationResult(
+            record=await save_sandbox_container_status(id, SandboxContainerStatus.ERROR),
+            succeeded=False,
+            message="sandbox container instance not found",
+        )
+    except Exception:
+        logger.exception("sandbox container resume failed: %s", id)
+        return SandboxContainerMutationResult(
+            record=await save_sandbox_container_status(id, SandboxContainerStatus.ERROR),
+            succeeded=False,
+            message="failed to resume sandbox container",
+        )
+
+    next_record = await load_sandbox_container_record(id)
+    if next_record is not None and next_record.container.status == SandboxContainerStatus.RUNNING:
+        logger.info("sandbox container resumed: %s", id)
+        return SandboxContainerMutationResult(
+            record=next_record,
+            succeeded=True,
+            message="sandbox container resumed",
+        )
+    return SandboxContainerMutationResult(
+        record=next_record,
+        succeeded=False,
+        message="sandbox container is not running after resume",
+    )
+
+
 async def delete_sandbox_container(id: int) -> bool:
     async with get_async_session() as session:
         sandbox_container = await session.get(SandboxContainer, id)
@@ -390,6 +505,7 @@ async def delete_sandbox_container(id: int) -> bool:
         sandbox_container = await session.get(SandboxContainer, id)
         if sandbox_container is None:
             return True
+        await _clear_sandbox_container_references(session, id)
         await session.delete(sandbox_container)
         await session.commit()
 
@@ -397,9 +513,30 @@ async def delete_sandbox_container(id: int) -> bool:
     return True
 
 
-def _assert_host_image_exists(host: ManagedHost, image_name: str) -> None:
-    from service.host.docker import inspect_image_on_host_sync
+async def _clear_sandbox_container_references(session, id: int) -> None:
+    for link in (await session.exec(
+        select(WorkProjectSandboxContainer).where(WorkProjectSandboxContainer.sandbox_container_id == id)
+    )).all():
+        await session.delete(link)
 
+    await session.execute(
+        update(AgentSessionMeta)
+        .where(
+            or_(
+                AgentSessionMeta.selected_sandbox_container_id == id,
+                AgentSessionMeta.runtime_sandbox_container_id == id,
+            )
+        )
+        .values(
+            selected_sandbox_container_id=None,
+            selected_sandbox_container_generation=0,
+            runtime_sandbox_container_id=None,
+            runtime_sandbox_container_generation=0,
+        )
+    )
+
+
+def _assert_host_image_exists(host: ManagedHost, image_name: str) -> None:
     inspect_image_on_host_sync(host, image_name)
 
 

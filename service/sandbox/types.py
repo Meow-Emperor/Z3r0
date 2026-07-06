@@ -33,6 +33,12 @@ class SandboxContainerCommandResult:
 
 
 @dataclass(frozen=True)
+class SandboxContainerSelection:
+    id: int
+    generation: int
+
+
+@dataclass(frozen=True)
 class SandboxContainerToolBinding:
     id: int
     generation: int

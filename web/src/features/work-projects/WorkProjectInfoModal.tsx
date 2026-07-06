@@ -49,7 +49,7 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
                 </div>
                 <div>
                   <span>Sandbox</span>
-                  <strong>{project.sandbox_container_ids.length || "-"}</strong>
+                  <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
                 </div>
               </section>
 

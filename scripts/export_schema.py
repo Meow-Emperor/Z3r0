@@ -11,10 +11,24 @@ FRONTEND_CONTRACT_CONSTANTS_PATH = ROOT_PATH / "web" / "src" / "shared" / "api" 
 if str(ROOT_PATH) not in sys.path:
     sys.path.insert(0, str(ROOT_PATH))
 
+from app import create_app
+from middleware.auth import ACCESS_TOKEN_HEADER, require_admin, require_user
+from pydantic import TypeAdapter
+from schema.agent.events import (
+    AgentEventSchema,
+    DoneEvent,
+    RunStateEvent,
+)
+from schema.agent.subordinates import AgentSubordinateTaskToolItem, AgentSubordinateTaskToolResult
+from schema.common.tool_results import ToolResultSchema
+from schema.sandbox.command_outputs import (
+    SandboxCommandOutputChunk,
+    SandboxCommandResultMetadata,
+)
+from schema.work_project.graph import EDGE_TYPE_CATEGORY, WorkProjectGraphEdgeCategory
+
 
 def export_openapi_schema() -> Path:
-    from app import create_app
-
     app = create_app()
     schema = app.openapi()
     _patch_auth_contracts(app, schema)
@@ -31,8 +45,6 @@ def export_openapi_schema() -> Path:
 
 
 def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
-    from schema.work_project.graph import EDGE_TYPE_CATEGORY, WorkProjectGraphEdgeCategory
-
     # Edge category is derived from edge type in Python, so it is serialized from that single source.
     edge_categories = [category.value for category in WorkProjectGraphEdgeCategory]
     edge_type_category = {edge_type.value: category.value for edge_type, category in EDGE_TYPE_CATEGORY.items()}
@@ -88,8 +100,6 @@ def _enum_member_name(value: str) -> str:
 
 
 def _get_access_token_header() -> str:
-    from middleware.auth import ACCESS_TOKEN_HEADER
-
     return ACCESS_TOKEN_HEADER
 
 
@@ -98,8 +108,6 @@ def _patch_auth_contracts(app: Any, schema: dict[str, Any]) -> None:
 
     routes that depend on require_user get AccessTokenAuth + 401; routes that
     additionally depend on require_admin also get 403."""
-    from middleware.auth import require_admin, require_user
-
     components = schema.setdefault("components", {})
     schemas = components.setdefault("schemas", {})
     schemas.setdefault("CommonResponse_Any_", _common_response_any_schema())
@@ -177,19 +185,6 @@ def _patch_error_contracts(schema: dict[str, Any]) -> None:
 
 def _register_extra_schemas(schema: dict[str, Any]) -> None:
     """publish ws contracts as OpenAPI components so the frontend can derive types"""
-    from pydantic import TypeAdapter
-    from schema.agent.events import (
-        AgentEventSchema,
-        DoneEvent,
-        RunStateEvent,
-    )
-    from schema.agent.subordinates import AgentSubordinateTaskToolItem, AgentSubordinateTaskToolResult
-    from schema.common.tool_results import ToolResultSchema
-    from schema.sandbox.command_outputs import (
-        SandboxCommandOutputChunk,
-        SandboxCommandResultMetadata,
-    )
-
     components = schema.setdefault("components", {})
     schemas = components.setdefault("schemas", {})
 

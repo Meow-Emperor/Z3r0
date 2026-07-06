@@ -31,6 +31,7 @@ from schema.common.responses import CommonResponse
 # rather than at router scope
 router = APIRouter(prefix="/agent-sessions", tags=["agent-sessions"])
 
+
 async def list_agent_sessions_route(
     limit: int = Query(default=100, ge=1, le=100),
     user: AuthUser = Depends(require_user),

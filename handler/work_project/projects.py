@@ -10,7 +10,9 @@ from schema.work_project.projects import (
     QueryWorkProjectsResponse,
     UpdateWorkProjectMetadataRequest,
 )
+from service.common.pagination import paginated_payload
 from service.work_project.projects import (
+    WorkProjectMetadataValidationError,
     cancel_work_project,
     create_work_project,
     create_work_project_session,
@@ -21,17 +23,14 @@ from service.work_project.projects import (
     query_work_projects_for_user,
     retry_work_project,
     update_work_project_metadata,
-    validate_work_project_metadata,
-    work_project_exists,
 )
-from service.common.pagination import paginated_payload
 
 
-async def create_work_project_handler(request: CreateWorkProjectRequest) -> CommonResponse:
-    validation_error = await validate_work_project_metadata(request)
-    if validation_error:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=validation_error)
-    project = await create_work_project(request)
+async def create_work_project_handler(request: CreateWorkProjectRequest, user: AuthUser) -> CommonResponse:
+    try:
+        project = await create_work_project(request, user_id=user.id, user_role=user.role)
+    except WorkProjectMetadataValidationError as exc:
+        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
     return CommonResponse(data=project)
 
 
@@ -45,13 +44,12 @@ async def get_work_project_record_snapshot_handler(id: int, user: AuthUser) -> C
 async def update_work_project_metadata_handler(
     id: int,
     request: UpdateWorkProjectMetadataRequest,
+    user: AuthUser,
 ) -> CommonResponse:
-    if not await work_project_exists(id):
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="work project not found")
-    validation_error = await validate_work_project_metadata(request, project_id=id)
-    if validation_error:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=validation_error)
-    project = await update_work_project_metadata(id, request)
+    try:
+        project = await update_work_project_metadata(id, request, user_id=user.id, user_role=user.role)
+    except WorkProjectMetadataValidationError as exc:
+        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
     if project is None:
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="work project not found")
     return CommonResponse(message="work project updated", data=project)
@@ -63,8 +61,8 @@ async def delete_work_project_handler(id: int) -> CommonResponse:
     return CommonResponse(data=DeleteWorkProjectResponse(id=id))
 
 
-async def cancel_work_project_handler(id: int) -> CommonResponse:
-    project, canceled = await cancel_work_project(id)
+async def cancel_work_project_handler(id: int, user: AuthUser) -> CommonResponse:
+    project, canceled = await cancel_work_project(id, user_id=user.id, user_role=user.role)
     if project is None:
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="work project not found")
     if not canceled:
@@ -76,8 +74,8 @@ async def cancel_work_project_handler(id: int) -> CommonResponse:
     return CommonResponse(message="work project canceled", data=project)
 
 
-async def retry_work_project_handler(id: int) -> CommonResponse:
-    project, retried = await retry_work_project(id)
+async def retry_work_project_handler(id: int, user: AuthUser) -> CommonResponse:
+    project, retried = await retry_work_project(id, user_id=user.id, user_role=user.role)
     if project is None:
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="work project not found")
     if not retried:

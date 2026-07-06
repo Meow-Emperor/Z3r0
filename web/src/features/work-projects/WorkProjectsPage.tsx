@@ -271,8 +271,8 @@ function WorkProjectExpanded({
           <strong>{workProjectOwnerNames(project)}</strong>
         </div>
         <div>
-          <span>Sandboxes</span>
-          <strong>{project.sandbox_container_ids.length || "-"}</strong>
+          <span>Sandbox</span>
+          <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
         </div>
         <div>
           <span>Task Progress</span>

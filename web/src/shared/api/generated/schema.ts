@@ -349,6 +349,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sandbox-containers/create-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sandbox Container Create Options Route */
+        get: operations["sandbox_container_create_options_route_api_sandbox_containers_create_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox-containers/{id}": {
         parameters: {
             query?: never;
@@ -359,8 +376,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete Sandbox Container Handler */
-        delete: operations["delete_sandbox_container_handler_api_sandbox_containers__id__delete"];
+        /** Delete Sandbox Container Route */
+        delete: operations["delete_sandbox_container_route_api_sandbox_containers__id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -379,8 +396,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Sandbox Container Egress Handler */
-        patch: operations["update_sandbox_container_egress_handler_api_sandbox_containers__id__egress_patch"];
+        /** Update Sandbox Container Egress Route */
+        patch: operations["update_sandbox_container_egress_route_api_sandbox_containers__id__egress_patch"];
         trace?: never;
     };
     "/api/sandbox-containers/{id}/files": {
@@ -536,6 +553,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sandbox-containers/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Sandbox Container Route */
+        post: operations["pause_sandbox_container_route_api_sandbox_containers__id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox-containers/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Sandbox Container Route */
+        post: operations["resume_sandbox_container_route_api_sandbox_containers__id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox-containers/{id}/start": {
         parameters: {
             query?: never;
@@ -545,8 +596,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Start Sandbox Container Handler */
-        post: operations["start_sandbox_container_handler_api_sandbox_containers__id__start_post"];
+        /** Start Sandbox Container Route */
+        post: operations["start_sandbox_container_route_api_sandbox_containers__id__start_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -562,8 +613,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Stop Sandbox Container Handler */
-        post: operations["stop_sandbox_container_handler_api_sandbox_containers__id__stop_post"];
+        /** Stop Sandbox Container Route */
+        post: operations["stop_sandbox_container_route_api_sandbox_containers__id__stop_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -704,8 +755,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete Work Project Handler */
-        delete: operations["delete_work_project_handler_api_work_projects__id__delete"];
+        /** Delete Work Project Route */
+        delete: operations["delete_work_project_route_api_work_projects__id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -720,8 +771,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cancel Work Project Handler */
-        post: operations["cancel_work_project_handler_api_work_projects__id__cancel_post"];
+        /** Cancel Work Project Route */
+        post: operations["cancel_work_project_route_api_work_projects__id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -771,8 +822,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Retry Work Project Handler */
-        post: operations["retry_work_project_handler_api_work_projects__id__retry_post"];
+        /** Retry Work Project Route */
+        post: operations["retry_work_project_route_api_work_projects__id__retry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1560,6 +1611,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[SandboxContainerCreateOptionsResponse] */
+        CommonResponse_SandboxContainerCreateOptionsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["SandboxContainerCreateOptionsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[SandboxContainerSchema] */
         CommonResponse_SandboxContainerSchema_: {
             /**
@@ -1869,8 +1934,8 @@ export interface components {
             name: string;
             /** Owner User Ids */
             owner_user_ids?: number[];
-            /** Sandbox Container Ids */
-            sandbox_container_ids?: number[];
+            /** Sandbox Container Id */
+            sandbox_container_id?: number | null;
             /** @default penetration_test */
             type: components["schemas"]["WorkProjectType"];
         };
@@ -2290,11 +2355,27 @@ export interface components {
             run_id: string | null;
             status: components["schemas"]["SandboxAsyncJobStatus"];
         };
+        /** SandboxContainerCreateOptionsResponse */
+        SandboxContainerCreateOptionsResponse: {
+            /** Hosts */
+            hosts: components["schemas"]["SandboxContainerHostOptionSchema"][];
+            /** Images */
+            images: components["schemas"]["SandboxImageSchema"][];
+        };
         /**
          * SandboxContainerEgressMode
          * @enum {string}
          */
         SandboxContainerEgressMode: "direct" | "proxy" | "tor";
+        /** SandboxContainerHostOptionSchema */
+        SandboxContainerHostOptionSchema: {
+            /** Docker Management Port */
+            docker_management_port: number;
+            /** Id */
+            id: number;
+            /** Ip Address */
+            ip_address: string;
+        };
         /** SandboxContainerPortMapping */
         SandboxContainerPortMapping: {
             /** Container Port */
@@ -2310,6 +2391,8 @@ export interface components {
         };
         /** SandboxContainerSchema */
         SandboxContainerSchema: {
+            /** Can Manage */
+            can_manage: boolean;
             /** Container Hash */
             container_hash: string;
             /** Container Name */
@@ -2357,7 +2440,7 @@ export interface components {
          * SandboxContainerStatus
          * @enum {string}
          */
-        SandboxContainerStatus: "created" | "running" | "stopped" | "error";
+        SandboxContainerStatus: "created" | "running" | "paused" | "stopped" | "error";
         /** SandboxImageSchema */
         SandboxImageSchema: {
             /** Control Port */
@@ -2908,8 +2991,8 @@ export interface components {
             name: string;
             /** Owner User Ids */
             owner_user_ids?: number[];
-            /** Sandbox Container Ids */
-            sandbox_container_ids?: number[];
+            /** Sandbox Container Id */
+            sandbox_container_id?: number | null;
             /** @default penetration_test */
             type: components["schemas"]["WorkProjectType"];
         };
@@ -3329,10 +3412,9 @@ export interface components {
              * @default 0
              */
             progress: number;
-            /** Sandbox Container Ids */
-            sandbox_container_ids: number[];
-            /** Sandbox Containers */
-            sandbox_containers?: components["schemas"]["SandboxContainerSchema"][];
+            sandbox_container?: components["schemas"]["SandboxContainerSchema"] | null;
+            /** Sandbox Container Id */
+            sandbox_container_id?: number | null;
             /**
              * Session Count
              * @default 0
@@ -4646,15 +4728,6 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -4741,6 +4814,8 @@ export interface operations {
                 page?: number;
                 size?: number;
                 keyword?: string;
+                work_project_id?: number | null;
+                include_non_running?: boolean;
             };
             header?: never;
             path?: never;
@@ -4777,7 +4852,45 @@ export interface operations {
             };
         };
     };
-    delete_sandbox_container_handler_api_sandbox_containers__id__delete: {
+    sandbox_container_create_options_route_api_sandbox_containers_create_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SandboxContainerCreateOptionsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_sandbox_container_route_api_sandbox_containers__id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -4835,7 +4948,7 @@ export interface operations {
             };
         };
     };
-    update_sandbox_container_egress_handler_api_sandbox_containers__id__egress_patch: {
+    update_sandbox_container_egress_route_api_sandbox_containers__id__egress_patch: {
         parameters: {
             query?: never;
             header?: never;
@@ -4946,6 +5059,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -5010,6 +5132,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5088,6 +5219,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -5151,6 +5291,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5229,6 +5378,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -5293,6 +5451,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5370,6 +5537,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -5434,6 +5610,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5521,6 +5706,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
             /** @description Sandbox container not found */
             404: {
                 headers: {
@@ -5550,7 +5744,7 @@ export interface operations {
             };
         };
     };
-    start_sandbox_container_handler_api_sandbox_containers__id__start_post: {
+    pause_sandbox_container_route_api_sandbox_containers__id__pause_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -5617,7 +5811,141 @@ export interface operations {
             };
         };
     };
-    stop_sandbox_container_handler_api_sandbox_containers__id__stop_post: {
+    resume_sandbox_container_route_api_sandbox_containers__id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SandboxContainerSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Sandbox container not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    start_sandbox_container_route_api_sandbox_containers__id__start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_SandboxContainerSchema_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Sandbox container not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    stop_sandbox_container_route_api_sandbox_containers__id__stop_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -6335,7 +6663,7 @@ export interface operations {
             };
         };
     };
-    delete_work_project_handler_api_work_projects__id__delete: {
+    delete_work_project_route_api_work_projects__id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -6393,7 +6721,7 @@ export interface operations {
             };
         };
     };
-    cancel_work_project_handler_api_work_projects__id__cancel_post: {
+    cancel_work_project_route_api_work_projects__id__cancel_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -6580,7 +6908,7 @@ export interface operations {
             };
         };
     };
-    retry_work_project_handler_api_work_projects__id__retry_post: {
+    retry_work_project_route_api_work_projects__id__retry_post: {
         parameters: {
             query?: never;
             header?: never;

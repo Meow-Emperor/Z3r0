@@ -1,9 +1,9 @@
-from dataclasses import dataclass
-from datetime import datetime
 import asyncio
 import getpass
+from dataclasses import dataclass
+from datetime import datetime
 
-from sqlalchemy import String, cast, or_
+from sqlalchemy import String, cast, or_, text
 from sqlmodel import select
 
 from database import get_async_session
@@ -228,7 +228,6 @@ async def ensure_local_managed_host() -> ManagedHost:
                 await session.commit()
                 await session.refresh(host)
 
-        from sqlalchemy import text
         await session.execute(text(
             "SELECT setval(pg_get_serial_sequence('managed_hosts', 'id'), (SELECT MAX(id) FROM managed_hosts))"
         ))

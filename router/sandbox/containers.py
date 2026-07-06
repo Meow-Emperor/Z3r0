@@ -16,14 +16,24 @@ from handler.sandbox.containers import (
     handle_read_file,
     handle_upload_files,
     handle_write_file,
+    pause_sandbox_container_handler,
     query_available_sandbox_containers_handler,
     query_sandbox_containers_handler,
+    resume_sandbox_container_handler,
+    sandbox_container_create_options_handler,
     start_sandbox_container_handler,
     stop_sandbox_container_handler,
     update_sandbox_container_egress_handler,
 )
-from middleware.auth import AuthUser, require_admin, require_user
-from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, CONFLICT_RESPONSE, INTERNAL_ERROR_RESPONSE, not_found_response
+from middleware.auth import AuthUser, require_user
+from router.common.responses import (
+    BAD_REQUEST_RESPONSE,
+    COMMON_ERROR_RESPONSES,
+    CONFLICT_RESPONSE,
+    FORBIDDEN_RESPONSE,
+    INTERNAL_ERROR_RESPONSE,
+    not_found_response,
+)
 from schema.common.responses import CommonResponse
 from schema.sandbox.containers import (
     ContainerFileCopyRequest,
@@ -37,6 +47,7 @@ from schema.sandbox.containers import (
     DeleteSandboxContainerResponse,
     ListContainerFilesResponse,
     QuerySandboxContainersResponse,
+    SandboxContainerCreateOptionsResponse,
     SandboxContainerSchema,
     UpdateSandboxContainerEgressRequest,
 )
@@ -46,6 +57,7 @@ NOT_FOUND_RESPONSE = not_found_response("Sandbox container")
 CREATE_NOT_FOUND_RESPONSE = not_found_response("Sandbox image")
 FILE_OPERATION_ERROR_RESPONSES = {
     **COMMON_ERROR_RESPONSES,
+    **FORBIDDEN_RESPONSE,
     **NOT_FOUND_RESPONSE,
     **BAD_REQUEST_RESPONSE,
     **INTERNAL_ERROR_RESPONSE,
@@ -60,32 +72,21 @@ router = APIRouter(
     tags=["sandbox-containers"],
 )
 
-ADMIN_ONLY = [Depends(require_admin)]
-
 
 async def create_sandbox_container_route(
     request: CreateSandboxContainerRequest,
-    user: AuthUser = Depends(require_admin),
+    user: AuthUser = Depends(require_user),
 ) -> CommonResponse[SandboxContainerSchema]:
-    effective_owner_id = request.owner_id if request.owner_id is not None else user.id
-    return await create_sandbox_container_handler(request=request, owner_id=effective_owner_id)
+    return await create_sandbox_container_handler(request=request, user=user)
 
 
 async def query_sandbox_containers_route(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=100, ge=1, le=100),
     keyword: str = Query(default=""),
-) -> CommonResponse[QuerySandboxContainersResponse]:
-    return await query_sandbox_containers_handler(page=page, size=size, keyword=keyword)
-
-
-async def query_available_sandbox_containers_route(
-    page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
-    keyword: str = Query(default=""),
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse[QuerySandboxContainersResponse]:
-    return await query_available_sandbox_containers_handler(
+    return await query_sandbox_containers_handler(
         page=page,
         size=size,
         keyword=keyword,
@@ -94,12 +95,80 @@ async def query_available_sandbox_containers_route(
     )
 
 
+async def query_available_sandbox_containers_route(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=100, ge=1, le=100),
+    keyword: str = Query(default=""),
+    work_project_id: int | None = Query(default=None, ge=1),
+    include_non_running: bool = Query(default=False),
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[QuerySandboxContainersResponse]:
+    return await query_available_sandbox_containers_handler(
+        page=page,
+        size=size,
+        keyword=keyword,
+        user_id=user.id,
+        user_role=user.role,
+        work_project_id=work_project_id,
+        include_non_running=include_non_running,
+    )
+
+
+async def sandbox_container_create_options_route(
+    _: AuthUser = Depends(require_user),
+) -> CommonResponse[SandboxContainerCreateOptionsResponse]:
+    return await sandbox_container_create_options_handler()
+
+
+async def delete_sandbox_container_route(
+    id: int,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[DeleteSandboxContainerResponse]:
+    return await delete_sandbox_container_handler(id=id, user=user)
+
+
+async def start_sandbox_container_route(
+    id: int,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[SandboxContainerSchema]:
+    return await start_sandbox_container_handler(id=id, user=user)
+
+
+async def stop_sandbox_container_route(
+    id: int,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[SandboxContainerSchema]:
+    return await stop_sandbox_container_handler(id=id, user=user)
+
+
+async def pause_sandbox_container_route(
+    id: int,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[SandboxContainerSchema]:
+    return await pause_sandbox_container_handler(id=id, user=user)
+
+
+async def resume_sandbox_container_route(
+    id: int,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[SandboxContainerSchema]:
+    return await resume_sandbox_container_handler(id=id, user=user)
+
+
+async def update_sandbox_container_egress_route(
+    id: int,
+    request: UpdateSandboxContainerEgressRequest,
+    user: AuthUser = Depends(require_user),
+) -> CommonResponse[SandboxContainerSchema]:
+    return await update_sandbox_container_egress_handler(id=id, request=request, user=user)
+
+
 router.add_api_route(
     "",
     create_sandbox_container_route,
     methods=["POST"],
     response_model=CommonResponse[SandboxContainerSchema],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **CREATE_NOT_FOUND_RESPONSE},
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **BAD_REQUEST_RESPONSE, **CREATE_NOT_FOUND_RESPONSE},
 )
 
 
@@ -112,46 +181,65 @@ router.add_api_route(
 )
 
 router.add_api_route(
+    "/create-options",
+    sandbox_container_create_options_route,
+    methods=["GET"],
+    response_model=CommonResponse[SandboxContainerCreateOptionsResponse],
+    responses=COMMON_ERROR_RESPONSES,
+)
+
+router.add_api_route(
     "/{id}",
-    delete_sandbox_container_handler,
+    delete_sandbox_container_route,
     methods=["DELETE"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[DeleteSandboxContainerResponse],
-    responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(
     "/{id}/start",
-    start_sandbox_container_handler,
+    start_sandbox_container_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[SandboxContainerSchema],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(
     "/{id}/stop",
-    stop_sandbox_container_handler,
+    stop_sandbox_container_route,
     methods=["POST"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[SandboxContainerSchema],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/{id}/pause",
+    pause_sandbox_container_route,
+    methods=["POST"],
+    response_model=CommonResponse[SandboxContainerSchema],
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+)
+
+router.add_api_route(
+    "/{id}/resume",
+    resume_sandbox_container_route,
+    methods=["POST"],
+    response_model=CommonResponse[SandboxContainerSchema],
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(
     "/{id}/egress",
-    update_sandbox_container_egress_handler,
+    update_sandbox_container_egress_route,
     methods=["PATCH"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[SandboxContainerSchema],
-    responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
+    responses={**COMMON_ERROR_RESPONSES, **FORBIDDEN_RESPONSE, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(
     "",
     query_sandbox_containers_route,
     methods=["GET"],
-    dependencies=ADMIN_ONLY,
     response_model=CommonResponse[QuerySandboxContainersResponse],
     responses=COMMON_ERROR_RESPONSES,
 )

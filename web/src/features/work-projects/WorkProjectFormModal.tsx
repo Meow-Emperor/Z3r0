@@ -1,6 +1,6 @@
 import { Button, Input, InputNumber, Select, Spin, Tag, TextArea } from "@douyinfe/semi-ui";
 import { FolderKanban, Plus, ScanSearch, Server, Trash2, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   WORK_PROJECT_ASSET_ORIGIN,
   getWorkProjectAssetTypes,
@@ -63,16 +63,22 @@ const EMPTY: WorkProjectFormValues = {
   name: "",
   description: "",
   owner_user_ids: [],
-  sandbox_container_ids: [],
+  sandbox_container_id: null,
   assets: [{ ...EMPTY_ASSET }],
   type: projectTypes[0],
 };
 
 export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit }: WorkProjectFormModalProps) {
   const [values, setValues] = useState<WorkProjectFormValues>(EMPTY);
+  const loadProjectSandboxContainers = useCallback((params: { page: number; size: number; keyword: string }) => (
+    queryAvailableSandboxContainers({
+      ...params,
+      work_project_id: project?.id,
+    })
+  ), [project?.id]);
   const { items: sandboxContainers, loading: sandboxLoading } = useOptionList<SandboxContainer>({
     enabled: open,
-    query: queryAvailableSandboxContainers,
+    query: loadProjectSandboxContainers,
   });
   const { items: users, loading: usersLoading } = useOptionList<SystemUser>({
     enabled: open,
@@ -86,7 +92,7 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       name: project.name,
       description: project.description,
       owner_user_ids: project.owner_user_ids,
-      sandbox_container_ids: project.sandbox_container_ids,
+      sandbox_container_id: project.sandbox_container_id ?? null,
       assets: scopeAssetsFromProject(project),
       type: project.type,
     } : { ...EMPTY, assets: [{ ...EMPTY_ASSET }] });
@@ -175,24 +181,23 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
           />
         </label>
         <label>
-          <span>Sandbox Containers</span>
+          <span>Sandbox Container</span>
           <Select
             prefix={<Server size={16} />}
-            value={values.sandbox_container_ids}
+            value={values.sandbox_container_id ?? undefined}
             optionList={sandboxOptionList}
-            placeholder={sandboxLoading ? "Loading sandbox containers" : "Select sandbox containers"}
+            placeholder={sandboxLoading ? "Loading sandbox containers" : "Select sandbox container"}
             emptyContent={sandboxLoading ? <Spin size="small" /> : "No running sandbox containers"}
             loading={sandboxLoading}
-            multiple
             showClear
             renderSelectedItem={(option: { value?: number }) => ({
               isRenderInTag: true,
               content: sandboxContainers.find((container) => container.id === option.value)?.container_name ?? String(option.value ?? ""),
             })}
-            onClear={() => setValues((v) => ({ ...v, sandbox_container_ids: [] }))}
+            onClear={() => setValues((v) => ({ ...v, sandbox_container_id: null }))}
             onChange={(value) => setValues((v) => ({
               ...v,
-              sandbox_container_ids: Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [],
+              sandbox_container_id: typeof value === "number" ? value : null,
             }))}
           />
         </label>

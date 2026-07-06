@@ -17,6 +17,7 @@ from handler import (
     finish_ws_reader_task,
 )
 from logger import get_logger
+from middleware.auth import AuthUser
 from model.sandbox.containers import SandboxContainer
 from schema.common.responses import CommonResponse
 from schema.sandbox.containers import (
@@ -55,6 +56,8 @@ from service.sandbox.files import (
 from service.sandbox.lifecycle import (
     create_sandbox_container,
     delete_sandbox_container,
+    pause_sandbox_container,
+    resume_sandbox_container,
     start_sandbox_container,
     stop_sandbox_container,
     update_sandbox_container_egress,
@@ -67,6 +70,8 @@ from service.sandbox.novnc import (
 from service.sandbox.records import (
     query_available_sandbox_containers,
     query_sandbox_containers,
+    sandbox_container_create_options,
+    sandbox_container_is_manageable_by_user,
     sandbox_container_schema,
 )
 from service.sandbox.shell import (
@@ -85,7 +90,7 @@ _NOVNC_ACCESS_COOKIE = "sandbox_novnc_access"
 _SHELL_KEEPALIVE_INTERVAL_SECONDS = 25
 
 
-def _mutation_response(result: SandboxContainerMutationResult) -> CommonResponse:
+def _mutation_response(result: SandboxContainerMutationResult, user: AuthUser) -> CommonResponse:
     if result.record is None:
         status = HTTPStatus.NOT_FOUND if result.not_found else HTTPStatus.BAD_REQUEST
         return CommonResponse(code=status.value, message=result.message)
@@ -93,18 +98,24 @@ def _mutation_response(result: SandboxContainerMutationResult) -> CommonResponse
         return CommonResponse(
             code=HTTPStatus.BAD_REQUEST.value,
             message=result.message,
-            data=sandbox_container_schema(result.record),
+            data=sandbox_container_schema(result.record, user_id=user.id, user_role=user.role),
         )
     return CommonResponse(
         message=result.message,
-        data=sandbox_container_schema(result.record),
+        data=sandbox_container_schema(result.record, user_id=user.id, user_role=user.role),
     )
 
 
 async def create_sandbox_container_handler(
     request: CreateSandboxContainerRequest,
-    owner_id: int,
+    user: AuthUser,
 ) -> CommonResponse:
+    if user.role != SystemUserRole.ADMIN and request.owner_id not in {None, user.id}:
+        return CommonResponse(
+            code=HTTPStatus.FORBIDDEN.value,
+            message="no permission to assign sandbox container owner",
+        )
+    owner_id = request.owner_id if user.role == SystemUserRole.ADMIN and request.owner_id is not None else user.id
     result = await create_sandbox_container(
         host_id=request.host_id,
         image_id=request.image_id,
@@ -113,40 +124,82 @@ async def create_sandbox_container_handler(
         owner_id=owner_id,
         port_mappings=request.port_mappings,
     )
-    return _mutation_response(result)
+    return _mutation_response(result, user)
 
 
-async def start_sandbox_container_handler(id: int) -> CommonResponse:
-    return _mutation_response(await start_sandbox_container(id))
+async def start_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
+    permission_error = await _manage_permission_error(id, user)
+    if permission_error is not None:
+        return permission_error
+    return _mutation_response(await start_sandbox_container(id), user)
 
 
-async def stop_sandbox_container_handler(id: int) -> CommonResponse:
-    return _mutation_response(await stop_sandbox_container(id))
+async def stop_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
+    permission_error = await _manage_permission_error(id, user)
+    if permission_error is not None:
+        return permission_error
+    return _mutation_response(await stop_sandbox_container(id), user)
+
+
+async def pause_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
+    permission_error = await _manage_permission_error(id, user)
+    if permission_error is not None:
+        return permission_error
+    return _mutation_response(await pause_sandbox_container(id), user)
+
+
+async def resume_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
+    permission_error = await _manage_permission_error(id, user)
+    if permission_error is not None:
+        return permission_error
+    return _mutation_response(await resume_sandbox_container(id), user)
 
 
 async def update_sandbox_container_egress_handler(
     id: int,
     request: UpdateSandboxContainerEgressRequest,
+    user: AuthUser,
 ) -> CommonResponse:
+    permission_error = await _manage_permission_error(id, user)
+    if permission_error is not None:
+        return permission_error
     return _mutation_response(await update_sandbox_container_egress(
         id,
         egress_mode=request.egress_mode,
         egress_proxy_id=request.egress_proxy_id,
-    ))
+    ), user)
 
 
-async def delete_sandbox_container_handler(id: int) -> CommonResponse:
+async def delete_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
+    permission_error = await _manage_permission_error(id, user)
+    if permission_error is not None:
+        return permission_error
     if not await delete_sandbox_container(id):
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="sandbox container not found")
     return CommonResponse(data=DeleteSandboxContainerResponse(id=id))
 
 
-async def query_sandbox_containers_handler(page: int, size: int, keyword: str) -> CommonResponse:
-    sandbox_containers = await query_sandbox_containers(page=page, size=size, keyword=keyword)
+async def query_sandbox_containers_handler(
+    page: int,
+    size: int,
+    keyword: str,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> CommonResponse:
+    sandbox_containers = await query_sandbox_containers(
+        page=page,
+        size=size,
+        keyword=keyword,
+        user_id=user_id,
+        user_role=user_role,
+    )
     return CommonResponse(data=QuerySandboxContainersResponse(
         **paginated_payload(
             sandbox_containers,
-            [sandbox_container_schema(record) for record in sandbox_containers.items],
+            [
+                sandbox_container_schema(record, user_id=user_id, user_role=user_role)
+                for record in sandbox_containers.items
+            ],
         ),
     ))
 
@@ -157,6 +210,8 @@ async def query_available_sandbox_containers_handler(
     keyword: str,
     user_id: int,
     user_role: SystemUserRole,
+    work_project_id: int | None = None,
+    include_non_running: bool = False,
 ) -> CommonResponse:
     sandbox_containers = await query_available_sandbox_containers(
         page=page,
@@ -164,13 +219,38 @@ async def query_available_sandbox_containers_handler(
         keyword=keyword,
         user_id=user_id,
         user_role=user_role,
+        work_project_id=work_project_id,
+        include_non_running=include_non_running,
     )
     return CommonResponse(data=QuerySandboxContainersResponse(
         **paginated_payload(
             sandbox_containers,
-            [sandbox_container_schema(record) for record in sandbox_containers.items],
+            [
+                sandbox_container_schema(record, user_id=user_id, user_role=user_role)
+                for record in sandbox_containers.items
+            ],
         ),
     ))
+
+
+async def sandbox_container_create_options_handler() -> CommonResponse:
+    return CommonResponse(data=await sandbox_container_create_options())
+
+
+async def _manage_permission_error(id: int, user: AuthUser) -> CommonResponse | None:
+    manageable = await sandbox_container_is_manageable_by_user(
+        id=id,
+        user_id=user.id,
+        user_role=user.role,
+    )
+    if manageable is None:
+        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="sandbox container not found")
+    if not manageable:
+        return CommonResponse(
+            code=HTTPStatus.FORBIDDEN.value,
+            message="no permission to operate this sandbox container",
+        )
+    return None
 
 
 async def handle_container_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
@@ -254,7 +334,10 @@ async def _forward_shell_output(
         data = await read_container_shell(shell)
         if not data:
             return
-        if websocket.client_state != WebSocketState.CONNECTED or websocket.application_state != WebSocketState.CONNECTED:
+        if (
+            websocket.client_state != WebSocketState.CONNECTED
+            or websocket.application_state != WebSocketState.CONNECTED
+        ):
             return
         async with send_lock:
             await websocket.send_bytes(data)
@@ -263,7 +346,10 @@ async def _forward_shell_output(
 async def _send_shell_keepalive(websocket: WebSocket, send_lock: asyncio.Lock) -> None:
     while True:
         await asyncio.sleep(_SHELL_KEEPALIVE_INTERVAL_SECONDS)
-        if websocket.client_state != WebSocketState.CONNECTED or websocket.application_state != WebSocketState.CONNECTED:
+        if (
+            websocket.client_state != WebSocketState.CONNECTED
+            or websocket.application_state != WebSocketState.CONNECTED
+        ):
             return
         try:
             async with send_lock:
@@ -300,7 +386,10 @@ def _file_container_json_error(code: int, message: str) -> JSONResponse:
 
 async def _validate_running_container_access(id: int, action: str, user=None) -> CommonResponse | None:
     if user is not None and not await _can_access_container_by_id(user, id):
-        return _file_container_error(HTTPStatus.FORBIDDEN.value, "no permission to access this sandbox container")
+        return _file_container_error(
+            HTTPStatus.FORBIDDEN.value,
+            "no permission to access this sandbox container",
+        )
     status = await resolve_file_container_status(id)
     if status is None:
         return _file_container_error(HTTPStatus.NOT_FOUND.value, "sandbox container not found")
@@ -339,7 +428,11 @@ async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=N
     except Exception:
         logger.exception("failed to read container file: %s", id)
         return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to read container file")
-    return _file_container_common_response(ContainerFileReadResponse(path=path, content=content, size=len(content.encode())))
+    return _file_container_common_response(ContainerFileReadResponse(
+        path=path,
+        content=content,
+        size=len(content.encode()),
+    ))
 
 
 async def handle_write_file(id: int, body: ContainerFileWriteRequest, user=None) -> CommonResponse:

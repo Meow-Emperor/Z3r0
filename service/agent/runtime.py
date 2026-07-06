@@ -8,15 +8,23 @@ from core.tools.knowledge import current_knowledge_generation
 from core.tools.sandbox import SANDBOX_SKILLS_DIR
 from logger import get_logger
 from middleware.auth import AuthUser
+from model.agent.sessions import AgentSessionMeta
 from schema.agent.events import AgentEventSchema, AgentInputPart
 from schema.agent.sessions import AgentSessionSummarySchema
 from service.agent import sessions as agent_sessions
 from service.sandbox.commands import execute_sandbox_container_command
 from service.sandbox.status import (
+    resolve_project_sandbox_container_selection,
     resolve_project_sandbox_container_tool_binding,
+    resolve_sandbox_container_selection,
     resolve_sandbox_container_tool_binding,
 )
-from service.work_project.projects import can_run_work_project_session, work_project_allows_sandbox_container
+from service.sandbox.types import SandboxContainerToolBinding
+from service.work_project.projects import (
+    can_run_work_project_session,
+    sandbox_container_id_for_work_project,
+    work_project_allows_sandbox_container,
+)
 
 
 logger = get_logger(__name__)
@@ -119,9 +127,26 @@ async def apply_turn_sandbox_selection(
     sandbox_container_id: int | None,
     user: AuthUser,
 ) -> None:
-    meta = await agent_sessions.get_session_meta(session_id)
+    meta = await agent_sessions.get_accessible_session_meta(session_id, user.id, user.role)
     if meta is None:
         raise PermissionError("agent session not found")
+    if meta.project_id is not None:
+        project_container_id = await sandbox_container_id_for_work_project(meta.project_id)
+        if sandbox_container_id is not None and sandbox_container_id != project_container_id:
+            raise SandboxContainerUnavailableError("work project sessions use the project's bound sandbox container")
+        selection_id, selection_generation = await _resolve_project_sandbox_selection_state(project_container_id)
+        if (
+            meta.selected_sandbox_container_id != selection_id
+            or meta.selected_sandbox_container_generation != selection_generation
+        ):
+            await agent_sessions.update_session_sandbox_container(
+                session_id=session_id,
+                sandbox_container_id=selection_id,
+                sandbox_container_generation=selection_generation,
+                user_id=user.id,
+                user_role=user.role,
+            )
+        return
     current_id = meta.selected_sandbox_container_id
     if current_id == sandbox_container_id:
         return
@@ -140,34 +165,23 @@ async def update_selected_sandbox_container(
     user: AuthUser,
     require_idle: bool = True,
 ) -> AgentSessionSummarySchema:
-    if not await agent_sessions.can_access_session(session_id, user.id, user.role):
-        raise PermissionError("agent session not found")
-    meta = await agent_sessions.get_session_meta(session_id)
+    meta = await agent_sessions.get_accessible_session_meta(session_id, user.id, user.role)
     if meta is None:
         raise PermissionError("agent session not found")
+    if meta.project_id is not None:
+        raise SandboxContainerUnavailableError("work project sessions use the project's bound sandbox container")
     if require_idle and (meta.is_running or await agent_sessions.has_outstanding_session_work(session_id)):
         raise SessionBusyError("stop running tasks before switching sandbox container")
     generation = 0
     if sandbox_container_id is not None:
-        if meta.project_id is not None:
-            allowed = await work_project_allows_sandbox_container(
-                project_id=meta.project_id,
-                sandbox_container_id=sandbox_container_id,
-                user_id=user.id,
-                user_role=user.role,
-            )
-            if not allowed:
-                raise SandboxContainerUnavailableError("sandbox container is not available for this project")
-            binding = await resolve_project_sandbox_container_tool_binding(sandbox_container_id)
-        else:
-            binding = await resolve_sandbox_container_tool_binding(
-                id=sandbox_container_id,
-                user_id=user.id,
-                user_role=user.role,
-            )
-        if binding is None:
+        selection = await resolve_sandbox_container_selection(
+            id=sandbox_container_id,
+            user_id=user.id,
+            user_role=user.role,
+        )
+        if selection is None:
             raise SandboxContainerUnavailableError("sandbox container is not available")
-        generation = binding.generation
+        generation = selection.generation
 
     session = await agent_sessions.update_session_sandbox_container(
         session_id=session_id,
@@ -205,40 +219,23 @@ async def build_runtime_context(
 ) -> AgentRuntimeContext:
     work_project_id = await agent_sessions.project_id_for_session(session_id)
     meta = await agent_sessions.get_session_meta(session_id)
-    effective_sandbox_container_id = sandbox_container_id
-    if effective_sandbox_container_id is None and meta is not None:
-        if meta.runtime_sandbox_container_id is not None and meta.is_running:
-            effective_sandbox_container_id = meta.runtime_sandbox_container_id
-        else:
-            effective_sandbox_container_id = meta.selected_sandbox_container_id
-
-    if work_project_id is not None:
-        if effective_sandbox_container_id is not None:
-            allowed = await work_project_allows_sandbox_container(
-                project_id=work_project_id,
-                sandbox_container_id=effective_sandbox_container_id,
-                user_id=user.id,
-                user_role=user.role,
-            )
-            if not allowed:
-                effective_sandbox_container_id = None
-
+    effective_sandbox_container_id = await _resolve_effective_sandbox_container_id(
+        requested_sandbox_container_id=sandbox_container_id,
+        work_project_id=work_project_id,
+        meta=meta,
+    )
+    binding = await _resolve_runtime_sandbox_tool_binding(
+        sandbox_container_id=effective_sandbox_container_id,
+        work_project_id=work_project_id,
+        user=user,
+    )
     selected_container_id = None
     selected_container_generation = 0
     sandbox_skill_metadata: tuple[str, ...] = ()
-    if effective_sandbox_container_id is not None:
-        if work_project_id is not None:
-            binding = await resolve_project_sandbox_container_tool_binding(effective_sandbox_container_id)
-        else:
-            binding = await resolve_sandbox_container_tool_binding(
-                id=effective_sandbox_container_id,
-                user_id=user.id,
-                user_role=user.role,
-            )
-        if binding is not None:
-            selected_container_id = binding.id
-            selected_container_generation = binding.generation
-            sandbox_skill_metadata = await _load_sandbox_skill_metadata(binding.id)
+    if binding is not None:
+        selected_container_id = binding.id
+        selected_container_generation = binding.generation
+        sandbox_skill_metadata = await _load_sandbox_skill_metadata(binding.id)
 
     return AgentRuntimeContext(
         session_id=session_id,
@@ -250,6 +247,57 @@ async def build_runtime_context(
         sandbox_container_generation=selected_container_generation,
         sandbox_skill_metadata=sandbox_skill_metadata,
         work_project_id=work_project_id,
+    )
+
+
+async def _resolve_effective_sandbox_container_id(
+    *,
+    requested_sandbox_container_id: int | None,
+    work_project_id: int | None,
+    meta: AgentSessionMeta | None,
+) -> int | None:
+    if work_project_id is not None:
+        return await sandbox_container_id_for_work_project(work_project_id)
+    if requested_sandbox_container_id is not None or meta is None:
+        return requested_sandbox_container_id
+    if meta.runtime_sandbox_container_id is not None and meta.is_running:
+        return meta.runtime_sandbox_container_id
+    return meta.selected_sandbox_container_id
+
+
+async def _resolve_project_sandbox_selection_state(
+    sandbox_container_id: int | None,
+) -> tuple[int | None, int]:
+    if sandbox_container_id is None:
+        return None, 0
+    selection = await resolve_project_sandbox_container_selection(sandbox_container_id)
+    if selection is None:
+        return None, 0
+    return selection.id, selection.generation
+
+
+async def _resolve_runtime_sandbox_tool_binding(
+    *,
+    sandbox_container_id: int | None,
+    work_project_id: int | None,
+    user: AuthUser,
+) -> SandboxContainerToolBinding | None:
+    if sandbox_container_id is None:
+        return None
+    if work_project_id is not None:
+        allowed = await work_project_allows_sandbox_container(
+            project_id=work_project_id,
+            sandbox_container_id=sandbox_container_id,
+            user_id=user.id,
+            user_role=user.role,
+        )
+        if not allowed:
+            return None
+        return await resolve_project_sandbox_container_tool_binding(sandbox_container_id)
+    return await resolve_sandbox_container_tool_binding(
+        id=sandbox_container_id,
+        user_id=user.id,
+        user_role=user.role,
     )
 
 

@@ -47,9 +47,9 @@ async def query_work_projects_route(
 
 async def create_work_project_route(
     request: CreateWorkProjectRequest,
-    _: AuthUser = Depends(require_admin),
+    user: AuthUser = Depends(require_admin),
 ) -> CommonResponse[WorkProjectSchema]:
-    return await create_work_project_handler(request=request)
+    return await create_work_project_handler(request=request, user=user)
 
 
 async def get_work_project_record_snapshot_route(
@@ -62,9 +62,9 @@ async def get_work_project_record_snapshot_route(
 async def update_work_project_metadata_route(
     id: int,
     request: UpdateWorkProjectMetadataRequest,
-    _: AuthUser = Depends(require_admin),
+    user: AuthUser = Depends(require_admin),
 ) -> CommonResponse[WorkProjectSchema]:
-    return await update_work_project_metadata_handler(id=id, request=request)
+    return await update_work_project_metadata_handler(id=id, request=request, user=user)
 
 
 async def create_work_project_session_route(
@@ -87,6 +87,27 @@ async def delete_work_project_session_route(
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse:
     return await delete_work_project_session_handler(id=id, session_id=session_id, user=user)
+
+
+async def delete_work_project_route(
+    id: int,
+    _: AuthUser = Depends(require_admin),
+) -> CommonResponse[DeleteWorkProjectResponse]:
+    return await delete_work_project_handler(id=id)
+
+
+async def cancel_work_project_route(
+    id: int,
+    user: AuthUser = Depends(require_admin),
+) -> CommonResponse[WorkProjectSchema]:
+    return await cancel_work_project_handler(id=id, user=user)
+
+
+async def retry_work_project_route(
+    id: int,
+    user: AuthUser = Depends(require_admin),
+) -> CommonResponse[WorkProjectSchema]:
+    return await retry_work_project_handler(id=id, user=user)
 
 
 router.add_api_route(
@@ -147,27 +168,24 @@ router.add_api_route(
 
 router.add_api_route(
     "/{id}",
-    delete_work_project_handler,
+    delete_work_project_route,
     methods=["DELETE"],
-    dependencies=[Depends(require_admin)],
     response_model=CommonResponse[DeleteWorkProjectResponse],
     responses={**COMMON_ERROR_RESPONSES, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(
     "/{id}/cancel",
-    cancel_work_project_handler,
+    cancel_work_project_route,
     methods=["POST"],
-    dependencies=[Depends(require_admin)],
     response_model=CommonResponse[WorkProjectSchema],
     responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )
 
 router.add_api_route(
     "/{id}/retry",
-    retry_work_project_handler,
+    retry_work_project_route,
     methods=["POST"],
-    dependencies=[Depends(require_admin)],
     response_model=CommonResponse[WorkProjectSchema],
     responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE, **NOT_FOUND_RESPONSE},
 )

@@ -25,7 +25,7 @@ export function ResourceTable<T>({ ariaLabel, className, columns, rows, rowKey }
     <div className={cx("resource-table", className)} role="table" aria-label={ariaLabel}>
       <div className="resource-table-row resource-table-head" role="row" style={gridTemplate}>
         {columns.map((col) => (
-          <div key={col.key} role="columnheader">{col.header}</div>
+          <div key={col.key} role="columnheader" className={`resource-cell-${col.key}`}>{col.header}</div>
         ))}
       </div>
       {rows.map((row) => (

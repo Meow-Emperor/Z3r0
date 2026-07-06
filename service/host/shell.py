@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
+import importlib
 import inspect
 import os
 import pty
@@ -14,6 +15,12 @@ from typing import Any
 
 from model.host.hosts import ManagedHost
 from service.host.hosts import DEFAULT_LOCAL_HOST_ID, query_managed_host_by_id
+
+
+try:
+    asyncssh = importlib.import_module("asyncssh")
+except ImportError:
+    asyncssh = None
 
 
 _DEFAULT_SHELL_ROWS = 24
@@ -146,10 +153,8 @@ async def _open_ssh_shell(
     rows: int,
     cols: int,
 ) -> HostShellSession:
-    try:
-        import asyncssh
-    except ImportError as exc:
-        raise RuntimeError("asyncssh is required for remote host shell access") from exc
+    if asyncssh is None:
+        raise RuntimeError("asyncssh is required for remote host shell access")
 
     connection = await asyncssh.connect(
         host.ip_address,

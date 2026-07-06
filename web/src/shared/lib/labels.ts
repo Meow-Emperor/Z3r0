@@ -99,6 +99,7 @@ export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_COLOR = colorsFromEnum<WorkProject
 export const SANDBOX_CONTAINER_STATUS_COLOR = colorsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUSES, {
   created: "blue",
   running: "green",
+  paused: "amber",
   stopped: "grey",
   error: "red",
 });

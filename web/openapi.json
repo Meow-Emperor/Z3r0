@@ -1450,6 +1450,32 @@
         "title": "CommonResponse[QueryWorkProjectsResponse]",
         "type": "object"
       },
+      "CommonResponse_SandboxContainerCreateOptionsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SandboxContainerCreateOptionsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[SandboxContainerCreateOptionsResponse]",
+        "type": "object"
+      },
       "CommonResponse_SandboxContainerSchema_": {
         "properties": {
           "code": {
@@ -2133,13 +2159,17 @@
             "title": "Owner User Ids",
             "type": "array"
           },
-          "sandbox_container_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "maxItems": 100,
-            "title": "Sandbox Container Ids",
-            "type": "array"
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
           },
           "type": {
             "$ref": "#/components/schemas/WorkProjectType",
@@ -3101,6 +3131,30 @@
         "title": "SandboxCommandResultMetadata",
         "type": "object"
       },
+      "SandboxContainerCreateOptionsResponse": {
+        "properties": {
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxContainerHostOptionSchema"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxImageSchema"
+            },
+            "title": "Images",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hosts",
+          "images"
+        ],
+        "title": "SandboxContainerCreateOptionsResponse",
+        "type": "object"
+      },
       "SandboxContainerEgressMode": {
         "enum": [
           "direct",
@@ -3109,6 +3163,29 @@
         ],
         "title": "SandboxContainerEgressMode",
         "type": "string"
+      },
+      "SandboxContainerHostOptionSchema": {
+        "properties": {
+          "docker_management_port": {
+            "title": "Docker Management Port",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip_address": {
+            "title": "Ip Address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ip_address",
+          "docker_management_port"
+        ],
+        "title": "SandboxContainerHostOptionSchema",
+        "type": "object"
       },
       "SandboxContainerPortMapping": {
         "properties": {
@@ -3143,6 +3220,10 @@
       },
       "SandboxContainerSchema": {
         "properties": {
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
           "container_hash": {
             "title": "Container Hash",
             "type": "string"
@@ -3248,6 +3329,7 @@
           "status",
           "owner_id",
           "owner_username",
+          "can_manage",
           "created_at",
           "updated_at"
         ],
@@ -3258,6 +3340,7 @@
         "enum": [
           "created",
           "running",
+          "paused",
           "stopped",
           "error"
         ],
@@ -4338,13 +4421,17 @@
             "title": "Owner User Ids",
             "type": "array"
           },
-          "sandbox_container_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "maxItems": 100,
-            "title": "Sandbox Container Ids",
-            "type": "array"
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
           },
           "type": {
             "$ref": "#/components/schemas/WorkProjectType",
@@ -5150,19 +5237,26 @@
             "title": "Progress",
             "type": "number"
           },
-          "sandbox_container_ids": {
-            "items": {
-              "type": "integer"
-            },
-            "title": "Sandbox Container Ids",
-            "type": "array"
+          "sandbox_container": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SandboxContainerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
-          "sandbox_containers": {
-            "items": {
-              "$ref": "#/components/schemas/SandboxContainerSchema"
-            },
-            "title": "Sandbox Containers",
-            "type": "array"
+          "sandbox_container_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sandbox Container Id"
           },
           "session_count": {
             "default": 0,
@@ -5194,7 +5288,6 @@
           "description",
           "owner_user_ids",
           "owners",
-          "sandbox_container_ids",
           "assets",
           "tasks",
           "agent_summaries",
@@ -7059,16 +7152,6 @@
             },
             "description": "Unauthorized"
           },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommonResponse_Any_"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -7211,6 +7294,33 @@
               "title": "Keyword",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "work_project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Work Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_non_running",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Non Running",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -7256,9 +7366,55 @@
         ]
       }
     },
+    "/api/sandbox-containers/create-options": {
+      "get": {
+        "operationId": "sandbox_container_create_options_route_api_sandbox_containers_create_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerCreateOptionsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Sandbox Container Create Options Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
     "/api/sandbox-containers/{id}": {
       "delete": {
-        "operationId": "delete_sandbox_container_handler_api_sandbox_containers__id__delete",
+        "operationId": "delete_sandbox_container_route_api_sandbox_containers__id__delete",
         "parameters": [
           {
             "in": "path",
@@ -7327,7 +7483,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Delete Sandbox Container Handler",
+        "summary": "Delete Sandbox Container Route",
         "tags": [
           "sandbox-containers"
         ]
@@ -7335,7 +7491,7 @@
     },
     "/api/sandbox-containers/{id}/egress": {
       "patch": {
-        "operationId": "update_sandbox_container_egress_handler_api_sandbox_containers__id__egress_patch",
+        "operationId": "update_sandbox_container_egress_route_api_sandbox_containers__id__egress_patch",
         "parameters": [
           {
             "in": "path",
@@ -7424,7 +7580,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Update Sandbox Container Egress Handler",
+        "summary": "Update Sandbox Container Egress Route",
         "tags": [
           "sandbox-containers"
         ]
@@ -7484,6 +7640,16 @@
               }
             },
             "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -7582,6 +7748,16 @@
             },
             "description": "Unauthorized"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7678,6 +7854,16 @@
               }
             },
             "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -7786,6 +7972,16 @@
             },
             "description": "Unauthorized"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7883,6 +8079,16 @@
             },
             "description": "Unauthorized"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -7979,6 +8185,16 @@
               }
             },
             "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -8087,6 +8303,16 @@
             },
             "description": "Unauthorized"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -8183,6 +8409,16 @@
               }
             },
             "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
           },
           "404": {
             "content": {
@@ -8291,6 +8527,16 @@
             },
             "description": "Unauthorized"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -8333,9 +8579,9 @@
         ]
       }
     },
-    "/api/sandbox-containers/{id}/start": {
+    "/api/sandbox-containers/{id}/pause": {
       "post": {
-        "operationId": "start_sandbox_container_handler_api_sandbox_containers__id__start_post",
+        "operationId": "pause_sandbox_container_route_api_sandbox_containers__id__pause_post",
         "parameters": [
           {
             "in": "path",
@@ -8414,7 +8660,181 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Start Sandbox Container Handler",
+        "summary": "Pause Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/resume": {
+      "post": {
+        "operationId": "resume_sandbox_container_route_api_sandbox_containers__id__resume_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Resume Sandbox Container Route",
+        "tags": [
+          "sandbox-containers"
+        ]
+      }
+    },
+    "/api/sandbox-containers/{id}/start": {
+      "post": {
+        "operationId": "start_sandbox_container_route_api_sandbox_containers__id__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_SandboxContainerSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Sandbox container not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Start Sandbox Container Route",
         "tags": [
           "sandbox-containers"
         ]
@@ -8422,7 +8842,7 @@
     },
     "/api/sandbox-containers/{id}/stop": {
       "post": {
-        "operationId": "stop_sandbox_container_handler_api_sandbox_containers__id__stop_post",
+        "operationId": "stop_sandbox_container_route_api_sandbox_containers__id__stop_post",
         "parameters": [
           {
             "in": "path",
@@ -8501,7 +8921,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Stop Sandbox Container Handler",
+        "summary": "Stop Sandbox Container Route",
         "tags": [
           "sandbox-containers"
         ]
@@ -9414,7 +9834,7 @@
     },
     "/api/work-projects/{id}": {
       "delete": {
-        "operationId": "delete_work_project_handler_api_work_projects__id__delete",
+        "operationId": "delete_work_project_route_api_work_projects__id__delete",
         "parameters": [
           {
             "in": "path",
@@ -9483,7 +9903,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Delete Work Project Handler",
+        "summary": "Delete Work Project Route",
         "tags": [
           "work-projects"
         ]
@@ -9491,7 +9911,7 @@
     },
     "/api/work-projects/{id}/cancel": {
       "post": {
-        "operationId": "cancel_work_project_handler_api_work_projects__id__cancel_post",
+        "operationId": "cancel_work_project_route_api_work_projects__id__cancel_post",
         "parameters": [
           {
             "in": "path",
@@ -9570,7 +9990,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Cancel Work Project Handler",
+        "summary": "Cancel Work Project Route",
         "tags": [
           "work-projects"
         ]
@@ -9742,7 +10162,7 @@
     },
     "/api/work-projects/{id}/retry": {
       "post": {
-        "operationId": "retry_work_project_handler_api_work_projects__id__retry_post",
+        "operationId": "retry_work_project_route_api_work_projects__id__retry_post",
         "parameters": [
           {
             "in": "path",
@@ -9821,7 +10241,7 @@
             "AccessTokenAuth": []
           }
         ],
-        "summary": "Retry Work Project Handler",
+        "summary": "Retry Work Project Route",
         "tags": [
           "work-projects"
         ]

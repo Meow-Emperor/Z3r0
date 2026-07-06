@@ -1,7 +1,5 @@
 import { Select, Spin, Tag } from "@douyinfe/semi-ui";
 import { Box } from "lucide-react";
-import { useMemo } from "react";
-import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { SandboxContainer } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
@@ -11,18 +9,14 @@ type SandboxSelectorProps = {
   loading: boolean;
   value: number | null;
   className?: string;
+  disabled?: boolean;
   onChange: (containerId: number | null) => void;
 };
 
 const CONTAINER_ID_PREVIEW_LENGTH = 12;
 
-export function SandboxSelector({ containers, loading, value, className = "", onChange }: SandboxSelectorProps) {
-  const runningContainers = useMemo(
-    () => containers.filter((container) => container.status === SANDBOX_CONTAINER_STATUS.RUNNING),
-    [containers],
-  );
-
-  const optionList = runningContainers.map((container) => ({
+export function SandboxSelector({ containers, loading, value, className = "", disabled = false, onChange }: SandboxSelectorProps) {
+  const optionList = containers.map((container) => ({
     label: renderContainerOption(container),
     value: container.id,
   }));
@@ -36,9 +30,9 @@ export function SandboxSelector({ containers, loading, value, className = "", on
         optionList={optionList}
         renderSelectedItem={() => renderContainerId(selectedContainer?.container_hash ?? "")}
         placeholder={loading ? "Loading sandboxes" : "Select sandbox"}
-        emptyContent={loading ? <Spin size="small" /> : "No running sandbox"}
-        disabled={loading || runningContainers.length === 0}
-        showClear
+        emptyContent={loading ? <Spin size="small" /> : "No sandbox"}
+        disabled={disabled || loading || containers.length === 0}
+        showClear={!disabled}
         onClear={() => onChange(null)}
         onChange={(nextValue) => onChange(typeof nextValue === "number" ? nextValue : null)}
       />

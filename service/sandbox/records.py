@@ -1,13 +1,19 @@
-from sqlalchemy import String, cast, or_
+from sqlalchemy import String, cast, exists, or_
 from sqlmodel import select
 
 from database import get_async_session
 from model.egress_proxy.proxies import EgressProxy
+from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
-from model.host.hosts import ManagedHost
 from model.system_user.users import SystemUser
-from schema.sandbox.containers import SandboxContainerSchema, SandboxContainerStatus
+from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
+from schema.sandbox.containers import (
+    SandboxContainerCreateOptionsResponse,
+    SandboxContainerHostOptionSchema,
+    SandboxContainerSchema,
+    SandboxContainerStatus,
+)
 from schema.system_user.users import SystemUserRole
 from service.common.pagination import Page, paginate_statement
 from service.sandbox.egress import sandbox_egress_label
@@ -84,7 +90,20 @@ async def load_sandbox_container_record(id: int) -> SandboxContainerRecord | Non
         return _to_record(row) if row is not None else None
 
 
-def sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContainerSchema:
+def sandbox_container_can_manage(
+    container: SandboxContainer,
+    user_id: int | None,
+    user_role: SystemUserRole | None,
+) -> bool:
+    return user_role == SystemUserRole.ADMIN or (user_id is not None and container.owner_id == user_id)
+
+
+def sandbox_container_schema(
+    record: SandboxContainerRecord,
+    *,
+    user_id: int | None = None,
+    user_role: SystemUserRole | None = None,
+) -> SandboxContainerSchema:
     container = record.container
     return SandboxContainerSchema(
         id=container.id or 0,
@@ -104,22 +123,13 @@ def sandbox_container_schema(record: SandboxContainerRecord) -> SandboxContainer
         status=container.status,
         owner_id=container.owner_id,
         owner_username=record.owner_username,
+        can_manage=sandbox_container_can_manage(container, user_id, user_role),
         created_at=container.created_at,
         updated_at=container.updated_at,
     )
 
 
 async def query_sandbox_containers(
-    page: int = 1,
-    size: int = 100,
-    keyword: str = "",
-) -> Page[SandboxContainerRecord]:
-    statement = _base_container_record_statement().order_by(SandboxContainer.id)
-    statement = _apply_keyword_filter(statement, keyword)
-    return await _paginate_container_records(statement, page, size)
-
-
-async def query_available_sandbox_containers(
     user_id: int,
     user_role: SystemUserRole,
     page: int = 1,
@@ -129,6 +139,106 @@ async def query_available_sandbox_containers(
     statement = _base_container_record_statement().order_by(SandboxContainer.id)
     if user_role != SystemUserRole.ADMIN:
         statement = statement.where(SandboxContainer.owner_id == user_id)
-    statement = statement.where(SandboxContainer.status == SandboxContainerStatus.RUNNING)
     statement = _apply_keyword_filter(statement, keyword)
     return await _paginate_container_records(statement, page, size)
+
+
+async def query_available_sandbox_containers(
+    user_id: int,
+    user_role: SystemUserRole,
+    work_project_id: int | None = None,
+    include_non_running: bool = False,
+    page: int = 1,
+    size: int = 100,
+    keyword: str = "",
+) -> Page[SandboxContainerRecord]:
+    accessible_work_project_id = await _accessible_work_project_id(
+        user_id=user_id,
+        user_role=user_role,
+        work_project_id=work_project_id,
+    )
+    statement = _base_container_record_statement().order_by(SandboxContainer.id)
+    if user_role != SystemUserRole.ADMIN:
+        statement = _apply_user_available_scope(statement, user_id, accessible_work_project_id)
+    statement = _apply_available_filter(statement, accessible_work_project_id, include_non_running)
+    statement = _apply_keyword_filter(statement, keyword)
+    return await _paginate_container_records(statement, page, size)
+
+
+async def sandbox_container_create_options() -> SandboxContainerCreateOptionsResponse:
+    async with get_async_session() as session:
+        hosts = (await session.exec(select(ManagedHost).order_by(ManagedHost.id))).all()
+        images = (await session.exec(select(SandboxImage).order_by(SandboxImage.id))).all()
+    return SandboxContainerCreateOptionsResponse(
+        hosts=[
+            SandboxContainerHostOptionSchema(
+                id=host.id or 0,
+                ip_address=host.ip_address,
+                docker_management_port=host.docker_management_port,
+            )
+            for host in hosts
+        ],
+        images=images,
+    )
+
+
+async def sandbox_container_is_manageable_by_user(
+    id: int,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> bool | None:
+    async with get_async_session() as session:
+        container = await session.get(SandboxContainer, id)
+        if container is None:
+            return None
+        return sandbox_container_can_manage(container, user_id, user_role)
+
+
+async def _accessible_work_project_id(
+    *,
+    user_id: int,
+    user_role: SystemUserRole,
+    work_project_id: int | None,
+) -> int | None:
+    if work_project_id is None:
+        return None
+    async with get_async_session() as session:
+        if await session.get(WorkProject, work_project_id) is None:
+            return None
+        if user_role == SystemUserRole.ADMIN:
+            return work_project_id
+        if await session.get(WorkProjectOwner, (work_project_id, user_id)) is None:
+            return None
+        return work_project_id
+
+
+def _apply_user_available_scope(statement, user_id: int, work_project_id: int | None):
+    if work_project_id is None:
+        return statement.where(SandboxContainer.owner_id == user_id)
+    bound_to_accessible_project = exists().where(
+        WorkProjectSandboxContainer.project_id == work_project_id,
+        WorkProjectSandboxContainer.sandbox_container_id == SandboxContainer.id,
+    )
+    return statement.where(or_(SandboxContainer.owner_id == user_id, bound_to_accessible_project))
+
+
+def _apply_available_filter(
+    statement,
+    work_project_id: int | None,
+    include_non_running: bool,
+):
+    bound_elsewhere = exists().where(WorkProjectSandboxContainer.sandbox_container_id == SandboxContainer.id)
+    if work_project_id is not None:
+        bound_elsewhere = bound_elsewhere.where(WorkProjectSandboxContainer.project_id != work_project_id)
+        bound_to_project = exists().where(
+            WorkProjectSandboxContainer.sandbox_container_id == SandboxContainer.id,
+            WorkProjectSandboxContainer.project_id == work_project_id,
+        )
+        if include_non_running:
+            return statement.where(~bound_elsewhere)
+        return statement.where(
+            or_(SandboxContainer.status == SandboxContainerStatus.RUNNING, bound_to_project)
+        ).where(~bound_elsewhere)
+    if include_non_running:
+        return statement.where(~bound_elsewhere)
+    return statement.where(SandboxContainer.status == SandboxContainerStatus.RUNNING).where(~bound_elsewhere)

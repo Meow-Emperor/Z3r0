@@ -3,8 +3,8 @@ from dataclasses import dataclass
 import docker
 
 from logger import get_logger
-from schema.sandbox.containers import SandboxContainerPortMapping, SandboxContainerStatus
 from model.host.hosts import ManagedHost
+from schema.sandbox.containers import SandboxContainerPortMapping, SandboxContainerStatus
 from service.host.docker import docker_client_for_host
 
 
@@ -88,6 +88,24 @@ def stop_container_sync(host: ManagedHost, container_hash: str) -> None:
         client.close()
 
 
+def pause_container_sync(host: ManagedHost, container_hash: str) -> None:
+    client = docker_client_for_host(host)
+    try:
+        container = client.containers.get(container_hash)
+        container.pause()
+    finally:
+        client.close()
+
+
+def resume_container_sync(host: ManagedHost, container_hash: str) -> None:
+    client = docker_client_for_host(host)
+    try:
+        container = client.containers.get(container_hash)
+        container.unpause()
+    finally:
+        client.close()
+
+
 def remove_container_sync(host: ManagedHost, container_hash: str) -> None:
     client = docker_client_for_host(host)
     try:
@@ -105,6 +123,8 @@ def docker_status_to_sandbox_status(status: str) -> SandboxContainerStatus:
         return SandboxContainerStatus.RUNNING
     if normalized == "created":
         return SandboxContainerStatus.CREATED
+    if normalized == "paused":
+        return SandboxContainerStatus.PAUSED
     if normalized == "exited":
         return SandboxContainerStatus.STOPPED
     return SandboxContainerStatus.ERROR

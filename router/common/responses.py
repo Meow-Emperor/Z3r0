@@ -11,6 +11,10 @@ BAD_REQUEST_RESPONSE = {
     400: {"description": "Bad Request", "model": CommonResponse},
 }
 
+FORBIDDEN_RESPONSE = {
+    403: {"description": "Forbidden", "model": CommonResponse},
+}
+
 INTERNAL_ERROR_RESPONSE = {
     500: {"description": "Internal Server Error", "model": CommonResponse},
 }

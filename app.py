@@ -34,15 +34,16 @@ from router.system_user.users import router as system_user_router
 from router.work_project.projects import router as work_project_router
 from schema.system_user.users import SystemUserRole
 from service.agent.recovery import recover_pending_sessions
+from service.host.hosts import ensure_local_managed_host
+from service.sandbox.control_proxy import close_control_proxy_http_client
+from service.sandbox.files import close_file_http_client
+from service.sandbox.novnc import close_novnc_http_client
 from service.sandbox.status import (
     invalidate_all_agent_tool_bindings,
+    set_agent_tool_binding_invalidator,
     start_sandbox_container_status_monitor,
     stop_sandbox_container_status_monitor,
 )
-from service.sandbox.novnc import close_novnc_http_client
-from service.sandbox.files import close_file_http_client
-from service.sandbox.control_proxy import close_control_proxy_http_client
-from service.host.hosts import ensure_local_managed_host
 from service.system_user.users import create_system_user, query_system_user_by_username
 from utils.urllib3_compat import install_urllib3_closed_file_close_patch
 
@@ -110,6 +111,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         await start_subagent_runtime()
         await recover_pending_sessions()
         await get_agent_pool().start()
+        set_agent_tool_binding_invalidator(get_agent_pool().invalidate_tool_bindings)
         await start_sandbox_container_status_monitor()
 
         yield
@@ -120,6 +122,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     finally:
         await stop_sandbox_container_status_monitor()
         await invalidate_all_agent_tool_bindings()
+        set_agent_tool_binding_invalidator(None)
         await stop_subagent_runtime()
         await stop_async_sandbox_commands()
         await get_agent_pool().stop()

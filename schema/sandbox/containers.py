@@ -5,11 +5,13 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from schema.common.responses import PaginatedResponse
+from schema.sandbox.images import SandboxImageSchema
 
 
 class SandboxContainerStatus(StrEnum):
     CREATED = "created"
     RUNNING = "running"
+    PAUSED = "paused"
     STOPPED = "stopped"
     ERROR = "error"
 
@@ -55,8 +57,20 @@ class SandboxContainerSchema(BaseModel):
     status: SandboxContainerStatus
     owner_id: int
     owner_username: str
+    can_manage: bool
     created_at: datetime
     updated_at: datetime
+
+
+class SandboxContainerHostOptionSchema(BaseModel):
+    id: int
+    ip_address: str
+    docker_management_port: int
+
+
+class SandboxContainerCreateOptionsResponse(BaseModel):
+    hosts: list[SandboxContainerHostOptionSchema]
+    images: list[SandboxImageSchema]
 
 
 # create sandbox container request schema

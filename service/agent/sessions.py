@@ -397,6 +397,18 @@ async def get_session_meta(session_id: str) -> AgentSessionMeta | None:
         return await session.get(AgentSessionMeta, session_id)
 
 
+async def get_accessible_session_meta(
+    session_id: str,
+    user_id: int,
+    user_role: SystemUserRole,
+) -> AgentSessionMeta | None:
+    async with get_async_session() as session:
+        meta = await session.get(AgentSessionMeta, session_id)
+        if meta is None or not await _can_access_meta(session, meta, user_id, user_role):
+            return None
+        return meta
+
+
 async def project_id_for_session(session_id: str) -> int | None:
     meta = await get_session_meta(session_id)
     return meta.project_id if meta is not None else None

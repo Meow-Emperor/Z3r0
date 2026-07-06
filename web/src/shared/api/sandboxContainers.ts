@@ -21,13 +21,18 @@ import type {
   ListContainerFilesParams,
   ListContainerFilesResponse,
   DownloadContainerFilesParams,
+  PauseSandboxContainerPathParams,
+  PauseSandboxContainerResponse,
   QueryAvailableSandboxContainersParams,
   QueryAvailableSandboxContainersResponse,
   QuerySandboxContainersParams,
   QuerySandboxContainersResponse,
   ReadContainerFileParams,
   ReadContainerFileResponse,
+  ResumeSandboxContainerPathParams,
+  ResumeSandboxContainerResponse,
   SandboxContainer,
+  SandboxContainerCreateOptionsResponse,
   SandboxContainerPathParams,
   StartSandboxContainerPathParams,
   StartSandboxContainerResponse,
@@ -52,12 +57,24 @@ export function createSandboxContainer(payload: CreateSandboxContainerRequest) {
   return apiPost<CreateSandboxContainerResponse>(SANDBOX_CONTAINERS_PATH, payload);
 }
 
+export function getSandboxContainerCreateOptions() {
+  return apiGet<SandboxContainerCreateOptionsResponse>(`${SANDBOX_CONTAINERS_PATH}/create-options`);
+}
+
 export function startSandboxContainer(id: StartSandboxContainerPathParams["id"]) {
   return apiPost<StartSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/start`);
 }
 
 export function stopSandboxContainer(id: StopSandboxContainerPathParams["id"]) {
   return apiPost<StopSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/stop`);
+}
+
+export function pauseSandboxContainer(id: PauseSandboxContainerPathParams["id"]) {
+  return apiPost<PauseSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/pause`);
+}
+
+export function resumeSandboxContainer(id: ResumeSandboxContainerPathParams["id"]) {
+  return apiPost<ResumeSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/resume`);
 }
 
 export function updateSandboxContainerEgress(
@@ -77,6 +94,10 @@ export function buildContainerShellUrl(containerId: number) {
 
 export function canOpenContainerNoVNC(container: SandboxContainer) {
   return Boolean(container.control_proxy_host_port > 0 && container.status === SANDBOX_CONTAINER_STATUS.RUNNING);
+}
+
+export function canManageSandboxContainer(container: SandboxContainer | null | undefined) {
+  return Boolean(container?.can_manage);
 }
 
 export function buildContainerNoVNCUrl(container: SandboxContainer) {

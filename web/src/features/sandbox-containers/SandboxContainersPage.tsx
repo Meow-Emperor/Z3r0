@@ -1,9 +1,35 @@
 import { Button, Modal, Popconfirm, Select, Tag, Tooltip } from "@douyinfe/semi-ui";
-import { Box, Boxes, Fingerprint, FolderOpen, Monitor, Network, Play, Route, Square, SquareTerminal, Trash2, User } from "lucide-react";
+import {
+  Box,
+  Boxes,
+  Fingerprint,
+  FolderOpen,
+  Monitor,
+  Network,
+  Pause,
+  Play,
+  RotateCcw,
+  Route,
+  SquareStop,
+  SquareTerminal,
+  Trash2,
+  User,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";
-import { canOpenContainerNoVNC, createSandboxContainer, deleteSandboxContainer, querySandboxContainers, startSandboxContainer, stopSandboxContainer, updateSandboxContainerEgress } from "../../shared/api/sandboxContainers";
 import { queryManagedHosts } from "../../shared/api/hosts";
+import {
+  canManageSandboxContainer,
+  canOpenContainerNoVNC,
+  createSandboxContainer,
+  deleteSandboxContainer,
+  pauseSandboxContainer,
+  querySandboxContainers,
+  resumeSandboxContainer,
+  startSandboxContainer,
+  stopSandboxContainer,
+  updateSandboxContainerEgress,
+} from "../../shared/api/sandboxContainers";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { querySystemUsers } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
@@ -68,6 +94,12 @@ export function SandboxContainersPage() {
   const { run: stopContainer, busyId: stoppingId } = useResourceAction<SandboxContainer>(
     (container) => stopSandboxContainer(container.id), loadContainers,
   );
+  const { run: pauseContainer, busyId: pausingId } = useResourceAction<SandboxContainer>(
+    (container) => pauseSandboxContainer(container.id), loadContainers,
+  );
+  const { run: resumeContainer, busyId: resumingId } = useResourceAction<SandboxContainer>(
+    (container) => resumeSandboxContainer(container.id), loadContainers,
+  );
   const { run: deleteContainer, busyId: deletingId } = useResourceAction<SandboxContainer>(
     (container) => deleteSandboxContainer(container.id), loadContainers,
   );
@@ -91,10 +123,11 @@ export function SandboxContainersPage() {
     () => containers.reduce(
       (acc, container) => ({
         running: acc.running + (container.status === SANDBOX_CONTAINER_STATUS.RUNNING ? 1 : 0),
+        paused: acc.paused + (container.status === SANDBOX_CONTAINER_STATUS.PAUSED ? 1 : 0),
         created: acc.created + (container.status === SANDBOX_CONTAINER_STATUS.CREATED ? 1 : 0),
         stopped: acc.stopped + (container.status === SANDBOX_CONTAINER_STATUS.STOPPED ? 1 : 0),
       }),
-      { running: 0, created: 0, stopped: 0 },
+      { running: 0, paused: 0, created: 0, stopped: 0 },
     ),
     [containers],
   );
@@ -142,41 +175,52 @@ export function SandboxContainersPage() {
     },
     { key: "updated", header: "Updated", width: "200px", render: (c) => formatDateTime(c.updated_at) },
     {
-      key: "actions", header: "Actions", width: "150px",
-      render: (container) => (
-        <RowActions>
-          <Button icon={<FolderOpen size={15} />} theme="borderless" type="tertiary"
-            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
-            aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
-          />
-          <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
-            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
-            aria-label={`Connect shell for ${container.container_name}`} onClick={() => openShell(container)}
-          />
-          <Button icon={<Monitor size={15} />} theme="borderless" type="tertiary"
-            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || !canOpenContainerNoVNC(container)}
-            aria-label={`Connect screen for ${container.container_name}`} onClick={() => openNoVNC(container)}
-          />
-          <Button icon={<Network size={15} />} theme="borderless" type="tertiary"
-            disabled={container.control_proxy_host_port <= 0}
-            aria-label={`Set egress for ${container.container_name}`} onClick={() => setEgressModalContainer(container)}
-          />
-          <Button icon={<Play size={15} />} theme="borderless" type="primary"
-            disabled={container.status !== SANDBOX_CONTAINER_STATUS.CREATED && container.status !== SANDBOX_CONTAINER_STATUS.STOPPED}
-            loading={startingId === container.id}
-            aria-label={`Start ${container.container_name}`} onClick={() => void startContainer(container)}
-          />
-          <Button icon={<Square size={15} />} theme="borderless" type="danger"
-            disabled={container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={stoppingId === container.id}
-            aria-label={`Stop ${container.container_name}`} onClick={() => void stopContainer(container)}
-          />
-          <Popconfirm title="Delete container" content={`Delete ${container.container_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteContainer(container)}>
-            <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-              loading={deletingId === container.id} aria-label={`Delete ${container.container_name}`}
+      key: "actions", header: "Actions", width: "256px",
+      render: (container) => {
+        const canManage = canManageSandboxContainer(container);
+        return (
+          <RowActions>
+            <Button icon={<FolderOpen size={15} />} theme="borderless" type="tertiary"
+              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
+              aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
             />
-          </Popconfirm>
-        </RowActions>
-      ),
+            <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
+              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
+              aria-label={`Connect shell for ${container.container_name}`} onClick={() => openShell(container)}
+            />
+            <Button icon={<Monitor size={15} />} theme="borderless" type="tertiary"
+              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || !canOpenContainerNoVNC(container)}
+              aria-label={`Connect screen for ${container.container_name}`} onClick={() => openNoVNC(container)}
+            />
+            <Button icon={<Network size={15} />} theme="borderless" type="tertiary"
+              disabled={!canManage || container.control_proxy_host_port <= 0}
+              aria-label={`Set egress for ${container.container_name}`} onClick={() => setEgressModalContainer(container)}
+            />
+            <Button icon={<Play size={15} />} theme="borderless" type="primary"
+              disabled={!canManage || (container.status !== SANDBOX_CONTAINER_STATUS.CREATED && container.status !== SANDBOX_CONTAINER_STATUS.STOPPED)}
+              loading={startingId === container.id}
+              aria-label={`Start ${container.container_name}`} onClick={() => void startContainer(container)}
+            />
+            <Button icon={<SquareStop size={15} />} theme="borderless" type="danger"
+              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={stoppingId === container.id}
+              aria-label={`Stop ${container.container_name}`} onClick={() => void stopContainer(container)}
+            />
+            <Button icon={<Pause size={15} />} theme="borderless" type="tertiary"
+              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={pausingId === container.id}
+              aria-label={`Pause ${container.container_name}`} onClick={() => void pauseContainer(container)}
+            />
+            <Button icon={<RotateCcw size={15} />} theme="borderless" type="primary"
+              disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.PAUSED} loading={resumingId === container.id}
+              aria-label={`Resume ${container.container_name}`} onClick={() => void resumeContainer(container)}
+            />
+            <Popconfirm title="Delete container" content={`Delete ${container.container_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteContainer(container)}>
+              <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
+                disabled={!canManage} loading={deletingId === container.id} aria-label={`Delete ${container.container_name}`}
+              />
+            </Popconfirm>
+          </RowActions>
+        );
+      },
     },
   ];
 
@@ -189,6 +233,7 @@ export function SandboxContainersPage() {
         metrics={[
           { label: "Total", value: total },
           { label: "Running", value: summary.running },
+          { label: "Paused", value: summary.paused },
           { label: "Created", value: summary.created },
           { label: "Stopped", value: summary.stopped },
         ]}

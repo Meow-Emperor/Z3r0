@@ -951,6 +951,10 @@ def _context_for_notification(
     base: AgentRuntimeContext,
     notification: AgentNotificationSnapshot,
 ) -> AgentRuntimeContext:
+    sandbox_container_id, sandbox_generation, sandbox_skill_metadata = _notification_sandbox_scope(
+        base,
+        notification,
+    )
     return AgentRuntimeContext(
         session_id=base.session_id,
         user=base.user,
@@ -959,10 +963,25 @@ def _context_for_notification(
         nested_for_agent_code=notification.nested_for_agent_code,
         nested_call_id=notification.nested_call_id,
         knowledge_generation=base.knowledge_generation,
-        sandbox_container_id=notification.sandbox_container_id,
-        sandbox_container_generation=notification.sandbox_container_generation,
-        sandbox_skill_metadata=notification.sandbox_skill_metadata,
+        sandbox_container_id=sandbox_container_id,
+        sandbox_container_generation=sandbox_generation,
+        sandbox_skill_metadata=sandbox_skill_metadata,
         work_project_id=base.work_project_id,
+    )
+
+
+def _notification_sandbox_scope(
+    base: AgentRuntimeContext,
+    notification: AgentNotificationSnapshot,
+) -> tuple[int | None, int, tuple[str, ...]]:
+    if notification.sandbox_container_id is None:
+        return None, 0, ()
+    if notification.sandbox_container_id != base.sandbox_container_id:
+        return None, 0, ()
+    return (
+        base.sandbox_container_id,
+        base.sandbox_container_generation,
+        base.sandbox_skill_metadata,
     )
 
 

@@ -41,7 +41,6 @@ export function SandboxContainerFormModal({
   onCancel,
   onSubmit,
 }: SandboxContainerFormModalProps) {
-  const availableImages = useMemo(() => images, [images]);
   const [hostId, setHostId] = useState<number | undefined>();
   const [imageId, setImageId] = useState<number | undefined>();
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
@@ -133,10 +132,10 @@ export function SandboxContainerFormModal({
           prefix={<Boxes size={16} />}
           value={imageId}
           loading={imagesLoading}
-          disabled={availableImages.length === 0}
+          disabled={images.length === 0}
           placeholder="Select a sandbox image"
           onChange={selectImage}
-          optionList={availableImages.map((image) => ({
+          optionList={images.map((image) => ({
             label: `${image.image_name} · control ${image.control_proxy_port}`,
             value: image.id,
           }))}
