@@ -190,10 +190,9 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             emptyContent={sandboxLoading ? <Spin size="small" /> : "No running sandbox containers"}
             loading={sandboxLoading}
             showClear
-            renderSelectedItem={(option: { value?: number }) => ({
-              isRenderInTag: true,
-              content: sandboxContainers.find((container) => container.id === option.value)?.container_name ?? String(option.value ?? ""),
-            })}
+            renderSelectedItem={(option: { value?: number }) => (
+              sandboxContainers.find((container) => container.id === option.value)?.container_name ?? String(option.value ?? "")
+            )}
             onClear={() => setValues((v) => ({ ...v, sandbox_container_id: null }))}
             onChange={(value) => setValues((v) => ({
               ...v,
