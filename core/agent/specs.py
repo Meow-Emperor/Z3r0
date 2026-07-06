@@ -5,13 +5,6 @@ from agents import Tool
 from core.agent.constants import DEFAULT_AGENT_CODE
 from core.tools.knowledge import create_knowledge, find_knowledge, load_knowledge, update_knowledge
 from core.tools.work_project import (
-    load_work_project_agent_summaries,
-    load_work_project_metadata,
-    load_work_project_tasks,
-    update_work_project_agent_summary,
-    update_work_project_tasks,
-)
-from core.tools.work_project_records import (
     create_or_update_work_project_asset,
     create_or_update_work_project_attack_path,
     create_or_update_work_project_attack_path_step,
@@ -20,7 +13,12 @@ from core.tools.work_project_records import (
     delete_work_project_record,
     list_work_project_assets,
     list_work_project_findings,
+    load_work_project_agent_summaries,
     load_work_project_graph,
+    load_work_project_metadata,
+    load_work_project_tasks,
+    update_work_project_agent_summary,
+    update_work_project_tasks,
 )
 from core.tools.sandbox import (
     cancel_sandbox_async_job,
