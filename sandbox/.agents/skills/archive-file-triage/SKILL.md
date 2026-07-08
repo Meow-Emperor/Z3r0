@@ -13,8 +13,9 @@ Before constructing commands, use installed help or version output as the source
 
 ```sh
 file --help
-7z
+7z i
 unzip -h
+tar --help
 ```
 
 ## Usage Rules
@@ -27,6 +28,38 @@ unzip -h
 - Do not execute extracted content.
 - Watch for path traversal, absolute paths, symlinks, excessive file counts, nested archives, and unexpectedly large expansion.
 - Save large listings and extraction logs to files rather than streaming them into the conversation.
+
+## Common Workflows
+
+Identify and hash before extraction:
+
+```sh
+file artifact.bin
+sha256sum artifact.bin
+```
+
+List archive contents first:
+
+```sh
+7z l archive.7z
+unzip -l archive.zip
+tar -tf archive.tar
+```
+
+Extract into a task-scoped directory:
+
+```sh
+mkdir -p extracted
+7z x archive.7z -oextracted
+unzip archive.zip -d extracted
+tar -xf archive.tar -C extracted
+```
+
+After extraction, inspect file types before any deeper analysis:
+
+```sh
+find extracted -maxdepth 2 -type f -exec file '{}' +
+```
 
 ## Output
 

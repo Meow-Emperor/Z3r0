@@ -1,11 +1,19 @@
 ---
 name: ghidra
-description: "Reverse engineer binaries using Ghidra's headless analyzer. Decompile executables, extract functions, strings, symbols, and analyze call graphs without GUI."
+description: Use Ghidra headless analysis for authorized binary reverse engineering, decompilation, function/string/symbol export, and call graph analysis without a GUI.
 ---
 
-# Ghidra Headless Analysis Skill
+# ghidra
 
-Perform automated reverse engineering using Ghidra's `analyzeHeadless` tool. Import binaries, run analysis, decompile to C code, and extract useful information.
+Use Ghidra's `analyzeHeadless` tool through the bundled wrapper for automated reverse engineering. Import binaries, run analysis, decompile to C code, and export functions, strings, symbols, and call graphs.
+
+## Help First
+
+Before constructing commands, run the wrapper help and use it as the source of truth:
+
+```bash
+.agents/skills/ghidra/scripts/ghidra-analyze.sh --help
+```
 
 ## Resource Paths
 
@@ -24,15 +32,19 @@ Perform automated reverse engineering using Ghidra's `analyzeHeadless` tool. Imp
 | Get call graph | `.agents/skills/ghidra/scripts/ghidra-analyze.sh -s ExportCalls.java -o ./output binary` |
 | Export symbols | `.agents/skills/ghidra/scripts/ghidra-analyze.sh -s ExportSymbols.java -o ./output binary` |
 
----
-
-## Usage
+## Usage Rules
 
 ```bash
 .agents/skills/ghidra/scripts/ghidra-analyze.sh [options] <binary>
 ```
 
 Always call the wrapper with its `.agents/skills/ghidra/...` path. It handles project creation/cleanup and provides a simpler interface to `analyzeHeadless`.
+
+- Work only on provided binaries or explicitly authorized artifacts.
+- Prefer `ExportAll.java` for first-pass analysis unless the task needs a narrower export.
+- Use task-scoped output directories and save logs instead of streaming large decompiler output into the conversation.
+- Specify `--processor` and `--cspec` when auto-detection is wrong or firmware context is known.
+- Use `--timeout` for large or hostile samples and `--keep-project` only when the task requires later project reuse.
 
 **Options:**
 - `-o, --output <dir>` - Output directory for results (default: current dir)
@@ -47,8 +59,6 @@ Always call the wrapper with its `.agents/skills/ghidra/...` path. It handles pr
 - `--project-dir <dir>` - Directory for Ghidra project (default: /tmp)
 - `--project-name <name>` - Project name (default: auto-generated)
 - `-v, --verbose` - Verbose output
-
----
 
 ## Built-in Export Scripts
 
@@ -125,8 +135,6 @@ Export all symbols: imports, exports, and internal symbols.
 
 **Output:** `{name}_symbols.json`
 
----
-
 ## Common Workflows
 
 ### Analyze an Unknown Binary
@@ -186,8 +194,6 @@ for bin in ./samples/*; do
 done
 ```
 
----
-
 ## Architecture/Processor IDs
 
 Common processor IDs for the `-p` option:
@@ -206,14 +212,14 @@ Find all available processors:
 ls /opt/ghidra/Ghidra/Processors/
 ```
 
----
-
 ## Troubleshooting
 
 ### Ghidra Not Found
+
+Inside the sandbox, `GHIDRA_HOME` is `/opt/ghidra` and the wrapper should find `/usr/local/bin/analyzeHeadless`. If running the skill outside the image, set `GHIDRA_HOME` explicitly:
+
 ```bash
-# Set GHIDRA_HOME if in non-standard location
-export GHIDRA_HOME=/path/to/ghidra_11.x_PUBLIC
+export GHIDRA_HOME=/path/to/ghidra_PUBLIC
 .agents/skills/ghidra/scripts/ghidra-analyze.sh ...
 ```
 
@@ -227,7 +233,9 @@ export GHIDRA_HOME=/path/to/ghidra_11.x_PUBLIC
 ```
 
 ### Out of Memory
-Edit the `analyzeHeadless` script or set:
+
+Set a larger Ghidra heap before running the wrapper:
+
 ```bash
 export MAXMEM=4G
 ```
@@ -238,8 +246,6 @@ Explicitly specify the processor:
 .agents/skills/ghidra/scripts/ghidra-analyze.sh -p "ARM:LE:32:v7" -s ExportAll.java firmware.bin
 ```
 
----
-
 ## Tips
 
 1. **Start with ExportAll.java** - It gives you everything and the summary helps orient you
@@ -247,3 +253,7 @@ Explicitly specify the processor:
 3. **Use jq for JSON parsing** - The JSON exports are designed to be machine-readable
 4. **Decompilation isn't perfect** - Use it as a guide, cross-reference with disassembly
 5. **Large binaries take time** - Use `--timeout` and consider `--no-analysis` for quick scans
+
+## Output
+
+Report the artifact path, wrapper command used, output directory, key exported files, architecture or processor assumptions, relevant findings, and limitations such as timeout, decompiler failures, or unresolved processor selection.

@@ -94,7 +94,7 @@ Z3r0 将系统划分为四个架构平面：
 | 控制平面 | 用户、系统配置、智能体、会话、WorkProject、托管主机、沙箱镜像、沙箱容器和出口代理。 |
 | 运行时平面 | 多智能体会话执行、实时事件流、长周期任务连续性、历史投影和时间线回放。 |
 | 证据平面 | 项目范围、资产、漏洞发现、关系图、攻击路径、任务进度和智能体摘要。 |
-| 执行平面 | Docker 主机、沙箱容器、Shell/文件/noVNC 访问、命令执行、沙箱技能和出站网络策略。 |
+| 执行平面 | Docker 主机、沙箱容器、Shell/文件/noVNC 访问、命令执行、沙箱内 skills、内置安全工具集和出站网络策略。 |
 
 这种划分也体现在代码结构中：router 与 handler 暴露应用契约，service 承载领域行为，model 定义持久状态，React 工作台消费稳定的 REST/WebSocket 接口。
 
@@ -196,7 +196,9 @@ flowchart TB
   Policy --> SOCKS
 ```
 
-沙箱不是附属工具调用，而是受管理的基础设施。管理员可以管理 Docker 主机、沙箱镜像、运行容器、端口映射和项目绑定。操作者与智能体通过选定的运行中容器工作，同一沙箱边界承载命令执行、Shell 会话、文件管理、浏览器/noVNC 复核和沙箱内技能。
+沙箱不是附属工具调用，而是受管理的基础设施。管理员可以管理 Docker 主机、沙箱镜像、运行容器、端口映射和项目绑定。操作者与智能体通过选定的运行中容器工作，同一沙箱边界承载命令执行、Shell 会话、文件管理、浏览器/noVNC 复核和沙箱内 skills。
+
+默认 sandbox 镜像不是裸 Shell，而是预装的安全工作空间。它包含侦察与 DNS 工具（`subfinder`、`amass`、`dnsx`、`dig`、`whois`）、HTTP 探测与 Web 发现工具（`httpx`、`ffuf`、`gobuster`、`observer_ward`、`sqlmap`、`nmap`）、受控凭据测试能力（`hydra`）、Android 与固件分析工具（`jadx`、`apktool`、`Ghidra`、`binwalk`）、二进制与 pwn 工具链（`gdb`、Pwndbg、`strace`、`ltrace`、`pwntools` 以及由 `pwntools` 提供的 `checksec`）、通过 `agent-browser-cli` 支持的浏览器自动化能力，以及内置 SecLists 字典语料。Python 工具链以 `uv` 为默认路径，任务虚拟环境、一次性 Python 运行和持久 Python CLI 都应显式选择解释器，避免随意使用全局 `pip` 安装。
 
 出站流量通过容器级出口配置归一化。沙箱运行时将代理环境变量指向容器内本地代理，控制平面可以将上游策略更新为直连或托管的 HTTP、HTTPS、SOCKS5 代理。该设计为网络身份、流量路由和操作者环境隔离提供统一策略面。
 
@@ -208,6 +210,7 @@ flowchart TB
 | 项目证据平面 | WorkProject 将临时分析输出转化为持久记录、关系图、攻击路径、任务和摘要。 |
 | 可回放事件时间线 | 前端消费标准化时间线事件，同一模型支持实时流和历史回放。 |
 | 分布式沙箱资源 | 托管 Docker 主机、镜像和容器使执行环境可以隔离、扩展并绑定到项目。 |
+| 预装 sandbox 工具链 | 默认 sandbox 镜像围绕 sandbox 内 skills 提供侦察、DNS、Web 发现、凭据测试、Android、固件、逆向、浏览器、Python 和字典能力。 |
 | 统一出口层 | 容器流量可通过直连、HTTP、HTTPS 或 SOCKS5 模式路由，并由平台统一管理策略。 |
 | 操作者工作台 | 前端将对话、项目记录、图谱复核、沙箱选择、终端、文件和 noVNC 组织为统一流程。 |
 

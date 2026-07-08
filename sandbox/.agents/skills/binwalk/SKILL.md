@@ -25,6 +25,33 @@ binwalk --help
 - Do not execute extracted files.
 - Save large listings, extraction logs, and recursive output to files rather than streaming them into the conversation.
 
+## Common Workflows
+
+Signature scan without extraction:
+
+```sh
+binwalk firmware.bin
+```
+
+Bounded extraction into a task directory:
+
+```sh
+mkdir -p binwalk-out
+binwalk -e -C binwalk-out firmware.bin
+```
+
+Review extracted file types before further analysis:
+
+```sh
+find binwalk-out -maxdepth 3 -type f -exec file '{}' +
+```
+
+Use recursive extraction only when the artifact scope and expected expansion are clear:
+
+```sh
+binwalk -Me -C binwalk-out firmware.bin
+```
+
 ## Output
 
 Report the artifact path, command used, output directory, notable offsets or embedded content, extracted paths, and limitations such as failed extraction or unsupported formats.

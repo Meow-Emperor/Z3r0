@@ -25,7 +25,8 @@ The platform mirrors the operating model of a real red team. A lead agent coordi
 | Session-level runtime architecture | Each session binds an independent agent graph and tool snapshot, supporting interruption, cancellation, recovery, and continuous execution. |
 | Background subagent tasks | Subagents can run as persistent background tasks and wake the parent agent for result integration and follow-up planning. |
 | Asynchronous sandbox task system | Long-running commands execute as asynchronous tasks with persisted state, preventing tool execution from blocking the main workflow. |
-| Controlled sandbox execution environment | Skill loading, command execution, and output reading are wrapped in the sandbox toolchain for isolated execution and traceable results. |
+| Controlled sandbox execution environment | Skill loading, command execution, output reading, browser/noVNC review, and file access are wrapped in the sandbox boundary for isolated execution and traceable results. |
+| Preloaded sandbox security toolchain | The default sandbox image bundles recon, DNS, HTTP probing, web discovery, credential testing, Android, firmware, reverse engineering, pwn, browser, Python, and wordlist capabilities behind sandbox-local skills. |
 | Distributed test management | Multiple hosts, images, and containers are managed to support parallel testing, environment isolation, and resource scheduling. |
 | Proxy egress environment isolation | Sandbox containers can bind HTTP, HTTPS, and SOCKS5 proxy egress to reduce exposure of the operator environment. |
 | Project-oriented red team workflow | WorkProject centralizes assets, vulnerability findings, relationship graphs, and attack paths so the process remains traceable and reviewable. |
@@ -57,7 +58,7 @@ flowchart TB
   Runtime --> Timeline --> Store
 ```
 
-The architecture uses FastAPI as the control plane for sessions, projects, and execution resources. The core runtime is driven by agent sessions, which organize the lead agent and expert agents through the session agent graph. The tool orchestration layer connects sandbox execution, project records, asynchronous tasks, and the event timeline. Distributed sandbox resources provide isolated execution environments for authorized security testing, while WorkProject persists assets, vulnerability findings, and attack paths as traceable and reviewable project evidence. PostgreSQL stores session state, task progress, vulnerability findings, asset relationships, attack paths, and replayable events so the full workflow remains traceable and reviewable.
+The architecture uses FastAPI as the control plane for sessions, projects, and execution resources. The core runtime is driven by agent sessions, which organize the lead agent and expert agents through the session agent graph. The tool orchestration layer connects sandbox execution, project records, asynchronous tasks, and the event timeline. Distributed sandbox resources provide isolated execution environments with browser access, file access, controlled egress, sandbox-local skills, and a preloaded security toolchain for authorized testing, while WorkProject persists assets, vulnerability findings, and attack paths as traceable and reviewable project evidence. PostgreSQL stores session state, task progress, vulnerability findings, asset relationships, attack paths, and replayable events so the full workflow remains traceable and reviewable.
 
 ## Expert Team
 

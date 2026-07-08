@@ -94,7 +94,7 @@ Z3r0 separates the system into four architectural planes:
 | Control plane | Users, system configuration, agents, sessions, WorkProjects, managed hosts, sandbox images, sandbox containers, and egress proxies. |
 | Runtime plane | Multi-agent session execution, live event streaming, long-running task continuity, history projection, and timeline replay. |
 | Evidence plane | Project scope, assets, findings, relationship graph, attack paths, task progress, and per-agent summaries. |
-| Execution plane | Docker hosts, sandbox containers, shell/file/noVNC access, command execution, sandbox skills, and outbound network policy. |
+| Execution plane | Docker hosts, sandbox containers, shell/file/noVNC access, command execution, sandbox-local skills, built-in security tooling, and outbound network policy. |
 
 This separation is reflected in the repository structure: routers and handlers expose application contracts, services own domain behavior, models define persistent state, and the React workbench consumes the stable REST/WebSocket surface.
 
@@ -198,6 +198,8 @@ flowchart TB
 
 Sandboxing is treated as infrastructure, not as an incidental tool call. Administrators manage Docker hosts, sandbox images, running containers, exposed ports, and project bindings. Operators and agents work through selected running containers, and the same sandbox boundary supports command execution, shell sessions, file management, browser/noVNC review, and sandbox-local skills.
 
+The default sandbox image is a preloaded security workspace rather than a bare shell. It includes reconnaissance and DNS tools (`subfinder`, `amass`, `dnsx`, `dig`, `whois`), HTTP probing and web discovery tools (`httpx`, `ffuf`, `gobuster`, `observer_ward`, `sqlmap`, `nmap`), bounded credential-testing support (`hydra`), Android and firmware analysis tools (`jadx`, `apktool`, `Ghidra`, `binwalk`), binary and pwn tooling (`gdb`, Pwndbg, `strace`, `ltrace`, `pwntools`, and the `pwntools`-provided `checksec`), browser automation through `agent-browser-cli`, and a built-in SecLists wordlist corpus. Python tooling is intentionally centered on `uv` so task environments, one-off Python runs, and persistent Python CLIs use explicit interpreter selection instead of ad hoc global `pip` installs.
+
 Outbound traffic is normalized through a container-level egress profile. The sandbox runtime exports proxy environment variables to a local proxy inside the container; the control plane can update the upstream policy to direct access or a managed HTTP, HTTPS, or SOCKS5 proxy. This gives the platform a unified place to manage network identity, traffic routing, and operator-environment isolation.
 
 ## Technical Highlights
@@ -208,6 +210,7 @@ Outbound traffic is normalized through a container-level egress profile. The san
 | Project evidence plane | WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries. |
 | Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
 | Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
+| Preloaded sandbox toolchain | The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills. |
 | Unified egress layer | Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface. |
 | Operator workbench | The frontend combines chat, project records, graph review, sandbox selector, terminal, files, and noVNC into one workflow. |
 

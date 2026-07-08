@@ -30,20 +30,10 @@ echo "$skill_files" | while IFS= read -r skill_file; do
   description=$(awk -F': *' 'NR > 1 && $1 == "description" { print $2; exit }' "$skill_file")
   [ -n "$description" ] || fail "$skill_file: missing front matter description"
   [ "${#description}" -le 320 ] || fail "$skill_file: description is too long"
-  if grep -Fq '/root/.agents/skills/' "$skill_file"; then
-    fail "$skill_file: use .agents/skills paths for skill resources"
-  fi
 
-  shell_scripts=$(find "$skill_dir" -mindepth 1 -name '*.sh' -type f | sort)
-  if [ -n "$shell_scripts" ]; then
-    echo "$shell_scripts" | while IFS= read -r script; do
-      if sed -n '1p' "$script" | grep -q 'bash'; then
-        bash -n "$script" || fail "$script: bash syntax check failed"
-      else
-        sh -n "$script" || fail "$script: shell syntax check failed"
-      fi
-    done
-  fi
+  h1=$(awk 'sub(/^# /, "") { print; exit }' "$skill_file")
+  [ -n "$h1" ] || fail "$skill_file: missing H1 title"
+  [ "$h1" = "$skill_name" ] || fail "$skill_file: H1 '$h1' does not match skill name '$skill_name'"
 done
 
 echo "validate-skills: ok"

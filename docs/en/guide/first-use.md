@@ -25,8 +25,8 @@ The system contains the following core modules:
 2. Work Projects: manages work projects, including creation, editing, and review.
 3. Host Management: manages host nodes and orchestrates the runtime environment for sandbox containers.
 4. Egress Proxies: manages unified network egress through HTTP, HTTPS, and SOCKS5 proxies.
-5. Sandbox Images: manages customized sandbox images for different task requirements.
-6. Sandbox Containers: orchestrates and configures runnable sandbox containers.
+5. Sandbox Images: manages customized sandbox images, including the default image with sandbox-local skills and preloaded security tooling.
+6. Sandbox Containers: orchestrates runnable sandbox containers with command execution, files, noVNC/browser review, and egress configuration.
 7. System Users: manages system users, roles, and related identity information.
 8. System Config: manages runtime configuration and supports hot updates.
 

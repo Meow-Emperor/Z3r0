@@ -81,9 +81,9 @@ const planes: CardItem[] = [
   {
     title: "Execution Plane",
     kicker: "Sandbox pool",
-    text: "Provides isolated Docker-based execution with shell, files, noVNC, command execution, sandbox skills, and container-level outbound network policy.",
+    text: "Provides isolated Docker-based execution with shell, files, noVNC/browser review, command execution, sandbox-local skills, a preloaded security toolchain, and container-level outbound network policy.",
     icon: SquareTerminal,
-    items: ["Managed Docker hosts", "Sandbox control proxy", "Unified egress"],
+    items: ["Managed Docker hosts", "Sandbox control proxy", "Preloaded toolchain"],
   },
 ];
 
@@ -129,8 +129,47 @@ const workbenchSurfaces: CardItem[] = [
   { title: "Work Projects", text: "Project metadata, owners, scoped assets, sessions, records, graph, and attack paths.", icon: FolderKanban },
   { title: "Host Management", text: "Docker host inventory for distributing sandbox workloads across managed infrastructure.", icon: Server },
   { title: "Egress Proxies", text: "Managed HTTP, HTTPS, and SOCKS5 upstreams for container-level outbound routing.", icon: Network },
-  { title: "Sandbox Images", text: "Reusable execution baselines that define the tools and control proxy available to containers.", icon: Boxes },
+  { title: "Sandbox Images", text: "Reusable execution baselines that define the sandbox-local skills, security tools, browser support, and control proxy available to containers.", icon: Boxes },
   { title: "Sandbox Containers", text: "Runtime instances with owner, status, ports, control proxy token, and egress mode.", icon: SquareTerminal },
+];
+
+const sandboxToolchain: CardItem[] = [
+  {
+    title: "Recon and DNS",
+    text: "Passive discovery, deeper asset intelligence, batch DNS validation, and targeted ownership triage.",
+    icon: Network,
+    items: ["subfinder", "amass", "dnsx", "dig / whois"],
+  },
+  {
+    title: "Web discovery",
+    text: "HTTP liveness, fingerprinting, content discovery, virtual-host checks, service scanning, and injection validation.",
+    icon: FileSearch,
+    items: ["httpx", "observer_ward", "ffuf / gobuster", "nmap / sqlmap"],
+  },
+  {
+    title: "Credential testing",
+    text: "Bounded authentication checks with explicit scope, account limits, and lockout-aware execution.",
+    icon: LockKeyhole,
+    items: ["hydra", "SecLists directories", "rate-conscious workflows"],
+  },
+  {
+    title: "Reverse and pwn",
+    text: "ELF triage, debugger state, runtime traces, exploit prototyping, and mitigation review.",
+    icon: Code2,
+    items: ["gdb + Pwndbg", "strace / ltrace", "pwntools", "checksec from pwntools"],
+  },
+  {
+    title: "Mobile and firmware",
+    text: "Android decompilation, resource/smali inspection, firmware triage, and headless binary analysis.",
+    icon: Boxes,
+    items: ["jadx", "apktool", "binwalk", "Ghidra"],
+  },
+  {
+    title: "Browser, Python, wordlists",
+    text: "Chrome automation, noVNC review, uv-first Python workflows, and a build-time SecLists corpus.",
+    icon: SquareTerminal,
+    items: ["agent-browser-cli", "uv / uvx", "SecLists", "sandbox skills"],
+  },
 ];
 
 const agents: AgentItem[] = [
@@ -206,9 +245,19 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
           </div>
           <div className="landing-panel landing-topology-copy">
             <h3>Sandboxing is a managed resource boundary, not an incidental command runner.</h3>
-            <p>Operators and agents work through selected running containers. The same boundary supports command execution, shell, files, browser/noVNC review, sandbox skills, and container-level network identity.</p>
+            <p>Operators and agents work through selected running containers. The same boundary supports command execution, shell, files, browser/noVNC review, sandbox-local skills, preloaded security tooling, and container-level network identity.</p>
             <p>Egress policy is applied inside the container through a local proxy and can be routed directly or through managed HTTP, HTTPS, and SOCKS5 upstreams.</p>
           </div>
+        </div>
+      </Section>
+
+      <Section
+        eyebrow="Sandbox toolchain"
+        title="The default sandbox image ships as a ready security workspace, not a bare container."
+        description="Tooling is grouped behind sandbox-local skills so agents can choose the right workflow for recon, web discovery, credential checks, reverse analysis, browser review, Python tasks, and wordlist use without treating overlapping tools as interchangeable."
+      >
+        <div className="landing-card-grid landing-card-grid-3">
+          {sandboxToolchain.map((item) => <Card key={item.title} item={item} accent />)}
         </div>
       </Section>
 

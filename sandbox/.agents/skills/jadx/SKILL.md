@@ -1,20 +1,31 @@
 ---
 name: jadx
-description: Android APK decompiler for converting DEX bytecode to readable Java source with the jadx CLI. Use for APK decompilation, app logic review, vulnerability discovery, hardcoded credential checks, API endpoint discovery, and Android reverse engineering.
+description: Use jadx for authorized Android APK, DEX, AAR, and JAR decompilation, app logic review, API endpoint discovery, credential checks, and mobile reverse engineering.
 ---
 
-# Jadx CLI
+# jadx
 
 Use `jadx` to decompile Android APK, DEX, AAR, and JAR inputs into readable Java source and decoded resources. Prefer CLI output that can be searched, scripted, and archived.
 
-## Prerequisites
+## Help First
 
-- `jadx` must be installed and available in `PATH`.
-- Java runtime must be available.
-- Output directories need write permission.
-- Decompiled output can be several times larger than the input APK.
+Before constructing commands, run the installed help and use it as the source of truth:
 
-## Core Commands
+```bash
+jadx --help
+```
+
+## Usage Rules
+
+- Work only on provided Android artifacts or explicitly authorized mobile applications.
+- Prefer task-scoped output directories and preserve the original input file.
+- Ensure the output directory is writable and has enough space because decompiled output can be several times larger than the input.
+- Start from `resources/AndroidManifest.xml`, then inspect entry points and security-sensitive packages under `sources/`.
+- Use `--deobf` for obfuscated apps and `--show-bad-code` when partial decompilation is useful.
+- Use `apktool` when manifest, resources, smali, or packaging fidelity matters more than readable Java-like source.
+- Save large grep results and decompiled snippets to files rather than streaming them into the conversation.
+
+## Common Workflows
 
 ```bash
 # Standard decompilation
@@ -126,20 +137,19 @@ done
 ## Useful Options
 
 - `--deobf`: rename obfuscated classes and members where possible.
-- `--deobf-use-sourcename`: use source file names as deobfuscation hints.
+- `--use-source-name-as-class-name-alias`: use source file names as deobfuscation hints; valid values include `always`, `if-better`, and `never`.
 - `--show-bad-code`: emit partial code for methods jadx cannot cleanly decompile.
 - `--fallback`: use fallback decompilation when normal output fails.
 - `--no-res`: skip resources for faster source-only analysis.
 - `--no-src`: decode resources without Java source output.
 - `--export-gradle`: export a Gradle project layout.
 - `-j <threads>`: set decompilation thread count.
-- `-Xmx<size>`: set Java heap size, for example `-Xmx4096m`.
 
 ## Troubleshooting
 
 ```bash
 # Obfuscated names make code hard to follow
-jadx --deobf --deobf-use-sourcename app.apk -d app-jadx
+jadx --deobf --use-source-name-as-class-name-alias if-better app.apk -d app-jadx
 
 # Decompiler errors hide important logic
 jadx --show-bad-code --fallback app.apk -d app-jadx
@@ -147,19 +157,10 @@ jadx --show-bad-code --fallback app.apk -d app-jadx
 # Large APK is slow
 jadx --no-res -j 8 app.apk -d app-code
 
-# Out of memory
-jadx -Xmx4096m app.apk -d app-jadx
-
 # Need build-like project structure
 jadx --export-gradle app.apk -d app-project
 ```
 
-## Reporting Findings
+## Output
 
-When reporting results, include:
-
-- APK name and hash if available.
-- jadx command used.
-- Relevant file paths under `sources/` or `resources/`.
-- Exact constants, URLs, method names, or component names found.
-- Why the finding matters and what evidence supports it.
+Report the APK or artifact path, hash if available, jadx command used, output directory, relevant paths under `sources/` or `resources/`, exact constants/URLs/methods/components found, why the finding matters, and limitations such as decompiler errors or obfuscation.

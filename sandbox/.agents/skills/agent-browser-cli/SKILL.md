@@ -1,13 +1,13 @@
 ---
 name: agent-browser-cli
-description: Use agent-browser-cli to perceive and control the supervised Chromium browser inside the sandbox, interact with pages, capture screenshots/PDFs, inspect cookies/CDP/network/console state, and troubleshoot only when needed.
+description: Use agent-browser-cli to perceive and control the supervised Chrome browser inside the sandbox, interact with pages, capture screenshots/PDFs, inspect cookies/CDP/network/console state, and troubleshoot only when needed.
 ---
 
 # agent-browser-cli
 
 Use `agent-browser-cli` when a task requires browser perception, browser control, page interaction, screenshots, PDFs, cookies, Chrome DevTools Protocol, network logs, console logs, or browser troubleshooting.
 
-`agent-browser-cli` controls the sandbox's supervised Chromium through a Rust daemon and the bundled Chrome extension bridge. The browser is launched by `supervisord` with profile data under `/data` and the extension loaded from `/opt/agent-browser/chrome-extension`. It is not Selenium or Playwright.
+`agent-browser-cli` controls the sandbox's supervised Chrome through a Rust daemon and the bundled Chrome extension bridge. The browser is launched by `supervisord` with profile data under `/data` and the extension loaded from `/opt/agent-browser/chrome-extension`. It is not Selenium or Playwright.
 
 ## Core Rules
 
@@ -384,17 +384,6 @@ return input.files.length;
 
 Enter troubleshooting only after a failed target command, an explicit browser/extension/connectivity error, or a direct user request.
 
-Allowed lightweight troubleshooting commands:
-
-```bash
-agent-browser-cli status
-agent-browser-cli doctor
-agent-browser-cli logs --tail 100
-agent-browser-cli restart
-agent-browser-cli stop
-agent-browser-cli tabs
-```
-
 Interpret `status` carefully:
 
 - `ok=true` means the status command executed successfully.
@@ -428,7 +417,7 @@ Typical status:
 
 Handle in this order:
 
-1. Confirm the supervised Chromium process is running.
+1. Confirm the supervised Chrome process is running.
 2. Confirm the `/opt/agent-browser/chrome-extension` extension is loaded.
 3. Confirm the extension popup port equals the `configured_port` shown by `doctor`.
 4. Ask the user to reload the extension in `chrome://extensions`.
@@ -497,7 +486,7 @@ agent-browser-cli stop
 
 `stop` stops only the daemon.
 
-## Response Discipline
+## Output
 
 When using this skill in an agent response:
 

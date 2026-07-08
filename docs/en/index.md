@@ -26,7 +26,7 @@ features:
   - title: Asynchronous task runtime
     details: Run long commands and subagent tasks in the background, then resume context automatically when they finish to reduce waiting and preserve task state.
   - title: Distributed sandbox resource pool
-    details: Support multiple hosts, Docker containers, and project-bound environments so test infrastructure can be isolated, scaled, and switched by project.
+    details: Support multiple hosts, Docker containers, project-bound environments, and a preloaded security toolchain so test infrastructure can be isolated, scaled, and switched by project.
   - title: Controlled egress and identity isolation
     details: Reduce exposure of the operator environment through proxy egress, sandbox boundaries, and independent execution environments, making the platform better suited to authorized penetration-testing scenarios.
   - title: Structured evidence retention

@@ -25,6 +25,30 @@ apktool --help
 - Do not rebuild, sign, patch, or modify an APK unless the user explicitly asks and the scope permits it.
 - Use `jadx` when readable Java/Kotlin-like source is needed; use `apktool` when manifest, resources, smali, or packaging fidelity matters.
 
+## Common Workflows
+
+Decode an APK into a task directory:
+
+```sh
+apktool d app.apk -o app-apktool
+```
+
+Inspect manifest, resources, and smali after decoding:
+
+```sh
+sed -n '1,200p' app-apktool/AndroidManifest.xml
+find app-apktool/res -maxdepth 3 -type f | sort
+find app-apktool/smali -type f -name '*.smali' | head
+```
+
+Search decoded output for common static-analysis leads:
+
+```sh
+rg -n 'https?://|api.?key|secret|token|password|WebView|addJavascriptInterface' app-apktool
+```
+
+Use `jadx` alongside `apktool` when readable Java/Kotlin-like control flow is needed.
+
 ## Output
 
 Report the APK path, command used, output directory, relevant manifest/resource/smali paths, and any findings or blockers that affect analysis.

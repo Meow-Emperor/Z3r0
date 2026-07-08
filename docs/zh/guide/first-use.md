@@ -25,8 +25,8 @@ editLink: true
 2. Work Projects：工作项目管理模块，用于创建、编辑、审查工作项目。
 3. Host Management：主机节点管理模块，统一管理远程主机，编排沙盒容器的实际运行环境。
 4. Egress Proxies：统一出口管理模块，配置 HTTP/HTTPS/SOCKS5 代理，用于沙盒容器的网络出口。
-5. Sandbox Images：沙盒镜像管理模块，统一管理针对不同需求定制的沙盒镜像。
-6. Sandbox Containers：沙盒容器管理模块，编排配置实际运行的沙盒容器。
+5. Sandbox Images：沙盒镜像管理模块，统一管理针对不同需求定制的沙盒镜像，包括带有 sandbox 内 skills 和预装安全工具链的默认镜像。
+6. Sandbox Containers：沙盒容器管理模块，编排配置实际运行的 sandbox 容器，承载命令执行、文件、noVNC/浏览器复核和 egress 配置。
 7. System Users：系统用户管理模块，可配置用户信息、角色等。
 8. System Config：系统运行配置模块，支持热更新。
 

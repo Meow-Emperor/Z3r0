@@ -3,7 +3,7 @@ export const landingSeo = {
   siteName: "Z3r0",
   title: "Z3r0 - Red Team Collaboration Workbench for Authorized Security Work",
   description:
-    "Z3r0 is an open-source red team collaboration workbench with multi-agent orchestration, WorkProject evidence records, distributed Docker sandboxes, controlled egress, and replayable timelines.",
+    "Z3r0 is an open-source red team collaboration workbench with multi-agent orchestration, WorkProject evidence records, distributed Docker sandboxes, preloaded sandbox security tooling, controlled egress, and replayable timelines.",
   imagePath: "assets/z3r0-logo.png",
   imageAlt: "Z3r0 logo",
   keywords: [
@@ -18,9 +18,17 @@ export const landingSeo = {
     "attack path analysis",
     "attack path replay",
     "sandboxed security tooling",
+    "preloaded sandbox security tools",
     "distributed Docker sandbox",
+    "sandbox skills",
     "controlled egress",
     "proxy egress",
+    "subdomain enumeration",
+    "web discovery",
+    "reverse engineering sandbox",
+    "pwntools sandbox",
+    "Ghidra sandbox",
+    "SecLists wordlists",
     "evidence records",
     "asset relationship graph",
     "WorkProject records",
@@ -77,7 +85,7 @@ export const structuredData = [
         name: "How does Z3r0 run security tooling?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Z3r0 binds agent tools and manual review workflows to controlled Docker sandbox containers with command execution, file access, shell access, browser workflows, and noVNC review.",
+          text: "Z3r0 binds agent tools and manual review workflows to controlled Docker sandbox containers with command execution, file access, shell access, browser workflows, noVNC review, sandbox-local skills, controlled egress, and preloaded security tooling for recon, DNS, web discovery, credential testing, Android and firmware analysis, reverse engineering, pwn workflows, Python tasks, and wordlist use.",
         },
       },
       {
