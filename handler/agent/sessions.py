@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi.websockets import WebSocketState
 from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
+from fastapi.responses import FileResponse, JSONResponse
 
 from core.runtime.session import get_agent_pool
 from handler import authenticate_ws_token, cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
@@ -21,6 +22,7 @@ from schema.agent.sessions import (
 )
 from schema.common.responses import CommonResponse
 from service.agent import runtime as agent_runtime
+from service.agent import reports as agent_reports
 from service.agent import sessions as agent_sessions
 
 
@@ -168,6 +170,25 @@ async def list_agent_events_handler(
     ))
 
 
+async def download_agent_report_handler(report_id: str, user: AuthUser) -> FileResponse | JSONResponse:
+    try:
+        report_path = agent_reports.resolve_report_download_path(report_id)
+    except ValueError as exc:
+        return _download_error(HTTPStatus.BAD_REQUEST.value, str(exc))
+    except FileNotFoundError as exc:
+        return _download_error(HTTPStatus.NOT_FOUND.value, str(exc))
+
+    session_id = agent_reports.report_session_id(report_path)
+    if not session_id or not await agent_sessions.can_access_session(session_id, user.id, user.role):
+        return _download_error(HTTPStatus.NOT_FOUND.value, "report file not found")
+
+    return FileResponse(
+        report_path,
+        media_type="text/markdown; charset=utf-8",
+        filename=agent_reports.report_download_filename(report_path),
+    )
+
+
 async def handle_agent_stream(websocket: WebSocket, session_id: str, token: str) -> None:
     user = authenticate_ws_token(token)
     if user is None:
@@ -292,3 +313,10 @@ def _runtime_error_response(exc: Exception) -> CommonResponse[Any] | None:
     if isinstance(exc, PermissionError):
         return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
     return None
+
+
+def _download_error(code: int, message: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=code,
+        content=CommonResponse(code=code, message=message).model_dump(),
+    )

@@ -1,9 +1,10 @@
-import { apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { apiBlob, apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
 import type {
   AgentTurnRequest,
   CancelAllAgentSessionTasksResponse,
   CreateAgentSessionTurnResponse,
   DeleteAgentSessionResponse,
+  DownloadAgentReportPathParams,
   InterruptAgentSessionResponse,
   ListAgentEventsResponse,
   ListAgentSessionsResponse,
@@ -77,6 +78,10 @@ export function deleteAgentSession(sessionId: string) {
   return apiDelete<DeleteAgentSessionResponse>(
     `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}`,
   );
+}
+
+export function downloadAgentReport(reportId: DownloadAgentReportPathParams["report_id"]) {
+  return apiBlob(`${AGENT_SESSIONS_PATH}/reports/${encodeURIComponent(reportId)}/download`);
 }
 
 export function buildAgentStreamUrl(sessionId: string, token: string) {

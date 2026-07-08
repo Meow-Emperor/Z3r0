@@ -34,6 +34,7 @@ from router.system_user.users import router as system_user_router
 from router.work_project.projects import router as work_project_router
 from schema.system_user.users import SystemUserRole
 from service.agent.recovery import recover_pending_sessions
+from service.agent.reports import start_report_cleanup_runtime, stop_report_cleanup_runtime
 from service.host.hosts import ensure_local_managed_host
 from service.sandbox.control_proxy import close_control_proxy_http_client
 from service.sandbox.files import close_file_http_client
@@ -109,6 +110,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         set_tracing_disabled(True)
         await start_async_sandbox_runtime()
         await start_subagent_runtime()
+        await start_report_cleanup_runtime()
         await recover_pending_sessions()
         await get_agent_pool().start()
         set_agent_tool_binding_invalidator(get_agent_pool().invalidate_tool_bindings)
@@ -123,6 +125,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         await stop_sandbox_container_status_monitor()
         await invalidate_all_agent_tool_bindings()
         set_agent_tool_binding_invalidator(None)
+        await stop_report_cleanup_runtime()
         await stop_subagent_runtime()
         await stop_async_sandbox_commands()
         await get_agent_pool().stop()

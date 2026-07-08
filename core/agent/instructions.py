@@ -70,6 +70,13 @@ Project state is live shared memory for users and future agents. Keep it current
 """
 
 
+REPORT_TOOL_INSTRUCTIONS = """## Report Export
+
+- Use `export_report` when a user-facing deliverable should be saved as a report artifact.
+- Pass only the complete report content as standard Markdown. The current session id is supplied by runtime context.
+"""
+
+
 def build_instructions(
     soul: str,
     rules: str,
@@ -82,6 +89,7 @@ def build_instructions(
     include_agent_knowledges: bool,
     include_work_project_tools: bool,
     include_delegation_tools: bool,
+    include_report_tools: bool,
 ) -> str:
     runtime_guidance = [MARKDOWN_OUTPUT_INSTRUCTIONS, DIAGRAM_INSTRUCTIONS]
     if include_agent_knowledges:
@@ -92,6 +100,8 @@ def build_instructions(
         runtime_guidance.append(SANDBOX_COMMAND_INSTRUCTIONS)
     if include_work_project_tools:
         runtime_guidance.append(WORK_PROJECT_INSTRUCTIONS)
+    if include_report_tools:
+        runtime_guidance.append(REPORT_TOOL_INSTRUCTIONS)
     parts = [
         soul,
         rules,

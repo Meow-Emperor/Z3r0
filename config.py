@@ -76,6 +76,7 @@ class AgentRuntimeConfig(StrictConfigModel):
     main_max_turns: int = Field(default=1000, ge=1)
     subordinate_max_turns: int = Field(default=1000, ge=1)
     model_stream_idle_timeout_seconds: int = Field(default=300, ge=30)
+    report_retention_seconds: int = Field(default=3 * 24 * 60 * 60, ge=0)
     context_compression_enabled: bool = True
     context_compression_trigger_ratio: float = Field(default=0.90, gt=0, lt=1)
     context_compression_hard_stop_ratio: float = Field(default=0.98, gt=0, lt=1)
@@ -152,6 +153,8 @@ def _migrate_config_data(data: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(runtime, dict):
         return data
     default_runtime = AgentRuntimeConfig()
+    if "report_retention_seconds" not in runtime:
+        runtime["report_retention_seconds"] = default_runtime.report_retention_seconds
     if "context_budget_model_call_ratio" not in runtime:
         runtime["context_budget_model_call_ratio"] = default_runtime.context_budget_model_call_ratio
     if runtime.get("context_compression_trigger_ratio") == _LEGACY_CONTEXT_COMPRESSION_TRIGGER_RATIO:

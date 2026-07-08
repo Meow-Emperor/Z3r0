@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, Query, WebSocket
+from fastapi import APIRouter, Depends, Path, Query, WebSocket
+from fastapi.responses import FileResponse
 
 from handler.agent.sessions import (
     cancel_agent_session_tasks_handler,
     create_agent_session_turn_handler,
     delete_agent_session_handler,
+    download_agent_report_handler,
     handle_agent_stream,
     interrupt_agent_session_handler,
     list_agent_events_handler,
@@ -109,6 +111,13 @@ async def list_agent_events_route(
     )
 
 
+async def download_agent_report_route(
+    report_id: str = Path(min_length=1),
+    user: AuthUser = Depends(require_user),
+):
+    return await download_agent_report_handler(report_id=report_id, user=user)
+
+
 router.add_api_route(
     "",
     list_agent_sessions_route,
@@ -123,6 +132,25 @@ router.add_api_route(
     methods=["GET"],
     response_model=CommonResponse[ListAgentEventsResponse],
     responses=COMMON_ERROR_RESPONSES,
+)
+
+router.add_api_route(
+    "/reports/{report_id}/download",
+    download_agent_report_route,
+    methods=["GET"],
+    response_model=None,
+    response_class=FileResponse,
+    responses={
+        **COMMON_ERROR_RESPONSES,
+        200: {
+            "description": "Markdown report file",
+            "content": {
+                "text/markdown": {"schema": {"type": "string", "format": "binary"}},
+            },
+        },
+        400: {"description": "Bad Request"},
+        404: {"description": "Report file not found"},
+    },
 )
 
 router.add_api_route(

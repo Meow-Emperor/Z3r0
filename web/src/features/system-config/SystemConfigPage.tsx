@@ -47,6 +47,7 @@ const DEFAULT_AGENT_RUNTIME: AgentRuntimeConfig = {
   main_max_turns: 1000,
   subordinate_max_turns: 1000,
   model_stream_idle_timeout_seconds: 300,
+  report_retention_seconds: 259200,
   context_compression_enabled: true,
   context_compression_trigger_ratio: 0.9,
   context_compression_hard_stop_ratio: 0.98,
@@ -62,7 +63,7 @@ const RUNTIME_FIELDS: ConfigField<AgentRuntimeConfig>[] = [
   { kind: "number", key: "main_max_turns", label: "Main Max Turns", min: 1 },
   { kind: "number", key: "subordinate_max_turns", label: "Subordinate Max Turns", min: 1 },
   { kind: "number", key: "model_stream_idle_timeout_seconds", label: "Stream Idle Timeout", min: 30 },
-  { kind: "toggle", key: "context_compression_enabled", label: "Context Compression" },
+  { kind: "number", key: "report_retention_seconds", label: "Report Retention Seconds", min: 0 },
   { kind: "number", key: "context_compression_trigger_ratio", label: "Trigger Ratio", min: 0.01, max: 0.99, step: 0.01 },
   { kind: "number", key: "context_compression_hard_stop_ratio", label: "Hard Stop Ratio", min: 0.01, max: 0.99, step: 0.01 },
   { kind: "number", key: "context_compression_target_ratio", label: "Target Ratio", min: 0.01, max: 0.99, step: 0.01 },
@@ -71,6 +72,7 @@ const RUNTIME_FIELDS: ConfigField<AgentRuntimeConfig>[] = [
   { kind: "number", key: "context_compression_preserve_recent_items", label: "Preserve Recent Items", min: 1 },
   { kind: "number", key: "context_compression_min_items", label: "Minimum Items", min: 1 },
   { kind: "number", key: "context_compression_summary_max_tokens", label: "Summary Max Tokens", min: 512 },
+  { kind: "toggle", key: "context_compression_enabled", label: "Context Compression" },
 ];
 
 const POOL_FIELDS: ConfigField<AgentPoolConfig>[] = [

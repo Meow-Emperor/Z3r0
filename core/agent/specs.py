@@ -4,6 +4,7 @@ from agents import Tool
 
 from core.agent.constants import DEFAULT_AGENT_CODE
 from core.tools.knowledge import create_knowledge, find_knowledge, load_knowledge, update_knowledge
+from core.tools.reports import export_report
 from core.tools.work_project import (
     create_or_update_work_project_asset,
     create_or_update_work_project_attack_path,
@@ -98,6 +99,7 @@ AGENT_SPECS: tuple[AgentSpec, ...] = (
             *WORK_PROJECT_TOOLS,
             *WORK_PROJECT_RECORD_TOOLS,
             ToolMount(update_work_project_tasks, requires_work_project=True),
+            ToolMount(export_report),
         ),
         subagents=(
             SubagentMount(code="cae"),

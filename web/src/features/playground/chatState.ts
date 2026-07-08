@@ -27,11 +27,13 @@ export type {
   ErrorItem,
   ExecutionItem,
   NestedTranscript,
+  ReportAttachmentItem,
   StreamingItem,
   SubagentExecutionItem,
   TextItem,
   ThinkingItem,
   ToolExecutionItem,
+  TranscriptAttachmentItem,
   TranscriptBlock,
 } from "./transcriptTypes";
 

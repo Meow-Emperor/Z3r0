@@ -6,11 +6,13 @@ import {
   findToolBlockIndex,
   hasCoveredCompletedText,
 } from "./transcriptIdentity";
+import { attachmentFromToolResult, transcriptAttachmentIdentity } from "./toolResultAttachments";
 import type {
   AgentTranscript,
   StreamingItem,
   SubagentExecutionItem,
   ToolExecutionItem,
+  TranscriptAttachmentItem,
   TranscriptBlock,
 } from "./transcriptTypes";
 
@@ -42,6 +44,10 @@ export function applyEventToTranscript(transcript: AgentTranscript, event: Agent
     case "tool_result":
       setAgentName(transcript, event.agent_name);
       upsertToolResult(transcript.blocks, event.call_id, event.output, event.is_error);
+      upsertTranscriptAttachment(
+        transcript.attachments,
+        attachmentFromToolResult(event),
+      );
       return false;
     case "subagent_task":
       setAgentName(transcript, event.agent_name);
@@ -55,11 +61,16 @@ export function applyEventToTranscript(transcript: AgentTranscript, event: Agent
 }
 
 export function createTranscript(createdAt: AgentContentEvent["created_at"] | "" = ""): AgentTranscript {
-  return { createdAt, agentName: "", blocks: [] };
+  return { createdAt, agentName: "", blocks: [], attachments: [] };
 }
 
 export function cloneTranscript(transcript: AgentTranscript): AgentTranscript {
-  return { createdAt: transcript.createdAt, agentName: transcript.agentName, blocks: transcript.blocks.slice() };
+  return {
+    createdAt: transcript.createdAt,
+    agentName: transcript.agentName,
+    blocks: transcript.blocks.slice(),
+    attachments: transcript.attachments?.slice() ?? [],
+  };
 }
 
 function setAgentName(transcript: AgentTranscript, name: string) {
@@ -104,12 +115,34 @@ function upsertToolCall(blocks: TranscriptBlock[], callId: string, name: string,
   blocks[index] = { ...existing, callId: existing.callId || callId, name, arguments: argumentsValue };
 }
 
-function upsertToolResult(blocks: TranscriptBlock[], callId: string, output: string, isError: boolean) {
+function upsertToolResult(
+  blocks: TranscriptBlock[],
+  callId: string,
+  output: string,
+  isError: boolean,
+): void {
   // Attach to its named tool call; never materialize an orphan (nameless) block.
   const index = findToolBlockIndex(blocks, callId);
   if (index === -1) return;
   const existing = blocks[index] as ToolExecutionItem;
   blocks[index] = { ...existing, output, isError, resolved: true };
+}
+
+function upsertTranscriptAttachment(
+  attachments: TranscriptAttachmentItem[],
+  nextItem: TranscriptAttachmentItem | null,
+) {
+  if (!nextItem) return;
+  const nextIdentity = transcriptAttachmentIdentity(nextItem);
+  const index = attachments.findIndex((item) =>
+    transcriptAttachmentIdentity(item) === nextIdentity
+    || (item.kind === nextItem.kind && item.callId !== "" && item.callId === nextItem.callId),
+  );
+  if (index === -1) {
+    attachments.push(nextItem);
+    return;
+  }
+  attachments[index] = nextItem;
 }
 
 function upsertSubagentTask(blocks: TranscriptBlock[], nextItem: SubagentExecutionItem) {

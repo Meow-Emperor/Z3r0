@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent-sessions/reports/{report_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Agent Report Route */
+        get: operations["download_agent_report_route_api_agent_sessions_reports__report_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent-sessions/turns": {
         parameters: {
             query?: never;
@@ -1023,6 +1040,11 @@ export interface components {
              * @default 300
              */
             model_stream_idle_timeout_seconds: number;
+            /**
+             * Report Retention Seconds
+             * @default 259200
+             */
+            report_retention_seconds: number;
             /**
              * Subordinate Max Turns
              * @default 1000
@@ -2282,6 +2304,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ReportToolResultOutputSchema */
+        ReportToolResultOutputSchema: {
+            /** Chars */
+            chars: number;
+            /** Filename */
+            filename: string;
+            /** Report Id */
+            report_id: string;
+            /** Size */
+            size: number;
+        };
         /** RunStateEvent */
         RunStateEvent: {
             /**
@@ -2852,7 +2885,7 @@ export interface components {
          * ToolResultTypeSchema
          * @enum {string}
          */
-        ToolResultTypeSchema: "skill_detail" | "knowledge_detail" | "knowledge_mutation" | "work_project";
+        ToolResultTypeSchema: "skill_detail" | "knowledge_detail" | "knowledge_mutation" | "work_project" | "report";
         /** TurnBoundaryEvent */
         TurnBoundaryEvent: {
             /**
@@ -3512,6 +3545,64 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    download_agent_report_route_api_agent_sessions_reports__report_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Markdown report file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/markdown": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Report file not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

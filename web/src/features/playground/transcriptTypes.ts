@@ -6,6 +6,7 @@ import type {
   ThinkingCompleteEvent,
   ToolCallEvent,
   ToolResultEvent,
+  ReportToolResultOutput,
 } from "../../shared/api/types";
 
 export type ThinkingItem = {
@@ -59,10 +60,23 @@ export type ErrorItem = { kind: "error"; id: string; message: string };
 export type ExecutionItem = ToolExecutionItem | SubagentExecutionItem;
 export type TranscriptBlock = ThinkingItem | TextItem | ExecutionItem | ErrorItem;
 
+export type ReportAttachmentItem = {
+  kind: "report";
+  id: string;
+  callId: ToolResultEvent["call_id"];
+  reportId: ReportToolResultOutput["report_id"];
+  filename: ReportToolResultOutput["filename"];
+  size: ReportToolResultOutput["size"];
+  chars: ReportToolResultOutput["chars"];
+};
+
+export type TranscriptAttachmentItem = ReportAttachmentItem;
+
 export type AgentTranscript = {
   createdAt: AgentContentEvent["created_at"] | "";
   agentName: string;
   blocks: TranscriptBlock[];
+  attachments: TranscriptAttachmentItem[];
 };
 
 export type NestedTranscript = AgentTranscript;

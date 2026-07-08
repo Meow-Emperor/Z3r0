@@ -22,6 +22,7 @@ from core.agent.specs import AGENT_SPECS, AgentSpec, ToolMount
 from core.delegation.subagents import build_subagent_tools
 from core.runtime.context import AgentRuntimeContext
 from core.tools.knowledge import find_knowledge, load_knowledge
+from core.tools.reports import export_report
 from core.tools.sandbox import (
     execute_async_command,
     execute_sync_command,
@@ -137,6 +138,7 @@ class AgentRegistry:
                 and _has_work_project_tool(spec)
             ),
             include_delegation_tools=bool(spec.subagents),
+            include_report_tools=_has_tool(spec, export_report),
         )
 
         tools: list[Tool] = [

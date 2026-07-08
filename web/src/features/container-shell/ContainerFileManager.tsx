@@ -12,6 +12,7 @@ import {
 import { showApiError } from "../../shared/api/feedback";
 import type { ContainerFileInfo } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
+import { saveBlob } from "../../shared/lib/download";
 import { formatBytes } from "../../shared/lib/number";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { cx } from "../../shared/lib/className";
@@ -494,13 +495,4 @@ function InlineCreateIcon({ type, onConfirm, onCancel }: {
       <InlineCreateInput type={type} onConfirm={onConfirm} onCancel={onCancel} cancelOnBlur />
     </div>
   );
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }

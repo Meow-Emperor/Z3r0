@@ -274,6 +274,12 @@
             "title": "Model Stream Idle Timeout Seconds",
             "type": "integer"
           },
+          "report_retention_seconds": {
+            "default": 259200,
+            "minimum": 0.0,
+            "title": "Report Retention Seconds",
+            "type": "integer"
+          },
           "subordinate_max_turns": {
             "default": 1000,
             "minimum": 1.0,
@@ -2989,6 +2995,37 @@
         "title": "QueryWorkProjectsResponse",
         "type": "object"
       },
+      "ReportToolResultOutputSchema": {
+        "properties": {
+          "chars": {
+            "minimum": 0,
+            "title": "Chars",
+            "type": "integer"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "report_id": {
+            "minLength": 1,
+            "title": "Report Id",
+            "type": "string"
+          },
+          "size": {
+            "minimum": 0,
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "report_id",
+          "filename",
+          "size",
+          "chars"
+        ],
+        "title": "ReportToolResultOutputSchema",
+        "type": "object"
+      },
       "RunStateEvent": {
         "properties": {
           "created_at": {
@@ -3964,7 +4001,8 @@
           "skill_detail",
           "knowledge_detail",
           "knowledge_mutation",
-          "work_project"
+          "work_project",
+          "report"
         ],
         "title": "ToolResultTypeSchema",
         "type": "string"
@@ -5446,6 +5484,85 @@
           }
         ],
         "summary": "List Agent Sessions Route",
+        "tags": [
+          "agent-sessions"
+        ]
+      }
+    },
+    "/api/agent-sessions/reports/{report_id}/download": {
+      "get": {
+        "operationId": "download_agent_report_route_api_agent_sessions_reports__report_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Markdown report file"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Report file not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Download Agent Report Route",
         "tags": [
           "agent-sessions"
         ]

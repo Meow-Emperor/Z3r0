@@ -109,6 +109,82 @@
   line-height: 1;
 }
 
+.transcript-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.report-attachment {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 8px;
+  width: min(360px, 100%);
+  min-height: 44px;
+  padding: 7px 9px;
+  color: var(--z-text);
+  background: var(--z-surface);
+  border: 1px solid var(--z-line);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.report-attachment:hover:not(:disabled) {
+  background: var(--z-surface-strong);
+  border-color: var(--z-line-strong);
+  transform: translateY(-1px);
+}
+
+.report-attachment:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
+.report-attachment-icon,
+.report-attachment-download {
+  display: inline-grid;
+  place-items: center;
+  color: var(--z-text-muted);
+}
+
+.report-attachment-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--z-surface-muted);
+  border-radius: 6px;
+}
+
+.report-attachment-main {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.report-attachment-name {
+  overflow: hidden;
+  color: var(--z-text-strong);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-attachment-size {
+  color: var(--z-text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .agent-text {
   position: relative;
   min-width: 0;

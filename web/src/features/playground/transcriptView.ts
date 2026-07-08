@@ -42,11 +42,12 @@ export function emptyAgentTranscript(): AgentTranscript {
     createdAt: "",
     agentName: "",
     blocks: [],
+    attachments: [],
   };
 }
 
 export function isTranscriptEmpty(transcript: AgentTranscript) {
-  return transcript.blocks.length === 0;
+  return transcript.blocks.length === 0 && (transcript.attachments?.length ?? 0) === 0;
 }
 
 export function activeThinkingItemId(blocks: TranscriptItem[]) {
@@ -62,7 +63,7 @@ export function transcriptHasRunningExecution(transcript: AgentTranscript): bool
 }
 
 export function transcriptItemCount(transcript: AgentTranscript) {
-  return transcript.blocks.length;
+  return transcript.blocks.length + (transcript.attachments?.length ?? 0);
 }
 
 function isToolBlock(block: TranscriptItem): block is ToolBlock {

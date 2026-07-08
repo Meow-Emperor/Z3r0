@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { downloadContainerFiles, readContainerFile, writeContainerFile } from "../../shared/api/sandboxContainers";
 import { showApiError } from "../../shared/api/feedback";
 import type { ContainerFileInfo } from "../../shared/api/types";
+import { saveBlob } from "../../shared/lib/download";
 
 const CodeEditor = lazy(() => import("./CodeEditor").then((module) => ({ default: module.CodeEditor })));
 
@@ -120,12 +121,7 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   const handleDownload = useCallback(async () => {
     try {
       const { blob, filename } = await downloadContainerFiles(containerId, { path: [file.path] });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      saveBlob(blob, filename);
     } catch (err) {
       showApiError(err);
     }

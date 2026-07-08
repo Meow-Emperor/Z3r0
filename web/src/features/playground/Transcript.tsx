@@ -1,14 +1,20 @@
-import { AlertOctagon, Brain, ChevronDown, ChevronRight } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { AlertOctagon, Brain, ChevronDown, ChevronRight, Download, FileText } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   AgentTranscript,
   ErrorItem,
+  ReportAttachmentItem,
   ThinkingItem,
+  TranscriptAttachmentItem,
 } from "./chatState";
+import { downloadAgentReport } from "../../shared/api/agentSessions";
+import { showApiError } from "../../shared/api/feedback";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { normalizeMarkdownForRender } from "./markdown";
 import type { SubagentSelection } from "./subagentView";
 import { cx } from "../../shared/lib/className";
+import { saveBlob } from "../../shared/lib/download";
+import { formatBytes } from "../../shared/lib/number";
 import { ToolGroup } from "./TranscriptExecutions";
 import {
   activeTextItemId,
@@ -40,6 +46,7 @@ export function TranscriptContent({
   const activeTextId = live ? activeTextItemId(transcript.blocks) : "";
   const activeThinkingId = live ? activeThinkingItemId(transcript.blocks) : "";
   const segments = useMemo(() => buildTranscriptSegments(transcript.blocks), [transcript.blocks]);
+  const attachments = transcript.attachments ?? [];
 
   return (
     <div className="transcript-body">
@@ -56,6 +63,7 @@ export function TranscriptContent({
           onOpenSubagent={onOpenSubagent}
         />
       ))}
+      {attachments.length ? <TranscriptAttachments attachments={attachments} /> : null}
       {live && !isEmpty ? <span className="caret" /> : null}
       {isEmpty && emptyText ? <div className="transcript-empty">{emptyText}</div> : null}
     </div>
@@ -243,6 +251,104 @@ function ErrorNotice({ item }: { item: ErrorItem }) {
       <AlertOctagon size={16} />
       <span>{item.message}</span>
     </div>
+  );
+}
+
+type TranscriptAttachmentRenderContext = {
+  downloadingReportId: string;
+  onDownloadReport: (report: ReportAttachmentItem) => void;
+};
+
+const TRANSCRIPT_ATTACHMENT_RENDERERS: {
+  [Kind in TranscriptAttachmentItem["kind"]]: (
+    attachment: Extract<TranscriptAttachmentItem, { kind: Kind }>,
+    context: TranscriptAttachmentRenderContext,
+  ) => ReactNode;
+} = {
+  report: (attachment, context) => (
+    <ReportAttachment
+      report={attachment}
+      disabled={Boolean(context.downloadingReportId)}
+      onDownload={() => context.onDownloadReport(attachment)}
+    />
+  ),
+};
+
+function TranscriptAttachments({ attachments }: { attachments: TranscriptAttachmentItem[] }) {
+  const [downloadingReportId, setDownloadingReportId] = useState("");
+  const downloadReport = useCallback(async (report: ReportAttachmentItem) => {
+    if (downloadingReportId) return;
+    setDownloadingReportId(report.reportId);
+    try {
+      const { blob, filename } = await downloadAgentReport(report.reportId);
+      saveBlob(blob, filename || report.filename);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      setDownloadingReportId((current) => (current === report.reportId ? "" : current));
+    }
+  }, [downloadingReportId]);
+  const context = useMemo(
+    () => ({ downloadingReportId, onDownloadReport: downloadReport }),
+    [downloadReport, downloadingReportId],
+  );
+
+  return (
+    <div className="transcript-attachments">
+      {attachments.map((attachment) => (
+        <TranscriptAttachment
+          key={attachment.id}
+          attachment={attachment}
+          context={context}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TranscriptAttachment({
+  attachment,
+  context,
+}: {
+  attachment: TranscriptAttachmentItem;
+  context: TranscriptAttachmentRenderContext;
+}) {
+  const render = TRANSCRIPT_ATTACHMENT_RENDERERS[attachment.kind] as (
+    attachment: TranscriptAttachmentItem,
+    context: TranscriptAttachmentRenderContext,
+  ) => ReactNode;
+  return render(attachment, context);
+}
+
+function ReportAttachment({
+  report,
+  disabled,
+  onDownload,
+}: {
+  report: ReportAttachmentItem;
+  disabled: boolean;
+  onDownload: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="report-attachment"
+      disabled={disabled}
+      title={`${report.filename} · ${formatBytes(report.size)}`}
+      aria-label={`Download ${report.filename}`}
+      onClick={onDownload}
+    >
+      <span className="report-attachment-icon">
+        <FileText size={18} />
+      </span>
+      <span className="report-attachment-main">
+        <span className="report-attachment-name">{report.filename}</span>
+        <span className="report-attachment-size">{formatBytes(report.size)}</span>
+      </span>
+      <span className="report-attachment-download">
+        <Download size={14} />
+      </span>
+    </button>
   );
 }
 
