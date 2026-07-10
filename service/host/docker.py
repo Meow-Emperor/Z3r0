@@ -60,6 +60,10 @@ class DirectDockerAPIClient(APIClient):
 
 
 def _docker_base_url(host: ManagedHost) -> str:
+    if not host.docker_tls_enabled and host.ip_address in ("127.0.0.1", "localhost"):
+        if Path("/var/run/docker.sock").exists():
+            return "unix:///var/run/docker.sock"
+
     address = ip_address(host.ip_address)
     host_address = f"[{address}]" if isinstance(address, IPv6Address) else str(address)
     return f"tcp://{host_address}:{host.docker_management_port}"

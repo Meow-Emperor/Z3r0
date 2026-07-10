@@ -18,6 +18,10 @@ DIAGRAM_INSTRUCTIONS = """## Diagram Policy
 - Never draw diagrams with ASCII or Unicode line art, including manually aligned boxes, trees, connector grids, arrows, or repeated punctuation.
 - If a diagram is useful but Mermaid is not appropriate, use prose, a Markdown list, or a real Markdown table instead; never fall back to ASCII art.
 - Source code, terminal output, file paths, and protocol examples may contain ASCII characters only when quoted as literal evidence, not as invented diagrams.
+- To prevent Mermaid syntax errors:
+  1. Do NOT use special characters like parentheses `()`, brackets `[]`, braces `{}`, quotes `"`, or colons `:` directly inside node text. Wrap the entire node text in double quotes if it contains any special characters (e.g., `A["Node (with parentheses)"]` or `B["Host: Port"]` instead of `A[Node (with parentheses)]` or `B[Host: Port]`).
+  2. Keep node IDs simple, alphanumeric, and use underscores only (e.g. `node_1` instead of `node-1` or `node.1`).
+  3. Ensure all opened quotes, brackets, and parentheses in the diagram code are properly matched and closed.
 """
 
 
