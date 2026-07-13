@@ -1,38 +1,36 @@
 ---
-title: Join Community
+title: Community
 editLink: true
 ---
 
-# Join Community
+# Community
 
-Z3r0 is a stylized form of “Zero”. In security research and technical work, Zero refers both to exploration from the ground up and to the process of discovering unknown vulnerabilities, unknown boundaries, and unknown system behavior.
+Z3r0 welcomes users, security researchers, and software engineers who are interested in building reliable workflows for authorized security assessment.
 
-Through this project, I hope to build a small but focused community that connects people who are genuinely committed to technology and consistently driven by curiosity.
+## Scope
 
-## Community Philosophy
+Community discussion and contributions focus on the project and its technical domains, including:
 
-This community values deep technical discussion and rigorous verification practice over shallow conversation or piling up tools.
+1. Multi-Agent runtime design, context management, and task continuity.
+2. Security assessment workflows, code auditing, vulnerability validation, and evidence modeling.
+3. Sandbox isolation, distributed execution resources, controlled egress, and operational security.
+4. LightRAG document ingestion, retrieval quality, graph data, and model integration.
+5. Frontend usability, API contracts, documentation, testing, and deployment reliability.
 
-**The following types of people are very welcome:**
+## Participation
 
-1. Developers and researchers interested in cybersecurity, vulnerability research, code auditing, red-team engineering, and related fields.
-2. CTF players, SRC contributors, and developers interested in agent applications or artificial intelligence technologies.
-3. Security industry or internet industry practitioners who love engineering technology and are committed to exploring frontier technologies.
+Keep technical discussions specific, evidence-based, and respectful. Report security-sensitive issues responsibly and avoid publishing credentials, private target data, or material obtained outside an authorized scope.
 
-**The following types of people should not join:**
+All use of Z3r0 must comply with applicable law and the authorization boundaries defined by the system owner. The project is intended for authorized testing, risk assessment, code auditing, and security research.
 
-1. Black-hat or gray-market practitioners, and people focused on political provocation.
-2. People who are excessively hostile, disrespectful, or prone to venting emotions without restraint.
-3. People who use tools illegally to launch malicious attacks.
+## Contributing
 
-Z3r0 is evolving rapidly. Developers with shared interests are sincerely invited to join the project development work and discuss technical topics together.
+Use GitHub issues for reproducible bug reports and scoped feature proposals. Pull requests should keep changes focused, explain user-visible behavior, include proportionate verification, and update documentation when contracts or workflows change.
 
 ## Contact
 
-At the early stage, interested developers can contact me by email. A brief self-introduction in the email is welcome.
+Project-related inquiries can be sent to `me@yvling.cn`.
 
-My email address is: me@yvling.cn
+## Maintainer
 
-## About the Author
-
-I am yv1ing, a cybersecurity engineer and full-stack developer. I was once a CTF player, or more precisely, I entered the field of cybersecurity because of CTF competitions. I have always maintained a strong passion for technology and enjoy exploring anything novel, unusual, and technically interesting.
+Z3r0 is maintained by [yv1ing](https://github.com/yv1ing), a cybersecurity engineer and full-stack developer with experience in CTF, security research, and application engineering.

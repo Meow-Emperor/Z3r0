@@ -12,6 +12,7 @@ __pycache__
 .codegraph
 
 .z3r0
+.lightrag
 
 node_modules
 dist

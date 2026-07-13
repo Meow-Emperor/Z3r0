@@ -88,6 +88,19 @@ class AgentRuntimeConfig(StrictConfigModel):
     context_compression_summary_max_tokens: int = Field(default=8000, ge=512)
 
 
+# LightRAG config
+class LightRAGConfig(StrictConfigModel):
+    embedding_api: str = Field(default="https://api.openai.com/v1", min_length=1)
+    embedding_key: str = Field(default="")
+    embedding_model: str = Field(default="text-embedding-3-small", min_length=1)
+    embedding_dim: int = Field(default=1536, ge=1)
+    llm_api: str = Field(default="https://api.openai.com/v1", min_length=1)
+    llm_key: str = Field(default="")
+    llm_model: str = Field(default="gpt-5", min_length=1)
+    graph_matches: int = Field(default=5, ge=1, le=50)
+    chunk_matches: int = Field(default=10, ge=1, le=50)
+
+
 # global config
 class GlobalConfig(StrictConfigModel):
     system: SystemConfig = Field(default_factory=SystemConfig)
@@ -95,13 +108,13 @@ class GlobalConfig(StrictConfigModel):
     agents: dict[str, AgentConfig] = Field(default_factory=dict)
     agent_pool: AgentPoolConfig = Field(default_factory=AgentPoolConfig)
     agent_runtime: AgentRuntimeConfig = Field(default_factory=AgentRuntimeConfig)
+    lightrag: LightRAGConfig = Field(default_factory=LightRAGConfig)
 
 
 ###
 # global config instance
 ###
 _cfg: GlobalConfig = GlobalConfig()
-_LEGACY_CONTEXT_COMPRESSION_TRIGGER_RATIO = 0.95
 
 
 def load_config():
@@ -123,7 +136,6 @@ def read_config_file() -> GlobalConfig:
     """read and validate config.json without mutating global state"""
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-    data = _migrate_config_data(data)
     return GlobalConfig.model_validate(data)
 
 
@@ -133,30 +145,20 @@ def write_config_file(cfg: GlobalConfig) -> None:
     data: dict[str, Any] = cfg.model_dump(mode="json")
     payload = json.dumps(data, ensure_ascii=False, indent=4)
 
-    with tempfile.NamedTemporaryFile(
-        "w",
-        encoding="utf-8",
-        dir=WORKSPACE,
-        prefix=".config.",
-        suffix=".json.tmp",
-        delete=False,
-    ) as f:
-        temp_path = Path(f.name)
-        f.write(payload)
-        f.write("\n")
-
-    temp_path.replace(CONFIG_FILE)
-
-
-def _migrate_config_data(data: dict[str, Any]) -> dict[str, Any]:
-    runtime = data.get("agent_runtime")
-    if not isinstance(runtime, dict):
-        return data
-    default_runtime = AgentRuntimeConfig()
-    if "report_retention_seconds" not in runtime:
-        runtime["report_retention_seconds"] = default_runtime.report_retention_seconds
-    if "context_budget_model_call_ratio" not in runtime:
-        runtime["context_budget_model_call_ratio"] = default_runtime.context_budget_model_call_ratio
-    if runtime.get("context_compression_trigger_ratio") == _LEGACY_CONTEXT_COMPRESSION_TRIGGER_RATIO:
-        runtime["context_compression_trigger_ratio"] = default_runtime.context_compression_trigger_ratio
-    return data
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=WORKSPACE,
+            prefix=".config.",
+            suffix=".json.tmp",
+            delete=False,
+        ) as f:
+            temp_path = Path(f.name)
+            f.write(payload)
+            f.write("\n")
+        temp_path.replace(CONFIG_FILE)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)

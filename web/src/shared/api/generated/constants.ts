@@ -23,7 +23,14 @@ export const SANDBOX_CONTAINER_EGRESS_MODE = {"DIRECT": "direct", "PROXY": "prox
 export const SANDBOX_CONTAINER_STATUSES = ["created", "running", "paused", "stopped", "error"] as const;
 export const SANDBOX_CONTAINER_STATUS = {"CREATED": "created", "RUNNING": "running", "PAUSED": "paused", "STOPPED": "stopped", "ERROR": "error"} as const;
 export const SESSION_TYPES = ["chat", "project"] as const;
-export const TOOL_RESULT_TYPES = ["skill_detail", "knowledge_detail", "knowledge_mutation", "work_project", "report"] as const;
-export const TOOL_RESULT_TYPE = {"SKILL_DETAIL": "skill_detail", "KNOWLEDGE_DETAIL": "knowledge_detail", "KNOWLEDGE_MUTATION": "knowledge_mutation", "WORK_PROJECT": "work_project", "REPORT": "report"} as const;
+export const TOOL_RESULT_TYPES = ["skill_detail", "work_project", "report"] as const;
+export const TOOL_RESULT_TYPE = {"SKILL_DETAIL": "skill_detail", "WORK_PROJECT": "work_project", "REPORT": "report"} as const;
+
+export const KNOWLEDGE_DOCUMENT_STATUSES = ["pending", "parsing", "analyzing", "processing", "preprocessed", "processed", "failed"] as const;
+
+export const RESOURCE_PAGE_SIZE = 10;
+
+export const KNOWLEDGE_GRAPH_EXPANSION_NODES = 100;
+export const KNOWLEDGE_GRAPH_MAX_NODES = 1000;
 
 export const ACCESS_TOKEN_HEADER = "X-Z3r0-Access-Token";

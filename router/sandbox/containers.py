@@ -51,6 +51,7 @@ from schema.sandbox.containers import (
     SandboxContainerSchema,
     UpdateSandboxContainerEgressRequest,
 )
+from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 NOT_FOUND_RESPONSE = not_found_response("Sandbox container")
@@ -82,7 +83,7 @@ async def create_sandbox_container_route(
 
 async def query_sandbox_containers_route(
     page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     keyword: str = Query(default=""),
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse[QuerySandboxContainersResponse]:
@@ -97,7 +98,7 @@ async def query_sandbox_containers_route(
 
 async def query_available_sandbox_containers_route(
     page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     keyword: str = Query(default=""),
     work_project_id: int | None = Query(default=None, ge=1),
     include_non_running: bool = Query(default=False),

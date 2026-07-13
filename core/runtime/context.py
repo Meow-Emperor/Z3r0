@@ -23,7 +23,7 @@ class AgentRuntimeContext:
     agent_instance_id: str = ""
     nested_for_agent_code: str = ""
     nested_call_id: str = ""
-    knowledge_generation: int = 0
+    rag_context: str = ""
     sandbox_container_id: int | None = None
     sandbox_container_generation: int = 0
     sandbox_skill_metadata: tuple[str, ...] = ()

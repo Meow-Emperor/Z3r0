@@ -1,8 +1,9 @@
 import { Button, Empty, Input, Spin } from "@douyinfe/semi-ui";
 import { Search } from "lucide-react";
 import { FormEvent, ReactNode } from "react";
+import { cx } from "../lib/className";
 
-type ResourceMetric = {
+export type ResourceMetric = {
   label: string;
   value: ReactNode;
 };
@@ -48,44 +49,102 @@ export function ResourcePageShell({
   onPrevious,
   onNext,
 }: ResourcePageShellProps) {
+  return (
+    <section className="resource-page">
+      <MetricStrip metrics={metrics} />
+      <ResourcePanel
+        toolbar={(
+          <ResourceSearchForm
+            value={keyword}
+            placeholder={searchPlaceholder}
+            onChange={onKeywordChange}
+            onSearch={onSearch}
+          />
+        )}
+        loading={loading}
+        empty={empty}
+        emptyIcon={emptyIcon}
+        emptyTitle={emptyTitle}
+        footer={(
+          <ResourcePager
+            page={page}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={total}
+            loading={loading}
+            canGoBack={canGoBack}
+            canGoNext={canGoNext}
+            onPrevious={onPrevious}
+            onNext={onNext}
+          />
+        )}
+      >
+        {children}
+      </ResourcePanel>
+    </section>
+  );
+}
+
+export function ResourcePanel({ className, toolbar, loading = false, empty, emptyIcon, emptyTitle, footer, children }: {
+  className?: string;
+  toolbar?: ReactNode;
+  loading?: boolean;
+  empty: boolean;
+  emptyIcon: ReactNode;
+  emptyTitle: string;
+  footer?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cx("table-panel", className)}>
+      {toolbar ? <div className="table-toolbar">{toolbar}</div> : null}
+      <Spin spinning={loading} wrapperClassName="resource-table-spin">
+        {empty ? <Empty className="empty-state" image={emptyIcon} title={emptyTitle} description="" /> : children}
+      </Spin>
+      {footer}
+    </div>
+  );
+}
+
+export function ResourceSearchForm({ value, placeholder, onChange, onSearch }: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onSearch: () => void;
+}) {
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSearch();
   };
-
   return (
-    <section className="resource-page">
-      <MetricStrip metrics={metrics} />
+    <form onSubmit={handleSearch}>
+      <Input prefix={<Search size={16} />} value={value} onChange={onChange} placeholder={placeholder} showClear />
+      <Button htmlType="submit" theme="solid" type="primary" icon={<Search size={16} />}>Search</Button>
+    </form>
+  );
+}
 
-      <div className="table-panel">
-        <form className="table-toolbar" onSubmit={handleSearch}>
-          <Input
-            prefix={<Search size={16} />}
-            value={keyword}
-            onChange={onKeywordChange}
-            placeholder={searchPlaceholder}
-            showClear
-          />
-          <Button htmlType="submit" theme="solid" type="primary" icon={<Search size={16} />}>
-            Search
-          </Button>
-        </form>
-
-        <Spin spinning={loading} wrapperClassName="resource-table-spin">
-          {empty ? <Empty className="empty-state" image={emptyIcon} title={emptyTitle} description="" /> : children}
-        </Spin>
-
-        <div className="pager-row">
-          <span>
-            Page {page} · {rangeStart}-{rangeEnd} of {total}
-          </span>
-          <div>
-            <Button type="tertiary" disabled={!canGoBack || loading} onClick={onPrevious}>Previous</Button>
-            <Button type="tertiary" disabled={!canGoNext || loading} onClick={onNext}>Next</Button>
-          </div>
-        </div>
+export function ResourcePager({
+  page, rangeStart, rangeEnd, total, loading, canGoBack, canGoNext, onPrevious, onNext,
+}: {
+  page: number;
+  rangeStart: number;
+  rangeEnd: number;
+  total: number;
+  loading: boolean;
+  canGoBack: boolean;
+  canGoNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="pager-row">
+      <span>Page {page} · {rangeStart}-{rangeEnd} of {total}</span>
+      <div>
+        <Button type="tertiary" disabled={!canGoBack || loading} onClick={onPrevious}>Previous</Button>
+        <Button type="tertiary" disabled={!canGoNext || loading} onClick={onNext}>Next</Button>
       </div>
-    </section>
+    </div>
   );
 }
 

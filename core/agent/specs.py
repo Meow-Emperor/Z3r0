@@ -2,8 +2,6 @@ from dataclasses import dataclass
 
 from agents import Tool
 
-from core.agent.constants import DEFAULT_AGENT_CODE
-from core.tools.knowledge import create_knowledge, find_knowledge, load_knowledge, update_knowledge
 from core.tools.reports import export_report
 from core.tools.work_project import (
     create_or_update_work_project_asset,
@@ -49,13 +47,6 @@ class AgentSpec:
     subagents: tuple[SubagentMount, ...] = ()
 
 
-KNOWLEDGE_TOOLS = (
-    ToolMount(find_knowledge),
-    ToolMount(load_knowledge),
-    ToolMount(create_knowledge),
-    ToolMount(update_knowledge),
-)
-
 WORK_PROJECT_TOOLS = (
     ToolMount(load_work_project_metadata, requires_work_project=True),
     ToolMount(load_work_project_tasks, requires_work_project=True),
@@ -86,7 +77,6 @@ SANDBOX_TOOLS = (
 
 SPECIALIST_TOOLS = (
     *SANDBOX_TOOLS,
-    *KNOWLEDGE_TOOLS,
     *WORK_PROJECT_TOOLS,
     *WORK_PROJECT_RECORD_TOOLS,
 )
@@ -95,7 +85,6 @@ AGENT_SPECS: tuple[AgentSpec, ...] = (
     AgentSpec(
         code="cso",
         tools=(
-            *KNOWLEDGE_TOOLS,
             *WORK_PROJECT_TOOLS,
             *WORK_PROJECT_RECORD_TOOLS,
             ToolMount(update_work_project_tasks, requires_work_project=True),

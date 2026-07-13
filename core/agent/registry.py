@@ -21,7 +21,6 @@ from core.agent.models import build_openai_model
 from core.agent.specs import AGENT_SPECS, AgentSpec, ToolMount
 from core.delegation.subagents import build_subagent_tools
 from core.runtime.context import AgentRuntimeContext
-from core.tools.knowledge import find_knowledge, load_knowledge
 from core.tools.reports import export_report
 from core.tools.sandbox import (
     execute_async_command,
@@ -55,7 +54,6 @@ async def _end_turn_after_async_dispatch(
 
 @dataclass(frozen=True, slots=True)
 class AgentToolSnapshot:
-    knowledge_generation: int = 0
     sandbox_container_id: int | None = None
     sandbox_container_generation: int = 0
     sandbox_skill_metadata: tuple[str, ...] = ()
@@ -64,7 +62,6 @@ class AgentToolSnapshot:
     @classmethod
     def from_context(cls, context: AgentRuntimeContext) -> "AgentToolSnapshot":
         return cls(
-            knowledge_generation=context.knowledge_generation,
             sandbox_container_id=context.sandbox_container_id,
             sandbox_container_generation=context.sandbox_container_generation,
             sandbox_skill_metadata=context.sandbox_skill_metadata,
@@ -127,12 +124,10 @@ class AgentRegistry:
         instructions = build_instructions(
             soul,
             rules,
-            spec.code,
             graph.tool_snapshot.sandbox_skill_metadata,
             has_sandbox_container=graph.tool_snapshot.sandbox_container_id is not None,
             include_sandbox_commands=_has_tool(spec, execute_sync_command) or _has_tool(spec, execute_async_command),
             include_sandbox_skills=_has_tool(spec, load_skill),
-            include_agent_knowledges=_has_any_tool(spec, (find_knowledge, load_knowledge)),
             include_work_project_tools=(
                 graph.tool_snapshot.work_project_id is not None
                 and _has_work_project_tool(spec)
@@ -152,7 +147,9 @@ class AgentRegistry:
             name=cfg.name,
             model=build_openai_model(cfg),
             model_settings=ModelSettings(parallel_tool_calls=False),
-            instructions=instructions,
+            instructions=lambda run_context, _: "\n\n".join(
+                part for part in (instructions, run_context.context.rag_context) if part
+            ),
             tools=tools,
             tool_use_behavior=_end_turn_after_async_dispatch,
         )
@@ -198,10 +195,6 @@ class SessionAgentGraph:
 
 def _has_tool(spec: AgentSpec, tool: Tool) -> bool:
     return any(mount.tool is tool for mount in spec.tools)
-
-
-def _has_any_tool(spec: AgentSpec, tools: tuple[Tool, ...]) -> bool:
-    return any(_has_tool(spec, tool) for tool in tools)
 
 
 def _has_work_project_tool(spec: AgentSpec) -> bool:

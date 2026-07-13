@@ -1,6 +1,3 @@
-from core.tools.knowledge import load_knowledge_metadata
-
-
 MARKDOWN_OUTPUT_INSTRUCTIONS = """## Response Formatting
 
 Always write user-facing responses as valid GitHub-Flavored Markdown.
@@ -32,14 +29,6 @@ SANDBOX_COMMAND_INSTRUCTIONS = """## Sandbox Command Execution
 - The runtime resumes you automatically when the command finishes, delivering its terminal `status`, `exit_code`, and `output_file` as fresh context. Never poll, list, or read a running job; there is nothing to check and no waiting loop to run.
 - On that resumption, if `output_lines > 0` and the result matters, read it with `read_sandbox_command_output` using the delivered `output_file` and `start_line: 1`, at most 200 lines per call.
 - Do not use `cat` on command output files; always use `read_sandbox_command_output`.
-"""
-
-
-KNOWLEDGE_TOOL_INSTRUCTIONS = """## Knowledge Tools
-
-- Use knowledge tools only for reusable professional methodology that should benefit future work by the same agent.
-- Do not store conversation logs, raw tool output, project records, secrets, credentials, user preferences, or one-off task details as knowledge.
-- The Knowledge Index contains metadata only. Use `find_knowledge` to locate relevant entries and `load_knowledge` with line ranges before relying on details.
 """
 
 
@@ -84,20 +73,16 @@ REPORT_TOOL_INSTRUCTIONS = """## Report Export
 def build_instructions(
     soul: str,
     rules: str,
-    agent_code: str,
     sandbox_skill_metadata: tuple[str, ...],
     *,
     has_sandbox_container: bool,
     include_sandbox_commands: bool,
     include_sandbox_skills: bool,
-    include_agent_knowledges: bool,
     include_work_project_tools: bool,
     include_delegation_tools: bool,
     include_report_tools: bool,
 ) -> str:
     runtime_guidance = [MARKDOWN_OUTPUT_INSTRUCTIONS, DIAGRAM_INSTRUCTIONS]
-    if include_agent_knowledges:
-        runtime_guidance.append(KNOWLEDGE_TOOL_INSTRUCTIONS)
     if include_delegation_tools:
         runtime_guidance.append(DELEGATION_TOOL_INSTRUCTIONS)
     if include_sandbox_commands and has_sandbox_container:
@@ -111,26 +96,9 @@ def build_instructions(
         rules,
         "# Runtime Guidance\n\n" + "\n\n".join(part.strip() for part in runtime_guidance if part.strip()),
     ]
-    if include_agent_knowledges:
-        parts.append(_build_agent_knowledge_instructions(load_knowledge_metadata(agent_code)))
     if include_sandbox_skills and has_sandbox_container:
         parts.append(_build_sandbox_skill_instructions(sandbox_skill_metadata))
     return "\n\n".join(part.strip() for part in parts if part.strip())
-
-
-def _build_agent_knowledge_instructions(knowledge_metadata: tuple[str, ...]) -> str:
-    if not knowledge_metadata:
-        return (
-            "# Knowledge Index\n\n"
-            "## Available Items\n\n"
-            "None."
-        )
-
-    return (
-        "# Knowledge Index\n\n"
-        "## Available Items\n\n"
-        + "\n\n".join(knowledge_metadata)
-    )
 
 
 def _build_sandbox_skill_instructions(skill_metadata: tuple[str, ...]) -> str:

@@ -16,6 +16,7 @@ from schema.egress_proxy.proxies import (
     QueryEgressProxiesResponse,
     TestEgressProxyResponse,
 )
+from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 NOT_FOUND_RESPONSE = not_found_response("Egress proxy")
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/egress-proxies", tags=["egress-proxies"])
 
 async def query_egress_proxies_route(
     page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     keyword: str = Query(default=""),
 ) -> CommonResponse[QueryEgressProxiesResponse]:
     return await query_egress_proxies_handler(page=page, size=size, keyword=keyword)

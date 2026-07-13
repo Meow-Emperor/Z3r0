@@ -1,5 +1,5 @@
 import { Button, Input, InputNumber, Spin, Switch, TextArea } from "@douyinfe/semi-ui";
-import { Bot, RotateCcw, Save, Settings, X } from "lucide-react";
+import { Bot, DatabaseZap, RotateCcw, Save, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
@@ -10,16 +10,19 @@ import type {
   AgentPoolConfig,
   AgentRuntimeConfig,
   InstanceConfig,
+  LightRAGConfig,
   UpdateInstanceConfigRequest,
 } from "../../shared/api/types";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 
 type AgentFormValue = AgentConfig;
+type LightRAGFormValue = LightRAGConfig;
 
 type ConfigFormValue = {
   agents: AgentFormValue[];
   agent_pool: AgentPoolConfig;
   agent_runtime: AgentRuntimeConfig;
+  lightrag: LightRAGFormValue;
 };
 
 type FieldKey<T, Value> = {
@@ -35,28 +38,6 @@ type AgentTextField = {
   label: string;
   maxLength?: number;
   password?: boolean;
-};
-
-const DEFAULT_AGENT_POOL: AgentPoolConfig = {
-  max_size: 256,
-  ttl_seconds: 1800,
-  sweep_interval_seconds: 60,
-};
-
-const DEFAULT_AGENT_RUNTIME: AgentRuntimeConfig = {
-  main_max_turns: 1000,
-  subordinate_max_turns: 1000,
-  model_stream_idle_timeout_seconds: 300,
-  report_retention_seconds: 259200,
-  context_compression_enabled: true,
-  context_compression_trigger_ratio: 0.9,
-  context_compression_hard_stop_ratio: 0.98,
-  context_compression_target_ratio: 0.2,
-  context_budget_model_call_ratio: 0.8,
-  context_compression_preserve_recent_ratio: 0.25,
-  context_compression_preserve_recent_items: 20,
-  context_compression_min_items: 12,
-  context_compression_summary_max_tokens: 8000,
 };
 
 const RUNTIME_FIELDS: ConfigField<AgentRuntimeConfig>[] = [
@@ -89,15 +70,15 @@ const AGENT_TEXT_FIELDS: AgentTextField[] = [
 ];
 
 function toFormValue(config: InstanceConfig): ConfigFormValue {
-  const agents = Object.entries(config.agents ?? {}).map(([code, agent]) => ({
-    ...agent,
-    code: agent.code || code,
-    use_responses: agent.use_responses ?? false,
-  }));
+  if (!config.agent_pool || !config.agent_runtime || !config.lightrag) {
+    throw new Error("instance config is incomplete");
+  }
+  const agents = Object.values(config.agents ?? {}).map((agent) => ({ ...agent }));
   return {
     agents,
-    agent_pool: { ...DEFAULT_AGENT_POOL, ...(config.agent_pool ?? {}) },
-    agent_runtime: { ...DEFAULT_AGENT_RUNTIME, ...(config.agent_runtime ?? {}) },
+    agent_pool: { ...config.agent_pool },
+    agent_runtime: { ...config.agent_runtime },
+    lightrag: { ...config.lightrag },
   };
 }
 
@@ -106,6 +87,7 @@ function cloneFormValue(values: ConfigFormValue): ConfigFormValue {
     agents: values.agents.map((agent) => ({ ...agent })),
     agent_pool: { ...values.agent_pool },
     agent_runtime: { ...values.agent_runtime },
+    lightrag: { ...values.lightrag },
   };
 }
 
@@ -128,6 +110,7 @@ function toPayload(values: ConfigFormValue): UpdateInstanceConfigRequest {
     agents,
     agent_pool: values.agent_pool,
     agent_runtime: values.agent_runtime,
+    lightrag: values.lightrag,
   };
 }
 
@@ -163,7 +146,10 @@ export function SystemConfigPage() {
       { label: "Agents", value: agentCount },
       { label: "Pool Size", value: values?.agent_pool.max_size ?? "-" },
       { label: "Main Turns", value: values?.agent_runtime.main_max_turns ?? "-" },
-      { label: "Compression", value: values?.agent_runtime.context_compression_enabled ? "Enabled" : "Disabled" },
+      {
+        label: "Graph / Chunks",
+        value: values ? `${values.lightrag.graph_matches} / ${values.lightrag.chunk_matches}` : "-",
+      },
     ];
   }, [values]);
 
@@ -173,6 +159,10 @@ export function SystemConfigPage() {
 
   const updateRuntime = (patch: Partial<AgentRuntimeConfig>) => {
     setValues((current) => current && { ...current, agent_runtime: { ...current.agent_runtime, ...patch } });
+  };
+
+  const updateLightRAG = (patch: Partial<LightRAGFormValue>) => {
+    setValues((current) => current && { ...current, lightrag: { ...current.lightrag, ...patch } });
   };
 
   const updateAgent = (code: string, patch: Partial<AgentConfig>) => {
@@ -239,6 +229,10 @@ export function SystemConfigPage() {
               <ConfigFieldGrid compact fields={POOL_FIELDS} values={values.agent_pool} onChange={updatePool} />
             </ConfigPanel>
 
+            <ConfigPanel icon={<DatabaseZap size={18} />} title="LightRAG">
+              <LightRAGConfigEditor value={values.lightrag} onChange={updateLightRAG} />
+            </ConfigPanel>
+
             <ConfigPanel icon={<Bot size={18} />} title="Agents">
               <div className="agent-config-list">
                 {values.agents.map((agent) => (
@@ -254,6 +248,34 @@ export function SystemConfigPage() {
         ) : null}
       </Spin>
     </section>
+  );
+}
+
+function LightRAGConfigEditor({ value, onChange }: {
+  value: LightRAGFormValue;
+  onChange: (patch: Partial<LightRAGFormValue>) => void;
+}) {
+  return (
+    <div className="config-grid lightrag-config-grid">
+      <Field kind="text" label="Embedding API" value={value.embedding_api}
+        onChange={(embedding_api) => onChange({ embedding_api })} />
+      <Field kind="text" label="Embedding Key" value={value.embedding_key} password
+        onChange={(embedding_key) => onChange({ embedding_key })} />
+      <Field kind="text" label="Embedding Model" value={value.embedding_model}
+        onChange={(embedding_model) => onChange({ embedding_model })} />
+      <Field kind="number" label="Embedding Dimension" value={value.embedding_dim} min={1}
+        onChange={(embedding_dim) => onChange({ embedding_dim })} />
+      <Field kind="text" label="Extraction LLM API" value={value.llm_api}
+        onChange={(llm_api) => onChange({ llm_api })} />
+      <Field kind="text" label="Extraction LLM Key" value={value.llm_key} password
+        onChange={(llm_key) => onChange({ llm_key })} />
+      <Field kind="text" label="Extraction LLM Model" value={value.llm_model}
+        onChange={(llm_model) => onChange({ llm_model })} />
+      <Field kind="number" label="Graph Matches" value={value.graph_matches} min={1} max={50}
+        onChange={(graph_matches) => onChange({ graph_matches })} />
+      <Field kind="number" label="Chunk Matches" value={value.chunk_matches} min={1} max={50}
+        onChange={(chunk_matches) => onChange({ chunk_matches })} />
+    </div>
   );
 }
 

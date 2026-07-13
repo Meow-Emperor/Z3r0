@@ -42,6 +42,11 @@ class TurnTrigger:
         """Shorthand for lifecycle management (complete / release / fail)."""
         return self.notification.id if self.notification is not None else ""
 
+    @property
+    def content_is_retrieval_input(self) -> bool:
+        """Whether the trigger content carries user or delegated task semantics."""
+        return self.notification is None or self.notification.is_user_message
+
 
 def replace(trigger: TurnTrigger, **changes: object) -> TurnTrigger:
     """Derive a new ``TurnTrigger`` with selected fields replaced.

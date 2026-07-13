@@ -13,6 +13,7 @@ from schema.sandbox.images import (
     QuerySandboxImagesResponse,
     SandboxImageSchema,
 )
+from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 NOT_FOUND_RESPONSE = not_found_response("Sandbox image")
@@ -26,7 +27,7 @@ router = APIRouter(
 
 async def query_sandbox_images_route(
     page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     keyword: str = Query(default=""),
 ) -> CommonResponse[QuerySandboxImagesResponse]:
     return await query_sandbox_images_handler(page=page, size=size, keyword=keyword)

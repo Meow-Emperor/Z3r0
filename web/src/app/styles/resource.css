@@ -1,9 +1,300 @@
 .resource-page,
 .system-config-page,
+.knowledges-page,
 .work-project-workspace {
   display: grid;
+  min-height: 0;
   gap: 18px;
   color: var(--z-text);
+}
+
+.knowledge-tabs > .semi-tabs-bar {
+  margin: 0;
+  padding-inline: 4px;
+  border-bottom-color: var(--z-line);
+}
+
+.knowledge-tabs > .semi-tabs-content {
+  padding-top: 16px;
+}
+
+.knowledge-tabs,
+.knowledge-tabs > .semi-tabs-content,
+.knowledge-tabs > .semi-tabs-content > .semi-tabs-pane-active,
+.knowledge-tabs .semi-tabs-pane-motion-overlay,
+.knowledge-graph-panel {
+  min-height: 0;
+}
+
+.knowledge-tabs .table-toolbar .semi-select {
+  width: min(260px, 100%);
+}
+
+.knowledge-tabs .resource-table {
+  min-width: 900px;
+}
+
+.knowledge-tabs .resource-table-row {
+  min-height: 64px;
+}
+
+.knowledge-graph {
+  height: calc(100dvh - 330px);
+  min-height: 420px;
+  border: 0;
+  border-radius: 0;
+}
+
+@media (min-width: 901px) {
+  .resource-page,
+  .knowledges-page {
+    height: 100%;
+    grid-template-rows: max-content minmax(0, 1fr);
+  }
+
+  .knowledge-tabs,
+  .knowledge-tabs > .semi-tabs-content,
+  .knowledge-tabs > .semi-tabs-content > .semi-tabs-pane-active,
+  .knowledge-tabs .semi-tabs-pane-motion-overlay {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  .knowledge-tabs .table-panel {
+    flex: 1 1 auto;
+  }
+
+  .knowledge-graph {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+.knowledge-graph-inspector {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  width: min(360px, calc(100% - 74px));
+  max-height: 240px;
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  overflow: auto;
+  color: var(--z-text);
+  background: rgba(17, 24, 32, 0.96);
+  border: 1px solid var(--z-line-strong);
+  border-radius: 6px;
+  box-shadow: var(--z-shadow);
+}
+
+.knowledge-graph-inspector > strong,
+.knowledge-graph-inspector > span,
+.knowledge-graph-inspector p {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-graph-inspector > span,
+.knowledge-graph-inspector div > span {
+  color: var(--z-text-subtle);
+  font-size: 11px;
+}
+
+.knowledge-graph-inspector div {
+  display: grid;
+  gap: 2px;
+  padding-top: 7px;
+  border-top: 1px solid var(--z-line-soft);
+}
+
+.knowledge-graph-inspector p {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.knowledge-detail-title {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.knowledge-detail-title strong,
+.knowledge-detail-title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-detail-title strong {
+  flex: 0 0 auto;
+}
+
+.knowledge-detail-title span {
+  color: var(--z-text-subtle);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.knowledge-detail-spin {
+  display: block;
+  min-height: 240px;
+}
+
+.knowledge-detail-spin > .semi-spin-children {
+  min-height: 240px;
+}
+
+.knowledge-detail-content {
+  display: grid;
+  gap: 0;
+  padding-bottom: 22px;
+  color: var(--z-text);
+}
+
+.knowledge-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--z-line);
+}
+
+.knowledge-detail-facts > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 14px 14px 14px 0;
+}
+
+.knowledge-detail-facts span,
+.knowledge-detail-identifiers span {
+  color: var(--z-text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.knowledge-detail-facts strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--z-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-detail-identifiers {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--z-line);
+}
+
+.knowledge-detail-identifiers > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+}
+
+.knowledge-detail-identifiers code {
+  min-width: 0;
+  color: var(--z-text);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-detail-section {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--z-line);
+}
+
+.knowledge-detail-section:last-child {
+  border-bottom: 0;
+}
+
+.knowledge-detail-section h3 {
+  margin: 0;
+  color: var(--z-text-strong);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.knowledge-detail-text,
+.knowledge-detail-json {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px 14px;
+  color: var(--z-text);
+  background: var(--z-bg-deep);
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+  font-family: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-detail-text.is-error {
+  color: var(--z-danger);
+  background: var(--z-danger-bg);
+  border-color: var(--z-danger-border);
+}
+
+.knowledge-detail-editor {
+  height: clamp(260px, 38dvh, 420px);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--z-bg-deep);
+  border: 1px solid var(--z-line);
+  border-radius: 6px;
+}
+
+.knowledge-detail-editor.is-compact {
+  height: clamp(220px, 30dvh, 320px);
+}
+
+.knowledge-detail-editor .cm-host,
+.knowledge-detail-editor .cm-editor {
+  height: 100%;
+}
+
+.knowledge-detail-empty {
+  min-height: 220px;
+}
+
+@media (max-width: 720px) {
+  .knowledge-detail-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .knowledge-detail-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-detail-identifiers > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .knowledge-detail-editor {
+    height: min(38dvh, 360px);
+  }
 }
 
 .metric-strip {
@@ -61,7 +352,11 @@
 }
 
 .table-panel {
-  overflow-x: auto;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .table-toolbar {
@@ -72,6 +367,10 @@
   padding: 18px;
   border-bottom: 1px solid var(--z-line);
   background: var(--z-surface-muted);
+}
+
+.table-toolbar > form {
+  display: contents;
 }
 
 .table-toolbar .semi-button {
@@ -150,8 +449,27 @@
 }
 
 .resource-table-spin {
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 220px;
+  overflow: auto;
   transition: opacity var(--motion-normal) var(--ease-standard);
+}
+
+.resource-table-spin > .semi-spin-children {
+  min-height: 100%;
+}
+
+@media (min-width: 901px) {
+  .table-panel .resource-table-spin {
+    min-height: 0;
+  }
+
+  .table-panel .resource-table-spin > .semi-spin-children,
+  .table-panel .empty-state {
+    height: 100%;
+    min-height: 0;
+  }
 }
 
 .resource-table {
@@ -184,6 +502,10 @@
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.resource-table-head > [role="columnheader"] {
+  white-space: nowrap;
 }
 
 .resource-table-row:not(.resource-table-head):hover {
@@ -1006,19 +1328,27 @@
   display: block;
 }
 
-.project-graph {
-  position: relative;
+.project-graph-frame,
+.cytoscape-graph {
   height: 100%;
   min-height: 320px;
+}
+
+.cytoscape-graph {
+  position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle, rgba(156, 199, 203, 0.15) 1px, transparent 1px) 0 0 / 22px 22px,
-    var(--z-bg-deep);
+  background: var(--z-bg-deep);
   border: 1px solid var(--z-line);
   border-radius: 8px;
 }
 
-.project-graph-canvas {
+.project-graph {
+  background:
+    radial-gradient(circle, rgba(156, 199, 203, 0.15) 1px, transparent 1px) 0 0 / 22px 22px,
+    var(--z-bg-deep);
+}
+
+.cytoscape-graph-canvas {
   width: 100%;
   height: 100%;
   min-height: inherit;
@@ -1026,12 +1356,12 @@
   cursor: grab;
 }
 
-.project-graph-canvas:active {
+.cytoscape-graph-canvas:active {
   cursor: grabbing;
 }
 
 .project-graph-legend,
-.project-graph-controls button,
+.cytoscape-graph-controls button,
 .project-graph-tooltip {
   color: var(--z-text);
   background: var(--z-surface-strong);
@@ -1098,7 +1428,7 @@
   );
 }
 
-.project-graph-controls {
+.cytoscape-graph-controls {
   position: absolute;
   right: 12px;
   bottom: 12px;
@@ -1107,7 +1437,7 @@
   gap: 6px;
 }
 
-.project-graph-controls button {
+.cytoscape-graph-controls button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1120,7 +1450,7 @@
     color var(--motion-fast) var(--ease-standard);
 }
 
-.project-graph-controls button:hover {
+.cytoscape-graph-controls button:hover {
   color: var(--z-text-strong);
   background: var(--z-surface-muted);
 }
@@ -1356,10 +1686,6 @@
 @media (max-width: 900px) {
   .metric-strip {
     grid-template-columns: 1fr;
-  }
-
-  .table-panel {
-    overflow-x: auto;
   }
 
   .project-info-content,

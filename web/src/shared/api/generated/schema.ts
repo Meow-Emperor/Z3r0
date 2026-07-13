@@ -331,6 +331,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/knowledges/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Knowledge Documents Route */
+        get: operations["query_knowledge_documents_route_api_knowledges_documents_get"];
+        put?: never;
+        /** Upload Knowledge Documents Route */
+        post: operations["upload_knowledge_documents_route_api_knowledges_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledges/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Document Route */
+        get: operations["get_knowledge_document_route_api_knowledges_documents__document_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Knowledge Document Route */
+        delete: operations["delete_knowledge_document_route_api_knowledges_documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledges/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Graph Route */
+        get: operations["get_knowledge_graph_route_api_knowledges_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledges/graph/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Knowledge Graph Route */
+        get: operations["search_knowledge_graph_route_api_knowledges_graph_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledges/vectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Knowledge Vectors Route */
+        get: operations["query_knowledge_vectors_route_api_knowledges_vectors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledges/vectors/{vector_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Vector Route */
+        get: operations["get_knowledge_vector_route_api_knowledges_vectors__vector_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox-containers": {
         parameters: {
             query?: never;
@@ -1225,6 +1329,11 @@ export interface components {
              */
             path: string;
         };
+        /** Body_upload_knowledge_documents_route_api_knowledges_documents_post */
+        Body_upload_knowledge_documents_route_api_knowledges_documents_post: {
+            /** Files */
+            files: string[];
+        };
         /** CommonResponse */
         CommonResponse: {
             /**
@@ -1339,6 +1448,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[DeleteKnowledgeDocumentResponse] */
+        CommonResponse_DeleteKnowledgeDocumentResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["DeleteKnowledgeDocumentResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[DeleteManagedHostResponse] */
         CommonResponse_DeleteManagedHostResponse_: {
             /**
@@ -1431,6 +1554,48 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["InstanceConfigSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[KnowledgeDocumentDetailSchema] */
+        CommonResponse_KnowledgeDocumentDetailSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["KnowledgeDocumentDetailSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[KnowledgeGraph] */
+        CommonResponse_KnowledgeGraph_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["KnowledgeGraph"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[KnowledgeVectorDetailSchema] */
+        CommonResponse_KnowledgeVectorDetailSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["KnowledgeVectorDetailSchema"] | null;
             /**
              * Message
              * @default success
@@ -1557,6 +1722,34 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["QueryEgressProxiesResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryKnowledgeDocumentsResponse] */
+        CommonResponse_QueryKnowledgeDocumentsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryKnowledgeDocumentsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryKnowledgeVectorsResponse] */
+        CommonResponse_QueryKnowledgeVectorsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryKnowledgeVectorsResponse"] | null;
             /**
              * Message
              * @default success
@@ -1725,6 +1918,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["UpdateInstanceConfigResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[UploadKnowledgeDocumentsResponse] */
+        CommonResponse_UploadKnowledgeDocumentsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["UploadKnowledgeDocumentsResponse"] | null;
             /**
              * Message
              * @default success
@@ -1971,6 +2178,11 @@ export interface components {
             /** Id */
             id: number;
         };
+        /** DeleteKnowledgeDocumentResponse */
+        DeleteKnowledgeDocumentResponse: {
+            /** Id */
+            id: string;
+        };
         /** DeleteManagedHostImageRequest */
         DeleteManagedHostImageRequest: {
             /**
@@ -2006,6 +2218,14 @@ export interface components {
             /** Id */
             id: number;
         };
+        /**
+         * DocStatus
+         * @description Document processing status.
+         *     Pipeline order: PENDING -> PARSING -> ANALYZING (optional) -> PROCESSING -> PROCESSED | FAILED.
+         *     PREPROCESSED is deprecated, kept for backward compatibility.
+         * @enum {string}
+         */
+        DocStatus: "pending" | "parsing" | "analyzing" | "processing" | "preprocessed" | "processed" | "failed";
         /** DoneEvent */
         DoneEvent: {
             /**
@@ -2116,6 +2336,237 @@ export interface components {
             agents?: {
                 [key: string]: components["schemas"]["AgentConfig"];
             };
+            lightrag?: components["schemas"]["LightRAGConfig"];
+        };
+        /** KnowledgeDocumentDetailSchema */
+        KnowledgeDocumentDetailSchema: {
+            /** Chunk Ids */
+            chunk_ids: string[];
+            /** Chunk Options */
+            chunk_options: {
+                [key: string]: unknown;
+            };
+            /** Chunks Count */
+            chunks_count: number;
+            /** Content */
+            content: string;
+            /** Content Hash */
+            content_hash?: string | null;
+            /** Content Length */
+            content_length: number;
+            /** Content Summary */
+            content_summary: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error?: string | null;
+            /** File Name */
+            file_name: string;
+            /** Id */
+            id: string;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Parse Engine */
+            parse_engine?: string | null;
+            /** Parse Format */
+            parse_format?: string | null;
+            /** Process Options */
+            process_options?: string | null;
+            status: components["schemas"]["DocStatus"];
+            /** Track Id */
+            track_id?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** KnowledgeDocumentSchema */
+        KnowledgeDocumentSchema: {
+            /** Chunks Count */
+            chunks_count: number;
+            /** Content Length */
+            content_length: number;
+            /** Content Summary */
+            content_summary: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error?: string | null;
+            /** File Name */
+            file_name: string;
+            /** Id */
+            id: string;
+            status: components["schemas"]["DocStatus"];
+            /** Track Id */
+            track_id?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** KnowledgeGraph */
+        KnowledgeGraph: {
+            /**
+             * Edges
+             * @default []
+             */
+            edges: components["schemas"]["KnowledgeGraphEdge"][];
+            /**
+             * Is Truncated
+             * @default false
+             */
+            is_truncated: boolean;
+            /**
+             * Nodes
+             * @default []
+             */
+            nodes: components["schemas"]["KnowledgeGraphNode"][];
+        };
+        /** KnowledgeGraphEdge */
+        KnowledgeGraphEdge: {
+            /** Id */
+            id: string;
+            /** Properties */
+            properties: {
+                [key: string]: unknown;
+            };
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Type */
+            type: string | null;
+        };
+        /** KnowledgeGraphNode */
+        KnowledgeGraphNode: {
+            /** Id */
+            id: string;
+            /** Labels */
+            labels: string[];
+            /** Properties */
+            properties: {
+                [key: string]: unknown;
+            };
+        };
+        /** KnowledgeVectorDetailSchema */
+        KnowledgeVectorDetailSchema: {
+            /** Chunk Index */
+            chunk_index: number;
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dimension */
+            dimension: number;
+            /** Document Id */
+            document_id: string;
+            /** File Name */
+            file_name: string;
+            /** Heading */
+            heading: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: string;
+            /** Source Metadata */
+            source_metadata: {
+                [key: string]: unknown;
+            };
+            /** Tokens */
+            tokens: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** KnowledgeVectorSchema */
+        KnowledgeVectorSchema: {
+            /** Chunk Index */
+            chunk_index: number;
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dimension */
+            dimension: number;
+            /** Document Id */
+            document_id: string;
+            /** File Name */
+            file_name: string;
+            /** Id */
+            id: string;
+            /** Tokens */
+            tokens: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** LightRAGConfig */
+        LightRAGConfig: {
+            /**
+             * Chunk Matches
+             * @default 10
+             */
+            chunk_matches: number;
+            /**
+             * Embedding Api
+             * @default https://api.openai.com/v1
+             */
+            embedding_api: string;
+            /**
+             * Embedding Dim
+             * @default 1536
+             */
+            embedding_dim: number;
+            /**
+             * Embedding Key
+             * @default
+             */
+            embedding_key: string;
+            /**
+             * Embedding Model
+             * @default text-embedding-3-small
+             */
+            embedding_model: string;
+            /**
+             * Graph Matches
+             * @default 5
+             */
+            graph_matches: number;
+            /**
+             * Llm Api
+             * @default https://api.openai.com/v1
+             */
+            llm_api: string;
+            /**
+             * Llm Key
+             * @default
+             */
+            llm_key: string;
+            /**
+             * Llm Model
+             * @default gpt-5
+             */
+            llm_model: string;
         };
         /** ListAgentEventsResponse */
         ListAgentEventsResponse: {
@@ -2249,6 +2700,32 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** QueryKnowledgeDocumentsResponse */
+        QueryKnowledgeDocumentsResponse: {
+            /** Items */
+            items: components["schemas"]["KnowledgeDocumentSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Status Counts */
+            status_counts: {
+                [key: string]: number;
+            };
+            /** Total */
+            total: number;
+        };
+        /** QueryKnowledgeVectorsResponse */
+        QueryKnowledgeVectorsResponse: {
+            /** Items */
+            items: components["schemas"]["KnowledgeVectorSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
         /** QueryManagedHostsResponse */
         QueryManagedHostsResponse: {
             /** Items */
@@ -2303,6 +2780,13 @@ export interface components {
             size: number;
             /** Total */
             total: number;
+        };
+        /** RejectedKnowledgeDocumentUpload */
+        RejectedKnowledgeDocumentUpload: {
+            /** File Name */
+            file_name: string;
+            /** Message */
+            message: string;
         };
         /** ReportToolResultOutputSchema */
         ReportToolResultOutputSchema: {
@@ -2885,7 +3369,7 @@ export interface components {
          * ToolResultTypeSchema
          * @enum {string}
          */
-        ToolResultTypeSchema: "skill_detail" | "knowledge_detail" | "knowledge_mutation" | "work_project" | "report";
+        ToolResultTypeSchema: "skill_detail" | "work_project" | "report";
         /** TurnBoundaryEvent */
         TurnBoundaryEvent: {
             /**
@@ -2966,6 +3450,7 @@ export interface components {
             agents: {
                 [key: string]: components["schemas"]["UpdateAgentConfigRequest"];
             };
+            lightrag: components["schemas"]["LightRAGConfig"];
         };
         /** UpdateInstanceConfigResponse */
         UpdateInstanceConfigResponse: {
@@ -3028,6 +3513,15 @@ export interface components {
             sandbox_container_id?: number | null;
             /** @default penetration_test */
             type: components["schemas"]["WorkProjectType"];
+        };
+        /** UploadKnowledgeDocumentsResponse */
+        UploadKnowledgeDocumentsResponse: {
+            /** Queued Files */
+            queued_files: string[];
+            /** Rejected Files */
+            rejected_files: components["schemas"]["RejectedKnowledgeDocumentUpload"][];
+            /** Track Ids */
+            track_ids: string[];
         };
         /** UserMessageEvent */
         UserMessageEvent: {
@@ -4769,6 +5263,451 @@ export interface operations {
                 };
             };
             /** @description Managed host not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_knowledge_documents_route_api_knowledges_documents_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                status?: components["schemas"]["DocStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryKnowledgeDocumentsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    upload_knowledge_documents_route_api_knowledges_documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_knowledge_documents_route_api_knowledges_documents_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_UploadKnowledgeDocumentsResponse_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_knowledge_document_route_api_knowledges_documents__document_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_KnowledgeDocumentDetailSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Knowledge document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    delete_knowledge_document_route_api_knowledges_documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_DeleteKnowledgeDocumentResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Knowledge document not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_knowledge_graph_route_api_knowledges_graph_get: {
+        parameters: {
+            query?: {
+                query?: string;
+                max_depth?: number;
+                max_nodes?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_KnowledgeGraph_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    search_knowledge_graph_route_api_knowledges_graph_search_get: {
+        parameters: {
+            query: {
+                query: string;
+                max_nodes?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_KnowledgeGraph_"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_knowledge_vectors_route_api_knowledges_vectors_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryKnowledgeVectorsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_knowledge_vector_route_api_knowledges_vectors__vector_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_KnowledgeVectorDetailSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Knowledge vector not found */
             404: {
                 headers: {
                     [name: string]: unknown;

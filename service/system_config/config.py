@@ -9,11 +9,13 @@ from config import (
     AgentPoolConfig,
     AgentRuntimeConfig,
     GlobalConfig,
+    LightRAGConfig,
     get_config,
     read_config_file,
     write_config_file,
 )
 from core.delegation.subagents import start_subagent_runtime, stop_subagent_runtime
+from core.lightrag.runtime import lightrag_client, restart_lightrag
 from core.runtime.session import AgentSessionPool, get_agent_pool, replace_agent_pool
 from logger import get_logger
 from schema.system_config.config import InstanceConfigSchema, UpdateInstanceConfigRequest
@@ -62,44 +64,94 @@ async def update_instance_config(request: UpdateInstanceConfigRequest) -> Instan
             "agents": agents,
             "agent_pool": request.agent_pool,
             "agent_runtime": request.agent_runtime,
+            "lightrag": request.lightrag,
         })
         write_config_file(next_cfg)
-        return await _apply_instance_config_from_file(next_cfg)
+        try:
+            return await _apply_instance_config_from_file(next_cfg)
+        except BaseException as exc:
+            try:
+                write_config_file(current)
+            except Exception as rollback_error:
+                logger.exception("failed to roll back instance config file")
+                exc.add_note(f"config file rollback also failed: {rollback_error}")
+            raise
 
 
 async def _apply_instance_config_from_file(file_cfg: GlobalConfig) -> InstanceConfigApplyResult:
     previous = _snapshot_instance_config(get_config())
-    runtime_changed = _apply_instance_config(file_cfg)
-    if runtime_changed:
+    await _ensure_embedding_storage_compatible(previous.lightrag, file_cfg.lightrag)
+    agent_runtime_changed, lightrag_runtime_changed = _apply_instance_config(file_cfg)
+    if lightrag_runtime_changed:
+        try:
+            await restart_lightrag(file_cfg.lightrag, fallback_config=previous.lightrag)
+        except BaseException:
+            _restore_instance_config(previous)
+            raise
+        logger.info("LightRAG config applied and runtime rebuilt")
+    if agent_runtime_changed:
         try:
             await rebuild_agent_instances()
-        except Exception:
+        except BaseException as exc:
             _restore_instance_config(previous)
+            if lightrag_runtime_changed:
+                try:
+                    await restart_lightrag(previous.lightrag)
+                except Exception as rollback_error:
+                    logger.exception("failed to roll back LightRAG after agent rebuild failure")
+                    exc.add_note(f"LightRAG rollback also failed: {rollback_error}")
             raise
         logger.info("instance config applied and agent instances rebuilt")
     return InstanceConfigApplyResult(
         config=_instance_config_from_global(get_config()),
-        restarted=runtime_changed,
+        restarted=agent_runtime_changed or lightrag_runtime_changed,
     )
 
 
-def _apply_instance_config(file_cfg: GlobalConfig) -> bool:
+def _apply_instance_config(file_cfg: GlobalConfig) -> tuple[bool, bool]:
     current = get_config()
-    if not _instance_config_changed(current, file_cfg):
-        return False
+    agent_runtime_changed = _agent_runtime_config_changed(current, file_cfg)
+    lightrag_changed = current.lightrag != file_cfg.lightrag
+    lightrag_runtime_changed = _lightrag_runtime_config_changed(current.lightrag, file_cfg.lightrag)
+    if not agent_runtime_changed and not lightrag_changed:
+        return False, False
 
     current.agents = _copy_agents(file_cfg.agents)
     current.agent_pool = _copy_agent_pool(file_cfg.agent_pool)
     current.agent_runtime = _copy_agent_runtime(file_cfg.agent_runtime)
-    return True
+    current.lightrag = _copy_lightrag(file_cfg.lightrag)
+    return agent_runtime_changed, lightrag_runtime_changed
 
 
-def _instance_config_changed(current: GlobalConfig, next_cfg: GlobalConfig) -> bool:
+def _agent_runtime_config_changed(current: GlobalConfig, next_cfg: GlobalConfig) -> bool:
     return (
         current.agents != next_cfg.agents
         or current.agent_pool != next_cfg.agent_pool
         or current.agent_runtime != next_cfg.agent_runtime
     )
+
+
+def _lightrag_runtime_config_changed(current: LightRAGConfig, next_cfg: LightRAGConfig) -> bool:
+    retrieval_fields = {"graph_matches", "chunk_matches"}
+    return current.model_dump(exclude=retrieval_fields) != next_cfg.model_dump(exclude=retrieval_fields)
+
+
+async def _ensure_embedding_storage_compatible(current: LightRAGConfig, next_cfg: LightRAGConfig) -> None:
+    embedding_changed = (
+        current.embedding_api != next_cfg.embedding_api
+        or current.embedding_model != next_cfg.embedding_model
+        or current.embedding_dim != next_cfg.embedding_dim
+    )
+    if not embedding_changed:
+        return
+
+    async with lightrag_client() as rag:
+        status_counts = await rag.get_processing_status()
+    if any(int(count) > 0 for count in status_counts.values()):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST.value,
+            detail="embedding API, model, and dimension cannot change while LightRAG documents exist",
+        )
 
 
 def _copy_agents(agents: dict[str, AgentConfig]) -> dict[str, AgentConfig]:
@@ -114,6 +166,10 @@ def _copy_agent_runtime(agent_runtime: AgentRuntimeConfig) -> AgentRuntimeConfig
     return agent_runtime.model_copy(deep=True)
 
 
+def _copy_lightrag(lightrag: LightRAGConfig) -> LightRAGConfig:
+    return lightrag.model_copy(deep=True)
+
+
 def _snapshot_instance_config(cfg: GlobalConfig) -> InstanceConfigSchema:
     return _instance_config_from_global(cfg).model_copy(deep=True)
 
@@ -123,6 +179,7 @@ def _restore_instance_config(snapshot: InstanceConfigSchema) -> None:
     current.agents = _copy_agents(snapshot.agents)
     current.agent_pool = _copy_agent_pool(snapshot.agent_pool)
     current.agent_runtime = _copy_agent_runtime(snapshot.agent_runtime)
+    current.lightrag = _copy_lightrag(snapshot.lightrag)
 
 
 async def rebuild_agent_instances() -> None:
@@ -135,11 +192,25 @@ async def rebuild_agent_instances() -> None:
             await old_pool.stop()
         await start_subagent_runtime()
         await new_pool.start()
-    except Exception:
+    except BaseException as exc:
         logger.exception("agent instance rebuild failed")
-        await new_pool.stop()
+        try:
+            await new_pool.stop()
+        except Exception as cleanup_error:
+            logger.exception("failed to stop replacement agent pool")
+            exc.add_note(f"replacement agent pool cleanup also failed: {cleanup_error}")
+
         fallback_pool = replace_agent_pool(AgentSessionPool())
-        await fallback_pool.start()
+        try:
+            await fallback_pool.start()
+        except Exception as recovery_error:
+            logger.exception("failed to start fallback agent pool")
+            exc.add_note(f"fallback agent pool start also failed: {recovery_error}")
+        try:
+            await start_subagent_runtime()
+        except Exception as recovery_error:
+            logger.exception("failed to recover subagent runtime")
+            exc.add_note(f"subagent runtime recovery also failed: {recovery_error}")
         raise
 
 
@@ -148,4 +219,5 @@ def _instance_config_from_global(cfg: GlobalConfig) -> InstanceConfigSchema:
         agents=cfg.agents,
         agent_pool=cfg.agent_pool,
         agent_runtime=cfg.agent_runtime,
+        lightrag=cfg.lightrag,
     )

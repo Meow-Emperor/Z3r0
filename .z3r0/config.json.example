@@ -31,6 +31,7 @@
         "context_compression_trigger_ratio": 0.95,
         "context_compression_hard_stop_ratio": 0.98,
         "context_compression_target_ratio": 0.20,
+        "context_budget_model_call_ratio": 0.80,
         "context_compression_preserve_recent_ratio": 0.25,
         "context_compression_preserve_recent_items": 20,
         "context_compression_min_items": 12,
@@ -40,6 +41,17 @@
         "max_size": 256,
         "ttl_seconds": 1800,
         "sweep_interval_seconds": 60
+    },
+    "lightrag": {
+        "embedding_api": "https://api.openai.com/v1",
+        "embedding_key": "",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dim": 1536,
+        "llm_api": "https://api.openai.com/v1",
+        "llm_key": "",
+        "llm_model": "gpt-5",
+        "graph_matches": 5,
+        "chunk_matches": 10
     },
     "agents": {
         "cso": {

@@ -14,6 +14,10 @@ if str(ROOT_PATH) not in sys.path:
 from app import create_app
 from middleware.auth import ACCESS_TOKEN_HEADER, require_admin, require_user
 from pydantic import TypeAdapter
+from router.knowledge.resources import (
+    KNOWLEDGE_GRAPH_EXPANSION_NODES,
+    KNOWLEDGE_GRAPH_MAX_NODES,
+)
 from schema.agent.events import (
     AgentEventSchema,
     DoneEvent,
@@ -26,6 +30,7 @@ from schema.sandbox.command_outputs import (
     SandboxCommandResultMetadata,
 )
 from schema.work_project.graph import EDGE_TYPE_CATEGORY, WorkProjectGraphEdgeCategory
+from service.common.pagination import RESOURCE_PAGE_SIZE
 
 
 def export_openapi_schema() -> Path:
@@ -77,6 +82,10 @@ def export_frontend_contract_constants(schema: dict[str, Any]) -> Path:
         f"export const SESSION_TYPES = {_enum_values_ts(schema, 'SessionType')} as const;\n"
         f"export const TOOL_RESULT_TYPES = {_enum_values_ts(schema, 'ToolResultTypeSchema')} as const;\n"
         f"export const TOOL_RESULT_TYPE = {_enum_object_ts(schema, 'ToolResultTypeSchema')} as const;\n\n"
+        f"export const KNOWLEDGE_DOCUMENT_STATUSES = {_enum_values_ts(schema, 'DocStatus')} as const;\n\n"
+        f"export const RESOURCE_PAGE_SIZE = {RESOURCE_PAGE_SIZE};\n\n"
+        f"export const KNOWLEDGE_GRAPH_EXPANSION_NODES = {KNOWLEDGE_GRAPH_EXPANSION_NODES};\n"
+        f"export const KNOWLEDGE_GRAPH_MAX_NODES = {KNOWLEDGE_GRAPH_MAX_NODES};\n\n"
         f"export const ACCESS_TOKEN_HEADER = {json.dumps(_get_access_token_header())};\n",
         encoding="utf-8",
     )

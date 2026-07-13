@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ghcr.io/yv1ing/postgres-for-rag:latest
     container_name: postgres
     restart: always
     environment:
@@ -18,7 +18,7 @@ services:
       retries: 20
     
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: ghcr.io/yv1ing/pgadmin4:latest
     container_name: pgadmin
     restart: always
     environment:

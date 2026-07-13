@@ -32,9 +32,9 @@
 
 ## Overview
 
-Z3r0 is a control-plane-oriented red team workbench. It combines a React operator console, a FastAPI management plane, a session-based multi-agent runtime, project-scoped evidence records, distributed Docker sandbox resources, and a controlled egress layer.
+Z3r0 is a control-plane-oriented red team workbench. It combines a React operator console, a FastAPI management plane, a session-based multi-Agent runtime, project-scoped evidence records, distributed Docker sandbox resources, and a controlled egress layer.
 
-The design goal is to make agent-assisted security work operationally bounded and reviewable. Conversations are not treated as the only source of truth. Project scope, assets, findings, relationship graph edges, attack paths, sandbox resources, egress policy, and replayable timeline events are represented as explicit application data.
+The design goal is to make Agent-assisted security work operationally bounded and reviewable. Conversations are not treated as the only source of truth. Project scope, assets, findings, relationship graph edges, attack paths, sandbox resources, egress policy, and replayable timeline events are represented as explicit application data.
 
 ## Architecture
 
@@ -48,6 +48,7 @@ flowchart TB
     Session["Session Runtime"]
     Graph["Session Agent Graph"]
     Team["Lead + Specialist Agents"]
+    RAG["LightRAG Core"]
     Timeline["Timeline Event Stream"]
   end
 
@@ -70,6 +71,8 @@ flowchart TB
   Workbench -->|REST| API
   Workbench -->|WebSocket| API
   API --> Session --> Graph --> Team
+  API --> RAG
+  Session --> RAG
   Team --> Records
   Team --> Containers
   Session --> Timeline
@@ -85,15 +88,16 @@ flowchart TB
   Tasks --> Store
   Project --> Store
   Containers --> Store
+  RAG --> Store
 ```
 
 Z3r0 separates the system into four architectural planes:
 
 | Plane | Scope |
 | --- | --- |
-| Control plane | Users, system configuration, agents, sessions, WorkProjects, managed hosts, sandbox images, sandbox containers, and egress proxies. |
-| Runtime plane | Multi-agent session execution, live event streaming, long-running task continuity, history projection, and timeline replay. |
-| Evidence plane | Project scope, assets, findings, relationship graph, attack paths, task progress, and per-agent summaries. |
+| Control plane | Users, system configuration, Agents, sessions, WorkProjects, Knowledges, managed hosts, sandbox images, sandbox containers, and egress proxies. |
+| Runtime plane | Multi-Agent session execution, task-input LightRAG retrieval, live event streaming, long-running task continuity, history projection, and timeline replay. |
+| Evidence plane | Project scope, assets, findings, relationship graph, attack paths, task progress, and per-Agent summaries. |
 | Execution plane | Docker hosts, sandbox containers, shell/file/noVNC access, command execution, sandbox-local skills, built-in security tooling, and outbound network policy. |
 
 This separation is reflected in the repository structure: routers and handlers expose application contracts, services own domain behavior, models define persistent state, and the React workbench consumes the stable REST/WebSocket surface.
@@ -106,6 +110,7 @@ sequenceDiagram
   participant API as FastAPI
   participant Pool as Session Runtime
   participant Agents as Agent Graph
+  participant RAG as LightRAG Core
   participant Tools as Tool Layer
   participant Project as WorkProject
   participant Sandbox as Sandbox Pool
@@ -113,8 +118,10 @@ sequenceDiagram
 
   UI->>API: Submit scoped message
   API->>Pool: Start or resume session
-  Pool->>Agents: Execute lead or specialist agent
-  Agents->>Tools: Invoke project, knowledge, sandbox, or delegation tools
+  Pool->>RAG: Retrieve semantically related context
+  RAG-->>Pool: Return documents, entities, and relationships
+  Pool->>Agents: Execute lead or specialist Agent
+  Agents->>Tools: Invoke project, sandbox, or delegation tools
 
   alt Evidence operation
     Tools->>Project: Create or update assets, findings, graph edges, paths
@@ -133,7 +140,7 @@ sequenceDiagram
   API-->>UI: Live view and replayable history
 ```
 
-The runtime is designed for assessments that outlive a single browser interaction. The frontend can stream live events, reload persisted timeline pages, switch sessions, inspect subagent work, and open project records without depending on provider-specific model events. Long-running commands and specialist tasks are represented as application state, so results can be integrated after they complete instead of forcing the operator to wait in a blocking turn.
+The runtime supports assessments that extend beyond a single browser interaction. Before Agent execution, LightRAG Core searches PostgreSQL-backed document vectors and graph relationships using the current request and bounded recent user topics, then supplies relevant context for that turn. The frontend streams live events, reloads persisted timeline pages, switches sessions, presents subagent work, and opens project records. Long-running commands and specialist tasks are represented as application state, allowing completed results to return to the appropriate session for integration.
 
 ## Evidence Model
 
@@ -165,7 +172,7 @@ WorkProject is the durable evidence boundary for professional review. Assets are
 | Graph edge | Directed relationship between two assets, either structural or offensive. |
 | Attack path | Ordered path over graph edges, used to reconstruct access or impact progression. |
 
-This model keeps evidence independent from model context. Agent summaries can remain compact while durable facts stay queryable, visualizable, and reviewable.
+The evidence model stores durable facts as queryable, visualizable, and reviewable application records while Agent summaries provide concise operational context.
 
 ## Sandbox and Egress
 
@@ -196,9 +203,9 @@ flowchart TB
   Policy --> SOCKS
 ```
 
-Sandboxing is treated as infrastructure, not as an incidental tool call. Administrators manage Docker hosts, sandbox images, running containers, exposed ports, and project bindings. Operators and agents work through selected running containers, and the same sandbox boundary supports command execution, shell sessions, file management, browser/noVNC review, and sandbox-local skills.
+Sandbox resources are managed infrastructure. Administrators manage Docker hosts, sandbox images, running containers, exposed ports, and project bindings. Operators and Agents work through selected running containers, and the same sandbox boundary supports command execution, Shell sessions, file management, browser/noVNC review, and sandbox-local skills.
 
-The default sandbox image is a preloaded security workspace rather than a bare shell. It includes reconnaissance and DNS tools (`subfinder`, `amass`, `dnsx`, `dig`, `whois`), HTTP probing and web discovery tools (`httpx`, `ffuf`, `gobuster`, `observer_ward`, `sqlmap`, `nmap`), bounded credential-testing support (`hydra`), Android and firmware analysis tools (`jadx`, `apktool`, `Ghidra`, `binwalk`), binary and pwn tooling (`gdb`, Pwndbg, `strace`, `ltrace`, `pwntools`, and the `pwntools`-provided `checksec`), browser automation through `agent-browser-cli`, and a built-in SecLists wordlist corpus. Python tooling is intentionally centered on `uv` so task environments, one-off Python runs, and persistent Python CLIs use explicit interpreter selection instead of ad hoc global `pip` installs.
+The default sandbox image provides a preloaded security workspace. It includes reconnaissance and DNS tools (`subfinder`, `amass`, `dnsx`, `dig`, `whois`), HTTP probing and web discovery tools (`httpx`, `ffuf`, `gobuster`, `observer_ward`, `sqlmap`, `nmap`), bounded credential-testing support (`hydra`), Android and firmware analysis tools (`jadx`, `apktool`, `Ghidra`, `binwalk`), binary and pwn tooling (`gdb`, Pwndbg, `strace`, `ltrace`, `pwntools`, and the `pwntools`-provided `checksec`), browser automation through `agent-browser-cli`, and a built-in SecLists wordlist corpus. Python workflows use `uv` for managed task environments, one-off runs, and persistent Python CLIs.
 
 Outbound traffic is normalized through a container-level egress profile. The sandbox runtime exports proxy environment variables to a local proxy inside the container; the control plane can update the upstream policy to direct access or a managed HTTP, HTTPS, or SOCKS5 proxy. This gives the platform a unified place to manage network identity, traffic routing, and operator-environment isolation.
 
@@ -206,8 +213,9 @@ Outbound traffic is normalized through a container-level egress profile. The san
 
 | Highlight | Description |
 | --- | --- |
-| Multi-agent orchestration | A lead agent coordinates specialist agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis. |
+| Multi-Agent orchestration | A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis. |
 | Project evidence plane | WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries. |
+| Retrieval context plane | LightRAG Core parses and indexes Markdown/PDF documents with pgvector and Apache AGE, then supplies matching document and graph context for task-oriented inputs. |
 | Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
 | Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
 | Preloaded sandbox toolchain | The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills. |
@@ -229,7 +237,7 @@ Outbound traffic is normalized through a container-level egress profile. The san
 
 ```text
 core/        Agent specs, runtime, task runtime, delegation, context, tools
-service/     Domain services for agent, sandbox, users, hosts, egress, projects
+service/     Domain services for Agent, knowledge, sandbox, users, hosts, egress, projects
 router/      FastAPI route declarations
 handler/     HTTP and WebSocket request handling
 model/       SQLModel database models
@@ -237,7 +245,8 @@ schema/      Pydantic API contracts
 web/         React workbench and landing page
 sandbox/     Docker sandbox image and control proxy
 docs/        VitePress documentation
-.z3r0/       Runtime configuration, agent prompts, knowledge files, logs
+.z3r0/       Runtime configuration, Agent prompts, logs
+.lightrag/   LightRAG parser inputs and local working files
 ```
 
 ## Documentation
@@ -245,7 +254,7 @@ docs/        VitePress documentation
 - [Overview](https://yv1ing.github.io/Z3r0/en/guide/overview)
 - [Quick Start](https://yv1ing.github.io/Z3r0/en/guide/quick-start)
 - [First Use](https://yv1ing.github.io/Z3r0/en/guide/first-use)
-- [Join Community](https://yv1ing.github.io/Z3r0/en/guide/community)
+- [Community](https://yv1ing.github.io/Z3r0/en/guide/community)
 
 ## Acknowledgments
 

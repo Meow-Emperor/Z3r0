@@ -6,6 +6,7 @@ notifications are handled separately by the executor and should never
 reach ``notification_prompt``.
 """
 
+from core.conversation.formats import TASK_RESUMPTION_CONTEXT_HEADER, sanitize_context_text
 from schema.agent.events import MAX_AGENT_TEXT_INPUT_CHARS
 from schema.agent.notifications import AgentNotificationKind, AgentNotificationSnapshot
 
@@ -33,7 +34,7 @@ def notification_prompt(notification: AgentNotificationSnapshot) -> str:
 
 
 _RESUMPTION_HEADER = (
-    "# Task Resumption Context\n\n"
+    f"{TASK_RESUMPTION_CONTEXT_HEADER}\n\n"
     "This is task context, not a new user request. "
     "Continue from the completed background work without mentioning how this context was delivered."
 )
@@ -109,7 +110,7 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
 
 
 def _truncate_inline(value: object, limit: int) -> str:
-    text = str(value or "").strip()
+    text = sanitize_context_text(str(value or "")).strip()
     if not text:
         return ""
     return _truncate_with_marker(text, limit, "[Preview truncated.]")

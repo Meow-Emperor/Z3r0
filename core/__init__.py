@@ -21,16 +21,6 @@ def extract_message_text(content: Any) -> str:
                 parts.append(text)
     return "".join(parts)
 
-
-INTERNAL_USER_MESSAGE_PREFIXES = ("# Task Resumption Context", "# Context Summary")
-
-
-def is_internal_user_text(text: str) -> bool:
-    """Return True if the text starts with a known internal-message prefix."""
-    stripped = text.lstrip()
-    return any(stripped.startswith(p) for p in INTERNAL_USER_MESSAGE_PREFIXES)
-
-
 def tool_call_id(item: dict[str, Any]) -> str:
     """Extract the tool call ID from an SDK item dict (``call_id`` or ``id``)."""
     value = item.get("call_id") or item.get("id")

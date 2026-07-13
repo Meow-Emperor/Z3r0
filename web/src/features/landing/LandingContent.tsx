@@ -60,21 +60,21 @@ const planes: CardItem[] = [
   {
     title: "Control Plane",
     kicker: "FastAPI",
-    text: "Owns authenticated resource management for users, sessions, WorkProjects, managed hosts, sandbox images, containers, egress proxies, and system configuration.",
+    text: "Manages authenticated resources for users, sessions, WorkProjects, Knowledges, managed hosts, sandbox images, containers, egress proxies, and system configuration.",
     icon: Braces,
-    items: ["REST resources", "WebSocket session entry", "Access and ownership"],
+    items: ["Identity and access", "Resource administration", "Session entry"],
   },
   {
     title: "Runtime Plane",
     kicker: "Agent sessions",
-    text: "Coordinates lead and specialist agents, streams normalized events, preserves timeline continuity, and resumes long-running work when results become available.",
+    text: "Coordinates lead and specialist Agents, enriches task inputs with LightRAG context, streams session activity, and resumes long-running work when results become available.",
     icon: Workflow,
     items: ["Session runtime", "Agent graph", "Replayable timeline"],
   },
   {
     title: "Evidence Plane",
     kicker: "WorkProject",
-    text: "Keeps assessment state outside model context through durable assets, findings, relationship graph edges, attack paths, tasks, and agent summaries.",
+    text: "Preserves assessment scope, assets, findings, relationship graph edges, attack paths, tasks, and Agent summaries as durable project evidence.",
     icon: FileCheck2,
     items: ["Assets and scope", "Findings and graph", "Attack paths"],
   },
@@ -95,22 +95,22 @@ const runtimePath: CardItem[] = [
   },
   {
     title: "Control plane",
-    text: "FastAPI receives REST and WebSocket traffic and resolves session, project, sandbox, and user boundaries.",
+    text: "Coordinates authenticated access to sessions, projects, knowledge documents, sandbox resources, and users.",
     icon: Braces,
   },
   {
     title: "Session runtime",
-    text: "The runtime executes the selected agent graph and turns provider output into application-level events.",
+    text: "Runs the selected Agent team, streams live progress, and preserves work across long-running tasks.",
     icon: Bot,
   },
   {
-    title: "Tool layer",
-    text: "Agent work reaches project records, knowledge, delegated specialists, or selected sandbox resources.",
-    icon: Workflow,
+    title: "Retrieval context",
+    text: "For task-oriented inputs, LightRAG retrieves relevant document, vector, and graph context before Agent execution.",
+    icon: Database,
   },
   {
     title: "Persistence",
-    text: "PostgreSQL stores timeline frames, project evidence, resource state, and background task state.",
+    text: "PostgreSQL retains session timelines, project evidence, LightRAG documents, vectors, graph data, and task state.",
     icon: Database,
   },
 ];
@@ -125,12 +125,13 @@ const evidenceNodes: CardItem[] = [
 ];
 
 const workbenchSurfaces: CardItem[] = [
-  { title: "Playground", text: "Live transcript, agent selection, streaming state, subagent panel, and sandbox actions.", icon: Activity },
+  { title: "Playground", text: "Live transcript, Agent selection, streaming state, subagent panel, and sandbox actions.", icon: Activity },
   { title: "Work Projects", text: "Project metadata, owners, scoped assets, sessions, records, graph, and attack paths.", icon: FolderKanban },
+  { title: "Knowledges", text: "Document ingestion, vector inspection, semantic retrieval, and knowledge graph exploration.", icon: Database },
   { title: "Host Management", text: "Docker host inventory for distributing sandbox workloads across managed infrastructure.", icon: Server },
   { title: "Egress Proxies", text: "Managed HTTP, HTTPS, and SOCKS5 upstreams for container-level outbound routing.", icon: Network },
-  { title: "Sandbox Images", text: "Reusable execution baselines that define the sandbox-local skills, security tools, browser support, and control proxy available to containers.", icon: Boxes },
-  { title: "Sandbox Containers", text: "Runtime instances with owner, status, ports, control proxy token, and egress mode.", icon: SquareTerminal },
+  { title: "Sandbox Images", text: "Reusable sandbox baselines with skills, security tools, browser access, and control services.", icon: Boxes },
+  { title: "Sandbox Containers", text: "Managed runtime instances with ownership, lifecycle, port access, browser review, and outbound policy.", icon: SquareTerminal },
 ];
 
 const sandboxToolchain: CardItem[] = [
@@ -166,7 +167,7 @@ const sandboxToolchain: CardItem[] = [
   },
   {
     title: "Browser, Python, wordlists",
-    text: "Chrome automation, noVNC review, uv-first Python workflows, and a build-time SecLists corpus.",
+    text: "Chrome automation, noVNC review, managed Python environments, and integrated SecLists wordlists.",
     icon: SquareTerminal,
     items: ["agent-browser-cli", "uv / uvx", "SecLists", "sandbox skills"],
   },
@@ -191,7 +192,7 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
         <div className="landing-hero-copy">
           <img className="landing-hero-logo" src={logoSrc} width="1000" height="1000" alt="Z3r0 logo" />
           <span className="page-eyebrow">Open-source red team collaboration workbench</span>
-          <h1>Red-Team Workbench</h1>
+          <h1>Z3r0</h1>
           <p>A control-plane-oriented platform for authorized penetration testing, vulnerability discovery, code auditing, and security research.</p>
           <div className="landing-actions">
             <ActionLink action={primaryAction} primary />
@@ -204,14 +205,14 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
       <Section
         eyebrow="Architecture planes"
         title="The system separates management, runtime, evidence, and execution concerns."
-        description="Each plane maps to real application resources: API routes and services, session runtime, WorkProject records, Docker infrastructure, sandbox control proxy, and PostgreSQL persistence."
+        description="The architecture connects authenticated administration, Agent collaboration, durable WorkProject evidence, managed sandbox infrastructure, and PostgreSQL persistence."
       >
         <div className="landing-card-grid landing-card-grid-4">
           {planes.map((item) => <Card key={item.title} item={item} accent />)}
         </div>
       </Section>
 
-      <Section eyebrow="Runtime flow" title="Live interaction, background work, and replay share one application event model.">
+      <Section eyebrow="Runtime flow" title="Live interaction, background work, and replay remain connected throughout an assessment.">
         <div className="landing-card-grid landing-card-grid-5">
           {runtimePath.map((item, index) => <Card key={item.title} item={item} index={index} arrow={index < runtimePath.length - 1} />)}
         </div>
@@ -240,12 +241,12 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
               ))}
             </div>
             <div className="landing-topology-node"><span>Sandbox control proxy</span><strong>shell / files / noVNC / egress API</strong></div>
-            <div className="landing-topology-node"><span>In-container egress proxy</span><strong>127.0.0.1:8118</strong></div>
+            <div className="landing-topology-node"><span>In-container egress proxy</span><strong>Managed routing service</strong></div>
             <div className="landing-egress-modes">{egressModes.map((mode) => <span key={mode}>{mode}</span>)}</div>
           </div>
           <div className="landing-panel landing-topology-copy">
-            <h3>Sandboxing is a managed resource boundary, not an incidental command runner.</h3>
-            <p>Operators and agents work through selected running containers. The same boundary supports command execution, shell, files, browser/noVNC review, sandbox-local skills, preloaded security tooling, and container-level network identity.</p>
+            <h3>Sandbox resources provide a managed execution boundary.</h3>
+            <p>Operators and Agents work through selected running containers. The same boundary supports command execution, Shell, files, browser/noVNC review, sandbox-local skills, preloaded security tooling, and container-level network identity.</p>
             <p>Egress policy is applied inside the container through a local proxy and can be routed directly or through managed HTTP, HTTPS, and SOCKS5 upstreams.</p>
           </div>
         </div>
@@ -253,15 +254,15 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
 
       <Section
         eyebrow="Sandbox toolchain"
-        title="The default sandbox image ships as a ready security workspace, not a bare container."
-        description="Tooling is grouped behind sandbox-local skills so agents can choose the right workflow for recon, web discovery, credential checks, reverse analysis, browser review, Python tasks, and wordlist use without treating overlapping tools as interchangeable."
+        title="The default sandbox image provides a ready-to-use security workspace."
+        description="Sandbox-local skills organize workflows for reconnaissance, web discovery, credential checks, reverse analysis, browser review, Python tasks, and wordlist use."
       >
         <div className="landing-card-grid landing-card-grid-3">
           {sandboxToolchain.map((item) => <Card key={item.title} item={item} accent />)}
         </div>
       </Section>
 
-      <Section eyebrow="Operator workbench" title="The frontend exposes the same resource model used by the backend control plane.">
+      <Section eyebrow="Operator workbench" title="A unified console brings assessment, knowledge, and execution resources into one workspace.">
         <div className="landing-card-grid landing-card-grid-3">
           {workbenchSurfaces.map((item) => <Card key={item.title} item={item} />)}
         </div>
@@ -316,7 +317,7 @@ function ArchitecturePanel() {
     <div className="landing-panel landing-architecture-panel" aria-label="Z3r0 architecture overview">
       <div className="landing-panel-heading">
         <span className="page-eyebrow">System model</span>
-        <h2>Workbench, API, runtime, evidence, sandbox, egress, and persistence are explicit layers.</h2>
+        <h2>Workbench, collaboration, evidence, sandbox, egress, and persistence operate as a connected system.</h2>
       </div>
       <div className="landing-architecture-canvas">
         <div className="landing-diagram-node landing-diagram-wide">Authorized Operator</div>

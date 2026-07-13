@@ -1,14 +1,19 @@
 """Helpers for constructing SDK input items consistently."""
 
+from typing import TYPE_CHECKING
+
 from agents import TResponseInputItem
 from openai.types.responses import (
-    EasyInputMessageParam,
     ResponseInputImageParam,
     ResponseInputMessageContentListParam,
     ResponseInputTextParam,
 )
 
+from core.conversation.formats import TASK_RESUMPTION_CONTEXT_ITEM_ID
 from schema.agent.events import AgentImageInputPart, AgentInputPart, AgentTextInputPart
+
+if TYPE_CHECKING:
+    from core.task_runtime.trigger import TurnTrigger
 
 
 def text_input_content(text: str) -> list[AgentInputPart]:
@@ -16,14 +21,32 @@ def text_input_content(text: str) -> list[AgentInputPart]:
 
 
 def display_text_from_content(content: list[AgentInputPart]) -> str:
-    text = "\n\n".join(part.text for part in content if isinstance(part, AgentTextInputPart)).strip()
+    text = retrieval_text_from_content(content)
     if text:
         return text
     image_count = sum(1 for part in content if isinstance(part, AgentImageInputPart))
     return "[Image]" if image_count == 1 else f"[{image_count} images]"
 
 
-def build_user_message_item(content_parts: list[AgentInputPart]) -> TResponseInputItem:
+def retrieval_text_from_content(content: list[AgentInputPart]) -> str:
+    """Return only user-provided text suitable for semantic retrieval."""
+    return "\n\n".join(
+        part.text.strip()
+        for part in content
+        if isinstance(part, AgentTextInputPart) and part.text.strip()
+    )
+
+
+def build_turn_input_item(trigger: "TurnTrigger") -> TResponseInputItem:
+    message_id = "" if trigger.content_is_retrieval_input else TASK_RESUMPTION_CONTEXT_ITEM_ID
+    return build_user_message_item(trigger.content, message_id=message_id)
+
+
+def build_user_message_item(
+    content_parts: list[AgentInputPart],
+    *,
+    message_id: str = "",
+) -> TResponseInputItem:
     content: ResponseInputMessageContentListParam = []
     for part in content_parts:
         if isinstance(part, AgentTextInputPart):
@@ -36,5 +59,7 @@ def build_user_message_item(content_parts: list[AgentInputPart]) -> TResponseInp
                 "detail": str(part.detail),
             }
             content.append(image_item)
-    message: EasyInputMessageParam = {"type": "message", "role": "user", "content": content}
+    message: TResponseInputItem = {"type": "message", "role": "user", "content": content}
+    if message_id:
+        message["id"] = message_id
     return message

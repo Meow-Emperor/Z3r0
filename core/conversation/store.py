@@ -18,6 +18,7 @@ from core.conversation.compaction import (
     compact_if_needed as compact_session_context_if_needed,
     get_latest_compaction,
 )
+from core.conversation.formats import is_context_summary_item
 from core.conversation.projection import ContextProjection, project_context
 from model.agent.message_meta import AgentMessageMeta
 from utils.sdk_tables import agent_messages
@@ -98,7 +99,20 @@ class Z3r0Session(SQLAlchemySession):
     async def get_items(self, limit: int | None = None) -> list[TResponseInputItem]:
         await self._ensure_tables()
         projected = await self._projected_items()
-        return projected if limit is None else projected[-limit:]
+        if limit is None:
+            return projected
+        return projected[-limit:] if limit > 0 else []
+
+    async def get_items_for_retrieval(self, recent_limit: int) -> list[TResponseInputItem]:
+        """Return the compaction anchor plus a bounded recent context tail."""
+        if recent_limit <= 0:
+            return []
+        await self._ensure_tables()
+        projected = await self._projected_items()
+        recent = projected[-recent_limit:]
+        if len(projected) > recent_limit and is_context_summary_item(projected[0]):
+            return [projected[0], *recent]
+        return recent
 
     async def compact_if_needed(
         self,

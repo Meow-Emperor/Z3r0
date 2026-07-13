@@ -20,6 +20,7 @@ from schema.host.hosts import (
     PullManagedHostImagesResponse,
     QueryManagedHostsResponse,
 )
+from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 NOT_FOUND_RESPONSE = not_found_response("Managed host")
@@ -30,7 +31,7 @@ router = APIRouter(prefix="/hosts", tags=["hosts"])
 
 async def query_managed_hosts_route(
     page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     keyword: str = Query(default=""),
 ) -> CommonResponse[QueryManagedHostsResponse]:
     return await query_managed_hosts_handler(page=page, size=size, keyword=keyword)

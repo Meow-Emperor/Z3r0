@@ -12,20 +12,22 @@ from typing import TYPE_CHECKING, Any
 from agents import Agent, RunContextWrapper, Runner, Tool, function_tool
 
 from config import get_config
+from core import extract_message_text
 from core.conversation.context_budget import build_context_run_config
+from core.conversation.retrieval import build_conversation_retrieval_query
+from core.conversation.store import Z3r0Session, fetch_stored_items
+from core.lightrag.runtime import activate_lightrag_context
 from core.runtime.context import (
     SUBAGENT_INSTANCE_PREFIX,
     AgentRuntimeContext,
     subagent_instance_id,
 )
+from core.runtime.input_items import build_turn_input_item, retrieval_text_from_content, text_input_content
 from core.runtime.notification_dispatch import forget_target_notifications, is_main_agent_instance
-from core.runtime.input_items import build_user_message_item, text_input_content
 from core.runtime.partial_context import DeltaBuffer, discard_partial_stream, incomplete_segment_events, track_delta
 from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
-from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, run_until_idle
 from core.sandbox.command_jobs import cancel_agent_async_sandbox_commands
-from core import extract_message_text
-from core.conversation.store import Z3r0Session, fetch_stored_items
+from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, run_until_idle
 from database import get_async_session, get_engine
 from logger import get_logger
 from schema.agent.events import (
@@ -655,50 +657,60 @@ def _subagent_run_turn(driver: _SubagentDriver) -> Callable[[TurnTrigger], Any]:
     )
 
     async def _run_turn(trigger: TurnTrigger) -> Any:
-        user_input = [build_user_message_item(trigger.content)]
-        if agent_config is not None:
-            await memory_session.compact_if_needed(agent_config=agent_config, incoming_items=user_input)
-        stream = Runner.run_streamed(
-            starting_agent=child_agent,
-            input=user_input,
-            session=memory_session,
-            context=context,
-            max_turns=max_turns,
-            run_config=build_context_run_config(agent_config) if agent_config is not None else None,
+        current_retrieval_text = (
+            retrieval_text_from_content(trigger.content)
+            if trigger.content_is_retrieval_input
+            else ""
         )
-        buffers: dict[str, DeltaBuffer] = {}
-        try:
-            async for event in iter_interruptible_events(
-                stream,
-                session_id=snapshot.session_id,
-                agent_instance_id=context.agent_instance_id,
-                current_agent_name=child_agent.name,
-                segment_scope=_next_subagent_segment_scope(context),
-            ):
-                track_delta(buffers, event)
-                _publish_event(snapshot.session_id, _tag_nested(event, snapshot))
-                await _update_progress_from_event(snapshot, event)
-            # Finalize segments left open by providers that omit text-done events.
-            for finalize_event in incomplete_segment_events(buffers, agent_name=child_agent.name):
-                _publish_event(snapshot.session_id, _tag_nested(finalize_event, snapshot))
-            buffers.clear()
-        except (InterruptSignal, asyncio.CancelledError):
-            # Mid-flight end: emit boundary + done so the parent finalises cleanly.
-            boundary_events = incomplete_segment_events(buffers, agent_name=child_agent.name)
-            await discard_partial_stream(stream, buffers, log_label="subagent")
-            for evt in boundary_events:
-                _publish_event(snapshot.session_id, _tag_nested(evt, snapshot))
-            _publish_event(snapshot.session_id, _tag_nested(
-                DoneEvent(created_at=datetime.now(), agent_name=child_agent.name), snapshot,
-            ))
-            raise
-        except StreamIdleTimeout as exc:
-            await discard_partial_stream(stream, buffers, log_label="subagent")
-            raise RuntimeError(str(exc)) from exc
-        except Exception:
-            await discard_partial_stream(stream, buffers, log_label="subagent")
-            raise
-        return stream
+        retrieval_query = await build_conversation_retrieval_query(
+            memory_session,
+            current_retrieval_text,
+        )
+        async with activate_lightrag_context(context, retrieval_query):
+            user_input = [build_turn_input_item(trigger)]
+            if agent_config is not None:
+                await memory_session.compact_if_needed(agent_config=agent_config, incoming_items=user_input)
+            stream = Runner.run_streamed(
+                starting_agent=child_agent,
+                input=user_input,
+                session=memory_session,
+                context=context,
+                max_turns=max_turns,
+                run_config=build_context_run_config(agent_config) if agent_config is not None else None,
+            )
+            buffers: dict[str, DeltaBuffer] = {}
+            try:
+                async for event in iter_interruptible_events(
+                    stream,
+                    session_id=snapshot.session_id,
+                    agent_instance_id=context.agent_instance_id,
+                    current_agent_name=child_agent.name,
+                    segment_scope=_next_subagent_segment_scope(context),
+                ):
+                    track_delta(buffers, event)
+                    _publish_event(snapshot.session_id, _tag_nested(event, snapshot))
+                    await _update_progress_from_event(snapshot, event)
+                # Finalize segments left open by providers that omit text-done events.
+                for finalize_event in incomplete_segment_events(buffers, agent_name=child_agent.name):
+                    _publish_event(snapshot.session_id, _tag_nested(finalize_event, snapshot))
+                buffers.clear()
+            except (InterruptSignal, asyncio.CancelledError):
+                # Mid-flight end: emit boundary + done so the parent finalises cleanly.
+                boundary_events = incomplete_segment_events(buffers, agent_name=child_agent.name)
+                await discard_partial_stream(stream, buffers, log_label="subagent")
+                for evt in boundary_events:
+                    _publish_event(snapshot.session_id, _tag_nested(evt, snapshot))
+                _publish_event(snapshot.session_id, _tag_nested(
+                    DoneEvent(created_at=datetime.now(), agent_name=child_agent.name), snapshot,
+                ))
+                raise
+            except StreamIdleTimeout as exc:
+                await discard_partial_stream(stream, buffers, log_label="subagent")
+                raise RuntimeError(str(exc)) from exc
+            except Exception:
+                await discard_partial_stream(stream, buffers, log_label="subagent")
+                raise
+            return stream
 
     return _run_turn
 
@@ -857,7 +869,6 @@ def _subagent_context(
         agent_instance_id=subagent_instance_id(snapshot.run_id),
         nested_for_agent_code=snapshot.parent_agent_code,
         nested_call_id=snapshot.nested_call_id,
-        knowledge_generation=context.knowledge_generation,
         sandbox_container_id=context.sandbox_container_id,
         sandbox_container_generation=context.sandbox_container_generation,
         sandbox_skill_metadata=context.sandbox_skill_metadata,

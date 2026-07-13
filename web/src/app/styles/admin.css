@@ -220,6 +220,12 @@
   min-height: 0;
 }
 
+@media (min-width: 901px) {
+  .admin-route-scroll {
+    height: 100%;
+  }
+}
+
 .admin-route-fixed {
   height: 100%;
   overflow: hidden;

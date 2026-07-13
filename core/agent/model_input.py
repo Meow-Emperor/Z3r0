@@ -8,6 +8,7 @@ from typing import Any
 from agents import TResponseInputItem
 
 from core import extract_message_text as _extract_message_text, tool_call_id as _tool_call_id
+from core.conversation.formats import strip_internal_context_item_id
 
 
 class ModelInputAdapter:
@@ -16,7 +17,8 @@ class ModelInputAdapter:
     def adapt(self, input: str | list[TResponseInputItem]) -> str | list[TResponseInputItem]:
         if isinstance(input, str):
             return input
-        return ToolTransactionNormalizer(input).normalize()
+        provider_items = [strip_internal_context_item_id(item) for item in input]
+        return ToolTransactionNormalizer(provider_items).normalize()
 
 
 @dataclass(slots=True)

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import AgentConfig, get_config
 from core.agent.models import build_openai_model
+from core.conversation.formats import CONTEXT_SUMMARY_ITEM_ID, format_context_summary
 from core.conversation.projection import ContextProjection, ProjectedItem, ProjectionCompaction
 from logger import get_logger
 from model.agent.context_compactions import AgentContextCompaction
@@ -21,7 +22,6 @@ from model.agent.context_compactions import AgentContextCompaction
 
 logger = get_logger(__name__)
 
-_SUMMARY_PREFIX = "# Context Summary\n\n"
 _SUMMARY_AGENT_INSTRUCTIONS = """# Runtime Guidance
 
 ## Context Compression
@@ -42,7 +42,8 @@ Write "None" for empty sections. Preserve durable facts, user requests, constrai
 code/file references, tool results, errors, pending tasks, and current state. Discard greetings,
 repetitive reasoning, obsolete plans, and low-value narration. Do not invent facts. The summary will
 replace the source messages in the next model context, so include anything required to continue the
-work safely."""
+work safely. In `User Goals`, include only user-authored goals, requests, and topics. Never place
+assistant conclusions, retrieved context, tool output, or task-resumption payloads in that section."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -389,12 +390,12 @@ async def _summarize_items(items: list[TResponseInputItem], agent_config: AgentC
 
 def _summary_item(summary_text: str) -> TResponseInputItem:
     return {
-        "id": "context_summary",
+        "id": CONTEXT_SUMMARY_ITEM_ID,
         "type": "message",
         "role": "user",
         "content": [{
             "type": "input_text",
-            "text": _SUMMARY_PREFIX + "This is context, not a new user request. Continue from the summary below.\n\n" + summary_text.strip(),
+            "text": format_context_summary(summary_text),
         }],
     }
 

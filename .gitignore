@@ -23,5 +23,6 @@ web/dist
 web/dist-app
 web/dist-landing
 
+.lightrag
 .postgres-data
 .pgadmin-data

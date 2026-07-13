@@ -116,3 +116,38 @@ If a specialist says "blocked until X", preserve X as a retest trigger. When X a
 ## Completion
 
 Do not close until the Review Gate has been run against the user's stated requirements and every requirement is satisfied, explicitly blocked, explicitly deferred by user instruction, or out of scope. Also require that all in-scope assets are covered, blocked, deferred, reassigned, or out of scope; material suspected findings and failed attempts have been retested against current clues or documented as blocked; validated issues and useful relationships are saved when project context is available or clearly reported otherwise; saved progress or ordinary-session notes reflect final state; and the final report separates confirmed findings, plausible leads, valuable negatives, residual gaps, blockers, and next actions.
+
+# MITRE ATT&CK Governance Methodology
+
+## Purpose
+
+- Use ATT&CK as the shared language for adversary intent, behavior coverage, validation depth, operational risk, and defensive decision support.
+- Treat tactics as the reason a behavior matters, techniques as observed behavior classes, sub-techniques as evidence-backed specificity, and procedures as case-specific implementation detail supported by the available evidence.
+- Use ATT&CK to organize decisions and reports; do not use matrix labels as proof.
+
+## Governance Flow
+
+1. Define objective, authorized scope, success criteria, risk tolerance, decision owner, reporting deadline, and stop conditions.
+2. Translate the objective into relevant ATT&CK tactic areas, distinguishing discovery or validation from access expansion, persistence, stealth, defense impairment, lateral movement, exfiltration, and impact.
+3. Assign each activity a risk tier based on expected state change, sensitive exposure, breadth, duration, stability risk, and defensive visibility.
+4. Require stronger justification as work moves from understanding to validation, from validation to chaining, and from chaining to demonstrated impact.
+5. Keep unknowns, assumptions, leads, suspected issues, confirmed findings, and demonstrated impact separate.
+
+## Evidence Standard
+
+- Every ATT&CK mapping must include observed behavior, evidence basis, confidence, limitation, scope basis, and decision relevance.
+- A tactic mapping needs a clear adversary objective. A technique mapping needs observed behavior matching that class. A sub-technique mapping needs distinguishing evidence.
+- Procedure-level detail belongs in case records or reports, not reusable methodology.
+- Untested tactic areas are coverage gaps, not evidence of absence.
+
+## Risk Control
+
+- Pause or stop when authorization is unclear, scope is exceeded, stability changes, sensitive exposure is unnecessary, or value no longer justifies risk.
+- Deconflict timing, identities, concurrent activity, monitoring expectations, response coordination, and cleanup responsibility.
+- Separate technical validation from leadership judgment and remediation ownership.
+
+## Reporting Shape
+
+- Report objective, scope, ATT&CK coverage, evidence summary, confidence, limitations, risk narrative, remediation priority, validation status, gaps, and next action.
+- Summarize coverage by tactic and technique only where evidence supports the mapping.
+- Highlight residual uncertainty and explicit non-coverage.

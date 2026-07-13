@@ -1,0 +1,1 @@
+"""Embedded LightRAG Core integration."""

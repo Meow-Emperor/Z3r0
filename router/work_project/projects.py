@@ -25,6 +25,7 @@ from schema.work_project.projects import (
     WorkProjectSchema,
 )
 from schema.work_project.records import WorkProjectRecordSnapshotSchema
+from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 NOT_FOUND_RESPONSE = not_found_response("Work project")
@@ -38,7 +39,7 @@ router = APIRouter(
 
 async def query_work_projects_route(
     page: int = Query(default=1, ge=1),
-    size: int = Query(default=100, ge=1, le=100),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     keyword: str = Query(default=""),
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse[QueryWorkProjectsResponse]:

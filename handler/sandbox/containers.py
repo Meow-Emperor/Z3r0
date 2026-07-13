@@ -33,7 +33,6 @@ from schema.sandbox.containers import (
     DeleteSandboxContainerResponse,
     ListContainerFilesResponse,
     QuerySandboxContainersResponse,
-    SandboxContainerSchema,
     SandboxContainerStatus,
     UpdateSandboxContainerEgressRequest,
 )

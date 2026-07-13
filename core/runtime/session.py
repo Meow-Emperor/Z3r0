@@ -12,17 +12,19 @@ from agents import Runner
 from config import get_config
 from core.agent.registry import AgentRegistry, AgentToolSnapshot, SessionAgentGraph
 from core.conversation.context_budget import build_context_run_config
+from core.conversation.retrieval import build_conversation_retrieval_query
+from core.conversation.store import Z3r0Session
+from core.delegation.subagents import cancel_sandbox_subagent_runs, cancel_session_subagent_runs
+from core.lightrag.runtime import activate_lightrag_context
 from core.runtime.context import AgentRuntimeContext, main_agent_instance_id
-from core.runtime.input_items import build_user_message_item, display_text_from_content
+from core.runtime.input_items import build_turn_input_item, display_text_from_content, retrieval_text_from_content
 from core.runtime.live_projection import LiveEventProjection
-from core.runtime.timeline import TimelineLogWriter, is_persistable, timeline_item_key
 from core.runtime.notification_dispatch import signal_target_notifications
 from core.runtime.partial_context import DeltaBuffer, discard_partial_stream, incomplete_segment_events, track_delta
 from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
-from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, replace_trigger, run_until_idle
-from core.conversation.store import Z3r0Session
-from core.delegation.subagents import cancel_sandbox_subagent_runs, cancel_session_subagent_runs
+from core.runtime.timeline import TimelineLogWriter, is_persistable, timeline_item_key
 from core.sandbox.command_jobs import cancel_sandbox_async_commands, cancel_session_async_sandbox_commands
+from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, replace_trigger, run_until_idle
 from database import get_engine
 from logger import get_logger
 from schema.agent.events import (
@@ -278,6 +280,41 @@ class AgentSession:
         def _tag(event: AgentEventSchema) -> AgentEventSchema:
             return _tag_notification_event(event, turn_context) if trigger.has_notification else event
 
+        memory_session = Z3r0Session(
+            session_id=self.session_id,
+            engine=get_engine(),
+            viewing_agent_code=turn_agent_code,
+            agent_code_to_name=self._registry.code_to_name(),
+            nested_for_agent_code=turn_context.nested_for_agent_code,
+            nested_call_id=turn_context.nested_call_id,
+        )
+        current_retrieval_text = (
+            retrieval_text_from_content(trigger.content)
+            if trigger.content_is_retrieval_input
+            else ""
+        )
+        retrieval_query = await build_conversation_retrieval_query(
+            memory_session,
+            current_retrieval_text,
+        )
+        async with activate_lightrag_context(turn_context, retrieval_query):
+            return await self._execute_turn_with_context(
+                trigger=trigger,
+                turn_agent_code=turn_agent_code,
+                turn_context=turn_context,
+                tag=_tag,
+                memory_session=memory_session,
+            )
+
+    async def _execute_turn_with_context(
+        self,
+        *,
+        trigger: TurnTrigger,
+        turn_agent_code: str,
+        turn_context: AgentRuntimeContext,
+        tag: Callable[[AgentEventSchema], AgentEventSchema],
+        memory_session: Z3r0Session,
+    ) -> Any:
         # Setup phase (graph bind, compaction, runner build) runs under the same
         # exception protection as the stream: a failure here is surfaced as a
         # finalized Error+Done turn instead of escaping and tearing down the
@@ -300,20 +337,11 @@ class AgentSession:
                 # agent turn with no visible user bubble. Emit a turn boundary so
                 # the transcript separates it from the previous turn, matching the
                 # boundary a real user message would create.
-                await self._publish(_tag(
+                await self._publish(tag(
                     TurnBoundaryEvent(created_at=datetime.now(), agent_name=agent.name),
                 ))
 
-            memory_session = Z3r0Session(
-                session_id=self.session_id,
-                engine=get_engine(),
-                viewing_agent_code=turn_agent_code,
-                agent_code_to_name=graph.code_to_name(),
-                nested_for_agent_code=turn_context.nested_for_agent_code,
-                nested_call_id=turn_context.nested_call_id,
-            )
-
-            user_input = [build_user_message_item(trigger.content)]
+            user_input = [build_turn_input_item(trigger)]
             agent_config = get_config().agents.get(turn_agent_code)
             if agent_config is not None:
                 await memory_session.compact_if_needed(
@@ -333,12 +361,12 @@ class AgentSession:
             raise
         except Exception as exc:
             logger.exception("agent turn setup failed session=%s: %s", self.session_id, exc)
-            await self._publish(_tag(ErrorEvent(
+            await self._publish(tag(ErrorEvent(
                 created_at=datetime.now(),
                 agent_name=turn_agent_code,
                 message=str(exc) or "agent turn setup failed",
             )))
-            await self._publish(_tag(DoneEvent(created_at=datetime.now(), agent_name=turn_agent_code)))
+            await self._publish(tag(DoneEvent(created_at=datetime.now(), agent_name=turn_agent_code)))
             return None
 
         buffers: dict[str, DeltaBuffer] = {}
@@ -352,11 +380,11 @@ class AgentSession:
                 segment_scope=turn_scope,
             ):
                 track_delta(buffers, event)
-                await self._publish(_tag(event))
+                await self._publish(tag(event))
             # Finalize segments left open by providers without a text-done event
             # (e.g. Chat Completions); otherwise the text is never persisted.
             for finalize_event in incomplete_segment_events(buffers, agent_name=agent.name):
-                await self._publish(_tag(finalize_event))
+                await self._publish(tag(finalize_event))
             buffers.clear()
         except (InterruptSignal, asyncio.CancelledError):
             # Both paths end the turn mid-flight; emit boundary + done so the
@@ -366,7 +394,7 @@ class AgentSession:
             await self._finalize_interrupted_turn(
                 stream=stream,
                 buffers=buffers,
-                tag=_tag,
+                tag=tag,
                 agent_name=agent.name,
             )
             raise
@@ -381,10 +409,9 @@ class AgentSession:
             await discard_partial_stream(stream, buffers, log_label="agent")
             logger.exception("agent stream failed session=%s: %s", self.session_id, exc)
             stream_error = ErrorEvent(created_at=datetime.now(), agent_name=agent.name, message=str(exc))
-
         if stream_error is not None:
-            await self._publish(_tag(stream_error))
-        await self._publish(_tag(DoneEvent(created_at=datetime.now(), agent_name=agent.name)))
+            await self._publish(tag(stream_error))
+        await self._publish(tag(DoneEvent(created_at=datetime.now(), agent_name=agent.name)))
         return stream
 
     async def _finalize_interrupted_turn(
@@ -413,10 +440,9 @@ class AgentSession:
             self._tool_snapshot = tool_snapshot
             self._agent_graph = self._registry.bind(tool_snapshot)
             logger.debug(
-                "agent graph bound session=%s agent=%s knowledge_generation=%d sandbox=%s generation=%d",
+                "agent graph bound session=%s agent=%s sandbox=%s generation=%d",
                 self.session_id,
                 agent_code,
-                tool_snapshot.knowledge_generation,
                 tool_snapshot.sandbox_container_id,
                 tool_snapshot.sandbox_container_generation,
             )
@@ -962,7 +988,6 @@ def _context_for_notification(
         agent_instance_id=notification.target_agent_instance_id,
         nested_for_agent_code=notification.nested_for_agent_code,
         nested_call_id=notification.nested_call_id,
-        knowledge_generation=base.knowledge_generation,
         sandbox_container_id=sandbox_container_id,
         sandbox_container_generation=sandbox_generation,
         sandbox_skill_metadata=sandbox_skill_metadata,

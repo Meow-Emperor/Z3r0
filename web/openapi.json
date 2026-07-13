@@ -710,6 +710,23 @@
         "title": "Body_upload_container_files_route_api_sandbox_containers__id__files_upload_post",
         "type": "object"
       },
+      "Body_upload_knowledge_documents_route_api_knowledges_documents_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "title": "Body_upload_knowledge_documents_route_api_knowledges_documents_post",
+        "type": "object"
+      },
       "CommonResponse": {
         "properties": {
           "code": {
@@ -910,6 +927,32 @@
         "title": "CommonResponse[DeleteEgressProxyResponse]",
         "type": "object"
       },
+      "CommonResponse_DeleteKnowledgeDocumentResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeleteKnowledgeDocumentResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[DeleteKnowledgeDocumentResponse]",
+        "type": "object"
+      },
       "CommonResponse_DeleteManagedHostResponse_": {
         "properties": {
           "code": {
@@ -1090,6 +1133,84 @@
           }
         },
         "title": "CommonResponse[InstanceConfigSchema]",
+        "type": "object"
+      },
+      "CommonResponse_KnowledgeDocumentDetailSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeDocumentDetailSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[KnowledgeDocumentDetailSchema]",
+        "type": "object"
+      },
+      "CommonResponse_KnowledgeGraph_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeGraph"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[KnowledgeGraph]",
+        "type": "object"
+      },
+      "CommonResponse_KnowledgeVectorDetailSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeVectorDetailSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[KnowledgeVectorDetailSchema]",
         "type": "object"
       },
       "CommonResponse_ListAgentEventsResponse_": {
@@ -1324,6 +1445,58 @@
           }
         },
         "title": "CommonResponse[QueryEgressProxiesResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QueryKnowledgeDocumentsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryKnowledgeDocumentsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryKnowledgeDocumentsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QueryKnowledgeVectorsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryKnowledgeVectorsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryKnowledgeVectorsResponse]",
         "type": "object"
       },
       "CommonResponse_QueryManagedHostsResponse_": {
@@ -1636,6 +1809,32 @@
           }
         },
         "title": "CommonResponse[UpdateInstanceConfigResponse]",
+        "type": "object"
+      },
+      "CommonResponse_UploadKnowledgeDocumentsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UploadKnowledgeDocumentsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[UploadKnowledgeDocumentsResponse]",
         "type": "object"
       },
       "CommonResponse_WorkProjectRecordSnapshotSchema_": {
@@ -2215,6 +2414,19 @@
         "title": "DeleteEgressProxyResponse",
         "type": "object"
       },
+      "DeleteKnowledgeDocumentResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "DeleteKnowledgeDocumentResponse",
+        "type": "object"
+      },
       "DeleteManagedHostImageRequest": {
         "properties": {
           "force": {
@@ -2299,6 +2511,20 @@
         ],
         "title": "DeleteWorkProjectResponse",
         "type": "object"
+      },
+      "DocStatus": {
+        "description": "Document processing status.\nPipeline order: PENDING -> PARSING -> ANALYZING (optional) -> PROCESSING -> PROCESSED | FAILED.\nPREPROCESSED is deprecated, kept for backward compatibility.",
+        "enum": [
+          "pending",
+          "parsing",
+          "analyzing",
+          "processing",
+          "preprocessed",
+          "processed",
+          "failed"
+        ],
+        "title": "DocStatus",
+        "type": "string"
       },
       "DoneEvent": {
         "properties": {
@@ -2463,9 +2689,511 @@
             },
             "title": "Agents",
             "type": "object"
+          },
+          "lightrag": {
+            "$ref": "#/components/schemas/LightRAGConfig"
           }
         },
         "title": "InstanceConfigSchema",
+        "type": "object"
+      },
+      "KnowledgeDocumentDetailSchema": {
+        "properties": {
+          "chunk_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Chunk Ids",
+            "type": "array"
+          },
+          "chunk_options": {
+            "additionalProperties": true,
+            "title": "Chunk Options",
+            "type": "object"
+          },
+          "chunks_count": {
+            "minimum": 0.0,
+            "title": "Chunks Count",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash"
+          },
+          "content_length": {
+            "minimum": 0.0,
+            "title": "Content Length",
+            "type": "integer"
+          },
+          "content_summary": {
+            "title": "Content Summary",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "parse_engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parse Engine"
+          },
+          "parse_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parse Format"
+          },
+          "process_options": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Options"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DocStatus"
+          },
+          "track_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "file_name",
+          "status",
+          "content_summary",
+          "content_length",
+          "chunks_count",
+          "created_at",
+          "updated_at",
+          "content",
+          "chunk_ids",
+          "metadata",
+          "chunk_options"
+        ],
+        "title": "KnowledgeDocumentDetailSchema",
+        "type": "object"
+      },
+      "KnowledgeDocumentSchema": {
+        "properties": {
+          "chunks_count": {
+            "minimum": 0.0,
+            "title": "Chunks Count",
+            "type": "integer"
+          },
+          "content_length": {
+            "minimum": 0.0,
+            "title": "Content Length",
+            "type": "integer"
+          },
+          "content_summary": {
+            "title": "Content Summary",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DocStatus"
+          },
+          "track_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Track Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "file_name",
+          "status",
+          "content_summary",
+          "content_length",
+          "chunks_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "KnowledgeDocumentSchema",
+        "type": "object"
+      },
+      "KnowledgeGraph": {
+        "properties": {
+          "edges": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGraphEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "is_truncated": {
+            "default": false,
+            "title": "Is Truncated",
+            "type": "boolean"
+          },
+          "nodes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGraphNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "title": "KnowledgeGraph",
+        "type": "object"
+      },
+      "KnowledgeGraphEdge": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "title": "Properties",
+            "type": "object"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source",
+          "target",
+          "properties"
+        ],
+        "title": "KnowledgeGraphEdge",
+        "type": "object"
+      },
+      "KnowledgeGraphNode": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "properties": {
+            "additionalProperties": true,
+            "title": "Properties",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "labels",
+          "properties"
+        ],
+        "title": "KnowledgeGraphNode",
+        "type": "object"
+      },
+      "KnowledgeVectorDetailSchema": {
+        "properties": {
+          "chunk_index": {
+            "minimum": 0.0,
+            "title": "Chunk Index",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dimension": {
+            "minimum": 1.0,
+            "title": "Dimension",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "heading": {
+            "additionalProperties": true,
+            "title": "Heading",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source_metadata": {
+            "additionalProperties": true,
+            "title": "Source Metadata",
+            "type": "object"
+          },
+          "tokens": {
+            "minimum": 0.0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "chunk_index",
+          "tokens",
+          "content",
+          "file_name",
+          "dimension",
+          "created_at",
+          "updated_at",
+          "heading",
+          "source_metadata"
+        ],
+        "title": "KnowledgeVectorDetailSchema",
+        "type": "object"
+      },
+      "KnowledgeVectorSchema": {
+        "properties": {
+          "chunk_index": {
+            "minimum": 0.0,
+            "title": "Chunk Index",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dimension": {
+            "minimum": 1.0,
+            "title": "Dimension",
+            "type": "integer"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "tokens": {
+            "minimum": 0.0,
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "chunk_index",
+          "tokens",
+          "content",
+          "file_name",
+          "dimension",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "KnowledgeVectorSchema",
+        "type": "object"
+      },
+      "LightRAGConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_matches": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Chunk Matches",
+            "type": "integer"
+          },
+          "embedding_api": {
+            "default": "https://api.openai.com/v1",
+            "minLength": 1,
+            "title": "Embedding Api",
+            "type": "string"
+          },
+          "embedding_dim": {
+            "default": 1536,
+            "minimum": 1.0,
+            "title": "Embedding Dim",
+            "type": "integer"
+          },
+          "embedding_key": {
+            "default": "",
+            "title": "Embedding Key",
+            "type": "string"
+          },
+          "embedding_model": {
+            "default": "text-embedding-3-small",
+            "minLength": 1,
+            "title": "Embedding Model",
+            "type": "string"
+          },
+          "graph_matches": {
+            "default": 5,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Graph Matches",
+            "type": "integer"
+          },
+          "llm_api": {
+            "default": "https://api.openai.com/v1",
+            "minLength": 1,
+            "title": "Llm Api",
+            "type": "string"
+          },
+          "llm_key": {
+            "default": "",
+            "title": "Llm Key",
+            "type": "string"
+          },
+          "llm_model": {
+            "default": "gpt-5",
+            "minLength": 1,
+            "title": "Llm Model",
+            "type": "string"
+          }
+        },
+        "title": "LightRAGConfig",
         "type": "object"
       },
       "ListAgentEventsResponse": {
@@ -2840,6 +3568,76 @@
         "title": "QueryEgressProxiesResponse",
         "type": "object"
       },
+      "QueryKnowledgeDocumentsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeDocumentSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Status Counts",
+            "type": "object"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items",
+          "status_counts"
+        ],
+        "title": "QueryKnowledgeDocumentsResponse",
+        "type": "object"
+      },
+      "QueryKnowledgeVectorsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeVectorSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryKnowledgeVectorsResponse",
+        "type": "object"
+      },
       "QueryManagedHostsResponse": {
         "properties": {
           "items": {
@@ -2993,6 +3791,24 @@
           "items"
         ],
         "title": "QueryWorkProjectsResponse",
+        "type": "object"
+      },
+      "RejectedKnowledgeDocumentUpload": {
+        "properties": {
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_name",
+          "message"
+        ],
+        "title": "RejectedKnowledgeDocumentUpload",
         "type": "object"
       },
       "ReportToolResultOutputSchema": {
@@ -3999,8 +4815,6 @@
       "ToolResultTypeSchema": {
         "enum": [
           "skill_detail",
-          "knowledge_detail",
-          "knowledge_mutation",
           "work_project",
           "report"
         ],
@@ -4210,12 +5024,16 @@
             },
             "title": "Agents",
             "type": "object"
+          },
+          "lightrag": {
+            "$ref": "#/components/schemas/LightRAGConfig"
           }
         },
         "required": [
           "agents",
           "agent_pool",
-          "agent_runtime"
+          "agent_runtime",
+          "lightrag"
         ],
         "title": "UpdateInstanceConfigRequest",
         "type": "object"
@@ -4481,6 +5299,38 @@
           "assets"
         ],
         "title": "UpdateWorkProjectMetadataRequest",
+        "type": "object"
+      },
+      "UploadKnowledgeDocumentsResponse": {
+        "properties": {
+          "queued_files": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Queued Files",
+            "type": "array"
+          },
+          "rejected_files": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedKnowledgeDocumentUpload"
+            },
+            "title": "Rejected Files",
+            "type": "array"
+          },
+          "track_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Track Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "track_ids",
+          "queued_files",
+          "rejected_files"
+        ],
+        "title": "UploadKnowledgeDocumentsResponse",
         "type": "object"
       },
       "UserMessageEvent": {
@@ -6208,7 +7058,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",
@@ -6632,7 +7482,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",
@@ -7210,6 +8060,676 @@
         ]
       }
     },
+    "/api/knowledges/documents": {
+      "get": {
+        "operationId": "query_knowledge_documents_route_api_knowledges_documents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryKnowledgeDocumentsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Knowledge Documents Route",
+        "tags": [
+          "knowledges"
+        ]
+      },
+      "post": {
+        "operationId": "upload_knowledge_documents_route_api_knowledges_documents_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_knowledge_documents_route_api_knowledges_documents_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_UploadKnowledgeDocumentsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Upload Knowledge Documents Route",
+        "tags": [
+          "knowledges"
+        ]
+      }
+    },
+    "/api/knowledges/documents/{document_id}": {
+      "delete": {
+        "operationId": "delete_knowledge_document_route_api_knowledges_documents__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_DeleteKnowledgeDocumentResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Knowledge document not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Delete Knowledge Document Route",
+        "tags": [
+          "knowledges"
+        ]
+      },
+      "get": {
+        "operationId": "get_knowledge_document_route_api_knowledges_documents__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_KnowledgeDocumentDetailSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Knowledge document not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Get Knowledge Document Route",
+        "tags": [
+          "knowledges"
+        ]
+      }
+    },
+    "/api/knowledges/graph": {
+      "get": {
+        "operationId": "get_knowledge_graph_route_api_knowledges_graph_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Query",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_depth",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "maximum": 5,
+              "minimum": 1,
+              "title": "Max Depth",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_nodes",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Max Nodes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_KnowledgeGraph_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Get Knowledge Graph Route",
+        "tags": [
+          "knowledges"
+        ]
+      }
+    },
+    "/api/knowledges/graph/search": {
+      "get": {
+        "operationId": "search_knowledge_graph_route_api_knowledges_graph_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "maxLength": 1000,
+              "minLength": 1,
+              "title": "Query",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_nodes",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Max Nodes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_KnowledgeGraph_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Search Knowledge Graph Route",
+        "tags": [
+          "knowledges"
+        ]
+      }
+    },
+    "/api/knowledges/vectors": {
+      "get": {
+        "operationId": "query_knowledge_vectors_route_api_knowledges_vectors_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryKnowledgeVectorsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Knowledge Vectors Route",
+        "tags": [
+          "knowledges"
+        ]
+      }
+    },
+    "/api/knowledges/vectors/{vector_id}": {
+      "get": {
+        "operationId": "get_knowledge_vector_route_api_knowledges_vectors__vector_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vector_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Vector Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_KnowledgeVectorDetailSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Knowledge vector not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Get Knowledge Vector Route",
+        "tags": [
+          "knowledges"
+        ]
+      }
+    },
     "/api/sandbox-containers": {
       "get": {
         "operationId": "query_sandbox_containers_route_api_sandbox_containers_get",
@@ -7230,7 +8750,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",
@@ -7395,7 +8915,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",
@@ -9064,7 +10584,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",
@@ -9436,7 +10956,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",
@@ -9814,7 +11334,7 @@
             "name": "size",
             "required": false,
             "schema": {
-              "default": 100,
+              "default": 10,
               "maximum": 100,
               "minimum": 1,
               "title": "Size",

@@ -9,19 +9,19 @@ from agents import TResponseInputItem
 from agents.run import CallModelData, ModelInputData, RunConfig
 
 from config import AgentConfig, get_config
-from core import extract_message_text, tool_call_id
+from core import tool_call_id
 from core.conversation.compaction import estimate_items_tokens, resolve_context_window
+from core.conversation.formats import is_context_summary_item
 from logger import get_logger
 
 
 logger = get_logger(__name__)
 
-_NOTICE_ID = "context_budget_notice"
 _NOTICE_TEXT = (
     "# Context Budget Notice\n\n"
     "Older conversation items were omitted from this model call because the active input exceeded "
     "the configured context window. Use the retained context summary and recent messages. Reload "
-    "specific files, command outputs, or knowledge entries if exact omitted details are needed."
+    "specific files, command outputs, or source documents if exact omitted details are needed."
 )
 _MIN_COMPLETION_SLACK_TOKENS = 2048
 
@@ -186,18 +186,9 @@ def _split_context_anchor(items: list[TResponseInputItem]) -> tuple[list[TRespon
     if not items:
         return [], []
     first = items[0]
-    if _is_context_summary(first):
+    if is_context_summary_item(first):
         return [first], items[1:]
     return [], items
-
-
-def _is_context_summary(item: TResponseInputItem) -> bool:
-    if not isinstance(item, dict):
-        return False
-    if item.get("type") != "message" or item.get("role") != "user":
-        return False
-    text = extract_message_text(item.get("content"))
-    return text.lstrip().startswith("# Context Summary")
 
 
 def _build_chunks(items: list[TResponseInputItem], model: str) -> list[_InputChunk]:
@@ -263,7 +254,6 @@ def _select_recent_chunks(chunks: list[_InputChunk], budget_tokens: int) -> tupl
 
 def _budget_notice_item() -> TResponseInputItem:
     return {
-        "id": _NOTICE_ID,
         "type": "message",
         "role": "user",
         "content": [{"type": "input_text", "text": _NOTICE_TEXT}],

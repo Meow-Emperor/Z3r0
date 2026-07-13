@@ -5,7 +5,7 @@ editLink: true
 
 # First Use
 
-This guide first introduces the overall capabilities of Z3r0, then walks through a complete CTF task from initial setup to automated solving. The walkthrough explains the main system modules and their intended usage.
+This guide introduces the primary Z3r0 modules and walks through initial resource configuration and an authorized CTF project workflow.
 
 ## System Overview
 
@@ -21,22 +21,31 @@ Enter the configured administrator account and password. After successful authen
 
 The system contains the following core modules:
 
-1. Playground: the primary workspace for direct interaction and collaboration with the agent team.
-2. Work Projects: manages work projects, including creation, editing, and review.
-3. Host Management: manages host nodes and orchestrates the runtime environment for sandbox containers.
-4. Egress Proxies: manages unified network egress through HTTP, HTTPS, and SOCKS5 proxies.
-5. Sandbox Images: manages customized sandbox images, including the default image with sandbox-local skills and preloaded security tooling.
-6. Sandbox Containers: orchestrates runnable sandbox containers with command execution, files, noVNC/browser review, and egress configuration.
-7. System Users: manages system users, roles, and related identity information.
-8. System Config: manages runtime configuration and supports hot updates.
+1. Playground: provides session-based interaction and collaboration with the Agent team.
+2. Work Projects: manages project scope, owners, sessions, evidence records, graphs, and attack paths.
+3. Knowledges: manages document ingestion, vector inspection, semantic retrieval, and knowledge graph exploration.
+4. Host Management: manages host nodes and orchestrates the runtime environment for sandbox containers.
+5. Egress Proxies: manages unified network egress through HTTP, HTTPS, and SOCKS5 proxies.
+6. Sandbox Images: manages customized sandbox images, including the default image with sandbox-local skills and preloaded security tooling.
+7. Sandbox Containers: orchestrates runnable sandbox containers with command execution, files, noVNC/browser review, and egress configuration.
+8. System Users: manages system users, roles, and related identity information.
+9. System Config: manages Agent runtime, Agent models, and independent LightRAG embedding and extraction configuration.
 
 ## Start Working
 
-The following sections start from a clean system state, configure the runtime environment step by step, and complete a CTF challenge.
+The following sections configure execution resources, create a project, and run an authorized CTF workflow from a clean system state.
+
+### Manage Knowledge Documents
+
+Knowledges accepts Markdown and PDF documents through LightRAG Core, with multi-file ingestion, parallel parsing and indexing, processing-status review, vector-chunk inspection, semantic entity and relationship search, and incremental graph exploration. Document details include the content summary, extracted document text, parsing metadata, and chunk identifiers. Vector details include the complete chunk content, heading hierarchy, and source metadata.
+
+After indexing, the managed document record, vector chunks, and graph contributions form the retained knowledge representation; the uploaded source file is no longer required. Deleting a document removes its vectors and graph contributions consistently.
+
+Before each Agent turn, retrieval combines the current request with a bounded set of recent user topics. Follow-up questions and notification-driven continuations therefore retain the active subject without replaying the full conversation. Retrieved document and graph context applies only to that turn; the next turn performs a fresh retrieval from its own request and recent topic context.
 
 ### Connect a Host
 
-When the system starts, it adds the local machine to the host management list by default, so Z3r0 can run without a remote host. In most scenarios, however, it is strongly recommended to configure a remote host and run sandbox containers remotely for security isolation and source-tracing resistance.
+Z3r0 adds the local machine to Host Management during startup, so a remote host is optional. A dedicated remote host is recommended when workload isolation, privilege separation, independent capacity, or centralized operational management is required.
 
 Follow the steps below to configure and connect a remote host.
 
@@ -77,7 +86,7 @@ systemctl restart docker
 
 In the `Host Management` module, click `Create Host` to open the edit form. Fill in the remote host IP address, port, account, password, and Docker certificate information, then save the record.
 
-> Note: In public network environments, use TLS mode. In LAN environments, Plain mode can be used without certificate authentication.
+> Use mutual TLS whenever Docker Remote API traffic leaves the local host. Plain mode should be limited to explicitly trusted, isolated networks with independent access controls.
 
 ![create-host-1](/images/create-host-1.png)
 
@@ -113,11 +122,11 @@ Using a CTF challenge as the target, create a work project in the `Work Projects
 
 ### Execute the Task
 
-After the work project is created, the corresponding option appears in the `Playground` list. Open it, create a new session, and start collaborating with the agent team. Use natural language to instruct the agent team to solve the CTF challenge, obtain the flag, and finally deliver the write-up:
+After the WorkProject is created, it appears in the `Playground` list. Open it, create a session, and assign the authorized CTF objective to the Agent team. The final deliverable can include the validated flag and a reviewable write-up:
 
 ![project-example-1](/images/project-example-1.png)
 
-During execution, open the `Project records` window to inspect real-time progress and related information. Assets, findings, relationships, and graphs together preserve the task execution process as long-term evidence:
+During execution, open `Project records` to review progress and structured evidence. Assets, findings, relationships, and graph data preserve the material results of the assessment:
 
 ![project-example-2](/images/project-example-2.png)
 

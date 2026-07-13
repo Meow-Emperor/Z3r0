@@ -15,6 +15,9 @@ _UVICORN_LOGGERS = (
     "uvicorn.access",
     "uvicorn.asgi",
 )
+_SILENCED_LIBRARY_LOGGERS = (
+    "lightrag",
+)
 _LIBRARY_LOGGERS = (
     "openai",
     "openai.agents",
@@ -55,6 +58,13 @@ def configure_library_loggers(level: str | int | None = None) -> None:
         _clear_handlers(uvicorn_logger)
         uvicorn_logger.disabled = True
         uvicorn_logger.propagate = False
+
+    for logger_name in _SILENCED_LIBRARY_LOGGERS:
+        library_logger = logging.getLogger(logger_name)
+        _clear_handlers(library_logger)
+        library_logger.addHandler(logging.NullHandler())
+        library_logger.disabled = True
+        library_logger.propagate = False
 
     resolved_level = _coerce_level(level) if level is not None else None
     quiet_level = max(logging.WARNING, resolved_level or logging.WARNING)

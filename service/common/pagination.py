@@ -9,6 +9,9 @@ from database import get_async_session
 
 T = TypeVar("T")
 
+RESOURCE_PAGE_SIZE = 10
+RESOURCE_PAGE_MAX_SIZE = 100
+
 
 @dataclass(frozen=True)
 class Page(Generic[T]):

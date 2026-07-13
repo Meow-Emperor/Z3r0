@@ -4,7 +4,6 @@ import shlex
 from core.runtime.context import AgentRuntimeContext, AgentUserContext, main_agent_instance_id
 from core.runtime.input_items import display_text_from_content
 from core.runtime.session import get_agent_pool
-from core.tools.knowledge import current_knowledge_generation
 from core.tools.sandbox import SANDBOX_SKILLS_DIR
 from logger import get_logger
 from middleware.auth import AuthUser
@@ -242,7 +241,6 @@ async def build_runtime_context(
         user=_agent_user_context(user),
         agent_code=agent_code,
         agent_instance_id=main_agent_instance_id(session_id, user.id, agent_code) if agent_code else "",
-        knowledge_generation=current_knowledge_generation(),
         sandbox_container_id=selected_container_id,
         sandbox_container_generation=selected_container_generation,
         sandbox_skill_metadata=sandbox_skill_metadata,

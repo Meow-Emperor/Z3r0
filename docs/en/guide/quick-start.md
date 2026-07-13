@@ -5,25 +5,25 @@ editLink: true
 
 # Quick Start
 
-Z3r0's core philosophy is to pursue extreme simplicity as much as possible, so Z3r0's deployment also keeps the steps as simple as possible.
+This guide covers the required configuration, sandbox image build, and deployment steps for production and development environments.
 
 > :warning: Iteration Notice
 >
-> Z3r0 is currently in a phase of rapid iteration and may undergo major structural or contract changes. To ensure code quality, forward compatibility is not considered for now. When using it in production, proper version control is recommended, and historical data may require additional migration measures.
+> Z3r0 is under active development. Review release notes before upgrading, pin production deployments to a tested revision, and back up configuration and PostgreSQL data before applying changes.
 
 ## Before You Start
 
 ### Basic Configuration
 
-Z3r0 requires only the following core content and infrastructure to run:
+Z3r0 requires the following configuration and infrastructure:
 
 | Item | Description |
 | --- | --- |
 | `.z3r0/config.json` | System runtime configuration |
-| `.z3r0/agents/*` | Agent configuration information |
-| `Sandbox` | Customized sandbox environment |
-| `Docker` | Sandbox environment runtime |
-| `PostgreSQL` | Persistent data storage |
+| `.z3r0/agents/*` | Agent role and instruction files |
+| `sandbox` | Isolated execution environment |
+| Docker | Runtime for sandbox containers |
+| PostgreSQL | Persistent application and LightRAG storage with pgvector and Apache AGE extensions |
 
 Get the latest code from GitHub:
 
@@ -33,9 +33,9 @@ git clone https://github.com/yv1ing/Z3r0.git && cd Z3r0
 
 ### Build the Sandbox
 
-Z3r0's capabilities are deeply tied to the sandbox environment, so you need to build the corresponding sandbox image:
+Build the sandbox image used for isolated task execution:
 
-> :warning: Architecture Limitation
+> :warning: Supported Architecture
 >
 > The sandbox image build currently supports only the x64/amd64 architecture. arm64/Apple Silicon, including Apple Silicon Macs, is not supported. Run this step on an x64 host or in an x64 build environment.
 
@@ -43,11 +43,11 @@ Z3r0's capabilities are deeply tied to the sandbox environment, so you need to b
 cd sandbox && bash build.sh
 ```
 
-After a short wait, you will get `sandbox-runtime:latest`. On first use, you also need to add the corresponding image record to the system.
+The build produces `sandbox-runtime:latest`. Add a matching image record in `Sandbox Images` before creating a container.
 
 ## Production Environment
 
-When deploying to production, follow these steps one by one.
+Complete the following steps for a production deployment.
 
 ### Prepare Configuration
 
@@ -61,8 +61,16 @@ Edit the system runtime configuration in `.z3r0/config.json`, mainly updating th
 | --- | --- |
 | `system.encrypt_key` | System data encryption key. This must be changed. A random string of at least 32 bytes is recommended. |
 | `system.bootstrap_admin` | Default system administrator information. This must be changed. A strong password is recommended. |
-| `database` | System database connection information. When deploying with Docker Compose, set `host` to the corresponding service name. |
-| `agents.*` | LLM API configuration for each agent. Different providers and models can be configured separately as needed. |
+| `database` | System database connection information. The bundled production Compose deployment uses host networking, so `host` remains `127.0.0.1`. |
+| `agents.*` | LLM API configuration for each Agent. Providers and models can be configured separately by role. |
+| `lightrag.embedding_*` | OpenAI-compatible embedding API, key, model, and vector dimension. |
+| `lightrag.llm_*` | Independent OpenAI-compatible LLM API, key, and model used for entity and relationship extraction. |
+| `lightrag.graph_matches` | Entity and relationship candidates retrieved for current-turn graph context. |
+| `lightrag.chunk_matches` | Original document chunks retrieved for current-turn text context. |
+
+LightRAG uses `lightrag.llm_*` for entity and relationship extraction. These settings are configured independently from each Agent model in `agents.*`. Both bundled Compose files pull `ghcr.io/yv1ing/postgres-for-rag:latest` and `ghcr.io/yv1ing/pgadmin4:latest` from GitHub Container Registry. The PostgreSQL image includes the pgvector and Apache AGE extensions required by LightRAG storage.
+
+The embedding API, model, and dimension define the stored vector representation. Configure them before uploading documents; they can be changed through `System Config` only while the LightRAG document store is empty. Embedding credentials, extraction LLM settings, and graph and document retrieval counts can be updated independently.
 
 ### Start Containers
 
@@ -117,7 +125,7 @@ server {
 
 ## Development Environment
 
-When deploying in a development environment, follow these steps one by one.
+Use the following setup for local development.
 
 ### Configure the Environment
 
@@ -143,7 +151,7 @@ pip install -r requirements.txt
 ```
 
 ```bash
-cd web && npm install
+cd web && npm ci
 ```
 
 Build the frontend project:
@@ -152,17 +160,15 @@ Build the frontend project:
 cd web && npm run build
 ```
 
-Create the database:
+### Start PostgreSQL
 
-Use `docker-compose.dev.yml` to start the database environment with one command:
+Start the development database services:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-Visit `127.0.0.1:5433`, log in with the configured pgAdmin username and password, enter the PostgreSQL connection information, and connect to the service.
-
-Create the `z3r0` database. The database name must match the value configured in `config.json`.
+The Compose service creates the `z3r0` database automatically. PostgreSQL is available on `127.0.0.1:5432`. pgAdmin is available as an optional administration interface at `http://127.0.0.1:5433` using the credentials defined in `docker-compose.dev.yml`.
 
 ### Start the Project
 
@@ -178,4 +184,4 @@ By default, the service listens on `0.0.0.0:8000`. Visit `http://127.0.0.1:8000/
 
 ## Next Step
 
-Follow the instructions in [First Use](./first-use) to officially start working with Z3r0.
+Continue with [First Use](./first-use) to configure execution resources and create a project.

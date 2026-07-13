@@ -1,6 +1,4 @@
 import cytoscape from "cytoscape";
-import fcose from "cytoscape-fcose";
-import { Maximize2, Minus, Plus } from "lucide-react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
@@ -11,6 +9,7 @@ import {
   type WorkProjectGraphEdgeCategory,
 } from "../../shared/api/contract";
 import type { WorkProjectAsset, WorkProjectAssetType, WorkProjectGraphEdge } from "../../shared/api/types";
+import { CytoscapeGraph, type CytoscapeLayoutOptions } from "../../shared/components/CytoscapeGraph";
 import {
   WORK_PROJECT_ASSET_ORIGIN_LABEL,
   WORK_PROJECT_ASSET_TYPE_LABEL,
@@ -19,8 +18,6 @@ import {
 } from "../../shared/lib/labels";
 import { filledDetailItems, type DetailItem, type FilledDetailItem } from "./workProjectDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
-
-cytoscape.use(fcose);
 
 const ASSET_TYPE_COLOR: Record<WorkProjectAssetType, string> = {
   [WORK_PROJECT_ASSET_TYPE.SERVICE]: "#65a9ff",
@@ -42,13 +39,10 @@ const EDGE_CATEGORY_COLOR: Record<WorkProjectGraphEdgeCategory, string> = {
 };
 
 const FIT_PADDING = 84;
-const MIN_ZOOM = 0.06;
-const MAX_ZOOM = 4;
 const WHEEL_SENSITIVITY = 1.6;
 const TOOLTIP_OFFSET = 14;
 const TOOLTIP_MARGIN = 10;
 const NODE_SIZE = 12;
-const CONTROL_ZOOM_FACTOR = 1.45;
 
 type HoverTarget =
   | { kind: "node"; asset: WorkProjectAsset }
@@ -56,7 +50,7 @@ type HoverTarget =
 type HoverState = { target: HoverTarget; left: number; top: number; containerWidth: number; containerHeight: number };
 type TooltipRows = { title: string; items: FilledDetailItem[] };
 
-type FcoseLayoutOptions = cytoscape.BaseLayoutOptions & {
+type FcoseLayoutOptions = CytoscapeLayoutOptions & {
   name: "fcose";
   quality: "draft" | "default" | "proof";
   randomize: boolean;
@@ -77,10 +71,6 @@ type FcoseLayoutOptions = cytoscape.BaseLayoutOptions & {
 
 export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset[]; edges: WorkProjectGraphEdge[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<HTMLDivElement>(null);
-  const cyRef = useRef<cytoscape.Core | null>(null);
-  const layoutRef = useRef<cytoscape.Layouts | null>(null);
-
   const assetById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
   const visibleEdges = useMemo(
     () => edges.filter((edge) => assetById.has(edge.source_asset_id) && assetById.has(edge.target_asset_id)),
@@ -88,11 +78,15 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
   );
   const edgeById = useMemo(() => new Map(visibleEdges.map((edge) => [edge.id, edge])), [visibleEdges]);
   const elements = useMemo(() => graphElements(assets, visibleEdges), [assets, visibleEdges]);
+  const stylesheet = useMemo(graphStyles, []);
+  const layoutOptions = useMemo(
+    () => graphLayoutOptions(assets.length, visibleEdges.length),
+    [assets.length, visibleEdges.length],
+  );
   const [hover, setHover] = useState<HoverState | null>(null);
 
-  const clearGraphHover = useCallback(() => {
-    const cy = cyRef.current;
-    cy?.elements(".is-hovered").removeClass("is-hovered");
+  const clearGraphHover = useCallback((core: cytoscape.Core) => {
+    core.elements(".is-hovered").removeClass("is-hovered");
     setHover(null);
   }, []);
 
@@ -110,104 +104,43 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
     });
   }, []);
 
-  useEffect(() => {
-    if (!graphRef.current || cyRef.current) return;
-
-    const cy = createGraph(graphRef.current);
-    cyRef.current = cy;
-
-    const resizeObserver = new ResizeObserver(() => {
-      cy.resize();
-      cy.fit(undefined, FIT_PADDING);
-    });
-    resizeObserver.observe(graphRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-      layoutRef.current?.stop();
-      layoutRef.current = null;
-      cy.destroy();
-      cyRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-
+  const bindEvents = useCallback((core: cytoscape.Core) => {
     const onNodeHover = hoverHandler(assetById, "assetId", (asset) => ({ kind: "node", asset }), showHover);
     const onEdgeHover = hoverHandler(edgeById, "edgeId", (edge) => ({ kind: "edge", edge }), showHover);
+    const clearHover = () => clearGraphHover(core);
 
-    cy.on("mouseover mousemove", "node", onNodeHover);
-    cy.on("mouseover mousemove", "edge", onEdgeHover);
-    cy.on("mouseout", "node, edge", clearGraphHover);
-    cy.on("dragpan zoom resize", clearGraphHover);
+    core.on("mouseover mousemove", "node", onNodeHover);
+    core.on("mouseover mousemove", "edge", onEdgeHover);
+    core.on("mouseout", "node, edge", clearHover);
+    core.on("dragpan zoom resize", clearHover);
 
     return () => {
-      cy.off("mouseover mousemove", "node", onNodeHover);
-      cy.off("mouseover mousemove", "edge", onEdgeHover);
-      cy.off("mouseout", "node, edge", clearGraphHover);
-      cy.off("dragpan zoom resize", clearGraphHover);
+      core.off("mouseover mousemove", "node", onNodeHover);
+      core.off("mouseover mousemove", "edge", onEdgeHover);
+      core.off("mouseout", "node, edge", clearHover);
+      core.off("dragpan zoom resize", clearHover);
     };
   }, [assetById, clearGraphHover, edgeById, showHover]);
 
   useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-
-    clearGraphHover();
-    layoutRef.current?.stop();
-    layoutRef.current = null;
-    cy.elements().remove();
-
-    if (!assets.length) return;
-
-    cy.add(elements);
-    const layout = runGraphLayout(cy, assets.length, visibleEdges.length, () => {
-      layoutRef.current = null;
-    });
-
-    layoutRef.current = layout;
-  }, [assets.length, clearGraphHover, elements, visibleEdges.length]);
-
-  const zoomFromCenter = (factor: number) => {
-    const cy = cyRef.current;
-    const graph = graphRef.current;
-    if (!cy || !graph) return;
-    const current = cy.zoom();
-    const next = clamp(current * factor, MIN_ZOOM, MAX_ZOOM);
-    cy.zoom({
-      level: next,
-      renderedPosition: { x: graph.clientWidth / 2, y: graph.clientHeight / 2 },
-    });
-  };
-
-  const resetView = () => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    cy.resize();
-    cy.fit(undefined, FIT_PADDING);
-  };
+    setHover(null);
+  }, [elements]);
 
   return (
-    <div className="project-graph" ref={containerRef}>
-      <div ref={graphRef} className="project-graph-canvas" role="img" aria-label="Work project relationship graph" />
-
-      <GraphLegend />
-
-      <div className="project-graph-controls">
-        <button type="button" aria-label="Zoom in" onClick={() => zoomFromCenter(CONTROL_ZOOM_FACTOR)}>
-          <Plus size={15} />
-        </button>
-        <button type="button" aria-label="Zoom out" onClick={() => zoomFromCenter(1 / CONTROL_ZOOM_FACTOR)}>
-          <Minus size={15} />
-        </button>
-        <button type="button" aria-label="Reset view" onClick={resetView}>
-          <Maximize2 size={14} />
-        </button>
-      </div>
-
-      {hover ? <GraphTooltip hover={hover} assetById={assetById} /> : null}
+    <div ref={containerRef} className="project-graph-frame">
+      <CytoscapeGraph
+        className="project-graph"
+        ariaLabel="Work project relationship graph"
+        elements={elements}
+        stylesheet={stylesheet}
+        layoutOptions={layoutOptions}
+        fitPadding={FIT_PADDING}
+        wheelSensitivity={WHEEL_SENSITIVITY}
+        bindEvents={bindEvents}
+      >
+        <GraphLegend />
+        {hover ? <GraphTooltip hover={hover} assetById={assetById} /> : null}
+      </CytoscapeGraph>
     </div>
   );
 }
@@ -224,36 +157,7 @@ function hoverHandler<T>(
   };
 }
 
-function createGraph(container: HTMLDivElement): cytoscape.Core {
-  return cytoscape({
-    container,
-    elements: [],
-    minZoom: MIN_ZOOM,
-    maxZoom: MAX_ZOOM,
-    wheelSensitivity: WHEEL_SENSITIVITY,
-    boxSelectionEnabled: false,
-    autoungrabify: false,
-    hideLabelsOnViewport: true,
-    style: graphStyles(),
-  });
-}
-
-function runGraphLayout(
-  cy: cytoscape.Core,
-  assetCount: number,
-  edgeCount: number,
-  onStop: () => void,
-): cytoscape.Layouts {
-  const layoutOptions = graphLayoutOptions(assetCount, edgeCount, () => {
-    cy.fit(undefined, FIT_PADDING);
-    onStop();
-  });
-  const layout = cy.layout(layoutOptions);
-  layout.run();
-  return layout;
-}
-
-function graphLayoutOptions(assetCount: number, edgeCount: number, stop: () => void): FcoseLayoutOptions {
+function graphLayoutOptions(assetCount: number, edgeCount: number): FcoseLayoutOptions {
   const dense = edgeCount / Math.max(assetCount, 1);
   return {
     name: "fcose",
@@ -272,7 +176,6 @@ function graphLayoutOptions(assetCount: number, edgeCount: number, stop: () => v
     gravity: 0.05,
     gravityRange: 6.5,
     numIter: assetCount > 220 ? 2200 : 3600,
-    stop,
   };
 }
 

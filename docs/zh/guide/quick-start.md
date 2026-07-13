@@ -5,25 +5,25 @@ editLink: true
 
 # 快速开始
 
-Z3r0 的核心理念是：尽力做到极致的简洁，因此 Z3r0 的部署也将尽力简化步骤。
+本文说明 Z3r0 在生产环境和开发环境中的必要配置、sandbox 镜像构建与部署流程。
 
 > :warning: 迭代说明
 > 
-> 目前，Z3r0 正处于快速迭代阶段，可能出现大幅度的结构、契约变动。为了保证代码质量，暂不考虑向前兼容。在生产环境使用时，建议做好合理的版本控制，历史数据可能需要额外的迁移措施。
+> Z3r0 仍在持续迭代。升级前请查阅版本说明；生产部署应固定到已验证的代码版本，并在变更前备份配置与 PostgreSQL 数据。
 
 ## 开始之前
 
 ### 基础配置
 
-Z3r0 的运行只需要以下核心内容和基础设施：
+Z3r0 需要以下配置与基础设施：
 
 | 项目 | 说明 |
 | --- | --- |
 | `.z3r0/config.json` | 系统的运行时配置 |
-| `.z3r0/agents/*` | 智能体的配置信息 |
-| `Sandbox` | 定制的沙盒环境 |
-| `Docker` | 沙盒环境运行时 |
-| `PostgreSQL` | 数据持久化存储 |
+| `.z3r0/agents/*` | Agent 角色与指令文件 |
+| `sandbox` | 隔离执行环境 |
+| Docker | sandbox 容器运行时 |
+| PostgreSQL | 应用与 LightRAG 持久化存储，需同时包含 pgvector 和 Apache AGE 扩展 |
 
 通过 GitHub 获取最新代码：
 
@@ -31,23 +31,23 @@ Z3r0 的运行只需要以下核心内容和基础设施：
 git clone https://github.com/yv1ing/Z3r0.git && cd Z3r0
 ```
 
-### 构建沙盒
+### 构建 sandbox
 
-Z3r0 的能力与沙盒环境深度绑定，因此需要构建对应的沙盒镜像：
+构建用于隔离任务执行的 sandbox 镜像：
 
-> :warning: 架构限制
+> :warning: 支持的架构
 >
-> Sandbox 镜像构建目前仅支持 x64/amd64 架构，不支持 arm64/Apple Silicon（包括 Apple Silicon Mac）。请在 x64 主机或 x64 构建环境中执行该步骤。
+> sandbox 镜像构建目前仅支持 x64/amd64 架构，不支持 arm64/Apple Silicon（包括 Apple Silicon Mac）。请在 x64 主机或 x64 构建环境中执行该步骤。
 
 ```bash
 cd sandbox && bash build.sh
 ```
 
-稍等片刻即可得到 `sandbox-runtime:latest`，在首次使用时，还需要在系统中添加对应的镜像记录。
+构建完成后将生成 `sandbox-runtime:latest`。创建容器前，需要在 `Sandbox Images` 中添加名称一致的镜像记录。
 
 ## 生产环境
 
-生产环境部署时，请按照以下步骤逐项进行。
+生产环境部署需要完成以下步骤。
 
 ### 准备配置
 
@@ -61,8 +61,16 @@ cp .z3r0/config.json.example .z3r0/config.json
 | --- | --- |
 | `system.encrypt_key` | 系统数据加密密钥，必须修改，建议使用至少 32 字节的随机字符串。 |
 | `system.bootstrap_admin` | 系统默认管理员信息，必须修改，建议使用强密码。 |
-| `database` | 系统数据库连接信息，使用 Docker Compose 部署时，`host` 填写对应的服务名称。 |
-| `agents.*` | 各智能体的 LLM API 配置，可根据需要分别配置不同的供应商和模型。 |
+| `database` | 系统数据库连接信息。项目提供的生产 Compose 使用 host 网络，因此 `host` 保持为 `127.0.0.1`。 |
+| `agents.*` | 各 Agent 的 LLM API 配置，可按角色分别配置供应商和模型。 |
+| `lightrag.embedding_*` | OpenAI 兼容的 embedding API、key、model 和向量维度。 |
+| `lightrag.llm_*` | 用于实体与关系抽取的独立 OpenAI 兼容 LLM API、key 和 model。 |
+| `lightrag.graph_matches` | 当前 turn 图谱上下文检索的实体与关系候选数量。 |
+| `lightrag.chunk_matches` | 当前 turn 文本上下文检索的原始文档 chunk 数量。 |
+
+LightRAG 使用 `lightrag.llm_*` 完成实体与关系抽取，该配置与 `agents.*` 中的 Agent model 独立。项目提供的两份 Compose 文件均从 GitHub Container Registry 拉取 `ghcr.io/yv1ing/postgres-for-rag:latest` 和 `ghcr.io/yv1ing/pgadmin4:latest`；PostgreSQL 镜像包含 LightRAG 存储所需的 pgvector 与 Apache AGE 扩展。
+
+Embedding API、model 和维度共同定义已存储向量的表示方式，应在上传文档前完成配置。仅当 LightRAG 文档库为空时，才可通过 `System Config` 修改这些字段；embedding 凭据、关系抽取 LLM 配置、图谱候选数量和文档 chunk 数量可独立更新。
 
 ### 启动容器
 
@@ -117,7 +125,7 @@ server {
 
 ## 开发环境
 
-开发环境部署时，请按照以下步骤逐项进行。
+本地开发可使用以下配置。
 
 ### 配置环境
 
@@ -143,7 +151,7 @@ pip install -r requirements.txt
 ```
 
 ```bash
-cd web && npm install
+cd web && npm ci
 ```
 
 构建前端项目：
@@ -152,17 +160,15 @@ cd web && npm install
 cd web && npm run build
 ```
 
-创建数据库：
+### 启动 PostgreSQL
 
-使用 `docker-compose.dev.yml` 一键启动数据库环境：
+启动开发数据库服务：
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-访问 `127.0.0.1:5433`，使用设置的 pgAdmin 账号密码登录，填写 PostgreSQL 连接信息并连接到服务。
-
-创建 `z3r0` 数据库，数据库名称要与 `config.json` 中填写的保持一致。
+Compose 服务会自动创建 `z3r0` 数据库。PostgreSQL 地址为 `127.0.0.1:5432`。如需使用管理界面，可通过 `http://127.0.0.1:5433` 访问 pgAdmin，并使用 `docker-compose.dev.yml` 中定义的凭据登录。
 
 ### 启动项目
 
@@ -178,4 +184,4 @@ python main.py
 
 ## 下一步
 
-根据 [首次使用](./first-use) 中的说明，正式开启 Z3r0 的工作！
+继续阅读 [首次使用](./first-use)，配置执行资源并创建项目。

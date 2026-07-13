@@ -10,8 +10,6 @@ class ToolResultStatusSchema(StrEnum):
 
 class ToolResultTypeSchema(StrEnum):
     SKILL_DETAIL = "skill_detail"
-    KNOWLEDGE_DETAIL = "knowledge_detail"
-    KNOWLEDGE_MUTATION = "knowledge_mutation"
     WORK_PROJECT = "work_project"
     REPORT = "report"
 

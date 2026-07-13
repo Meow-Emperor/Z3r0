@@ -12,10 +12,11 @@ services:
         condition: service_healthy
     volumes:
       - ./.z3r0:/app/.z3r0
+      - ./.lightrag:/app/.lightrag
       - /var/run/docker.sock:/var/run/docker.sock
 
   postgres:
-    image: postgres:16-alpine
+    image: ghcr.io/yv1ing/postgres-for-rag:latest
     container_name: z3r0-postgres
     restart: always
     environment:
@@ -33,7 +34,7 @@ services:
       retries: 20
     
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: ghcr.io/yv1ing/pgadmin4:latest
     container_name: z3r0-pgadmin
     restart: always
     environment:

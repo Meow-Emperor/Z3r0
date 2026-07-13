@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { showApiError } from "../api/feedback";
+import { RESOURCE_PAGE_SIZE } from "../api/generated/constants";
 
 type QueryParams = {
   page: number;
@@ -7,21 +8,24 @@ type QueryParams = {
   keyword: string;
 };
 
-type QueryResponse<Item> = {
-  data?: {
-    items: Item[];
-    total: number;
-  } | null;
+type QueryData<Item> = {
+  items: Item[];
+  total: number;
 };
 
-type UsePagedResourceListOptions<Item> = {
-  pageSize?: number;
-  query: (params: QueryParams) => Promise<QueryResponse<Item>>;
+type QueryResponse<Item, Data extends QueryData<Item>> = {
+  data?: Data | null;
 };
 
-const DEFAULT_PAGE_SIZE = 10;
+type UsePagedResourceListOptions<Item, Data extends QueryData<Item>> = {
+  query: (params: QueryParams) => Promise<QueryResponse<Item, Data>>;
+  onData?: (data: Data | null) => void;
+};
 
-export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query }: UsePagedResourceListOptions<Item>) {
+export function usePagedResourceList<Item, Data extends QueryData<Item> = QueryData<Item>>({
+  query,
+  onData,
+}: UsePagedResourceListOptions<Item, Data>) {
   const [items, setItems] = useState<Item[]>([]);
   const [page, setPage] = useState(1);
   const [keyword, setKeyword] = useState("");
@@ -31,9 +35,12 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
   const requestIdRef = useRef(0);
   const mountedRef = useRef(true);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    requestIdRef.current += 1;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+    };
   }, []);
 
   const loadItems = useCallback(async () => {
@@ -41,15 +48,16 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
     requestIdRef.current = requestId;
     setLoading(true);
     try {
-      const response = await query({ page, size: pageSize, keyword: activeKeyword });
+      const response = await query({ page, size: RESOURCE_PAGE_SIZE, keyword: activeKeyword });
       if (!mountedRef.current || requestIdRef.current !== requestId) return;
       const nextItems = response.data?.items || [];
+      setTotal(response.data?.total ?? 0);
+      onData?.(response.data ?? null);
       if (nextItems.length === 0 && page > 1) {
         setPage((current) => Math.max(1, current - 1));
         return;
       }
       setItems(nextItems);
-      setTotal(response.data?.total ?? 0);
     } catch (error) {
       if (mountedRef.current && requestIdRef.current === requestId) {
         showApiError(error);
@@ -59,7 +67,7 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
         setLoading(false);
       }
     }
-  }, [activeKeyword, page, pageSize, query]);
+  }, [activeKeyword, onData, page, query]);
 
   useEffect(() => {
     void loadItems();
@@ -78,21 +86,25 @@ export function usePagedResourceList<Item>({ pageSize = DEFAULT_PAGE_SIZE, query
     setPage((current) => current + 1);
   }, []);
 
+  const goToFirstPage = useCallback(() => {
+    setPage(1);
+  }, []);
+
   return {
     items,
     page,
-    pageSize,
     keyword,
     total,
-    rangeStart: total === 0 ? 0 : (page - 1) * pageSize + 1,
-    rangeEnd: Math.min(page * pageSize, total),
+    rangeStart: total === 0 ? 0 : (page - 1) * RESOURCE_PAGE_SIZE + 1,
+    rangeEnd: Math.min(page * RESOURCE_PAGE_SIZE, total),
     loading,
     loadItems,
     setKeyword,
     search,
     previous,
     next,
+    goToFirstPage,
     canGoBack: page > 1,
-    canGoNext: page * pageSize < total,
+    canGoNext: page * RESOURCE_PAGE_SIZE < total,
   };
 }

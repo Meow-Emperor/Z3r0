@@ -8,7 +8,8 @@ from typing import Any, Protocol
 
 from agents.items import TResponseInputItem
 
-from core import extract_message_text, is_internal_user_text as _is_internal_user_text_check, tool_call_id as _tool_call_id
+from core import extract_message_text, tool_call_id as _tool_call_id
+from core.conversation.formats import is_internal_context_item
 
 
 _OWNER_PRIVATE_TYPES = frozenset({"reasoning", "function_call", "function_call_output"})
@@ -123,7 +124,7 @@ def _project_visible(
             continue
 
         if role == "user":
-            if _is_internal_user_message(item) and owner != viewing_agent_code:
+            if is_internal_context_item(item) and owner != viewing_agent_code:
                 continue
             if (m := flush()) is not None:
                 yield m
@@ -198,7 +199,3 @@ def _build_foreign_block(*, source_code: str, source_name: str, message_ids: lis
         }],
         "status": "completed",
     }
-
-
-def _is_internal_user_message(item: dict[str, Any]) -> bool:
-    return _is_internal_user_text_check(extract_message_text(item.get("content")))

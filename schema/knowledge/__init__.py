@@ -1,0 +1,1 @@
+"""Knowledge administration API schemas."""
