@@ -18,7 +18,6 @@ from database import close_engine, create_all_tables, init_engine
 from logger import get_logger
 from middleware.auth import JwtAuthMiddleware
 from middleware.response import (
-    CommonResponseStatusMiddleware,
     http_exception_handler,
     request_validation_exception_handler,
     unhandled_exception_handler,
@@ -34,6 +33,7 @@ from router.sandbox.images import router as sandbox_image_router
 from router.system_config.config import router as system_config_router
 from router.system_user.users import router as system_user_router
 from router.work_project.projects import router as work_project_router
+from router.work_project.records import router as work_project_records_router
 from schema.system_user.users import SystemUserRole
 from service.agent.recovery import recover_pending_sessions
 from service.agent.reports import start_report_cleanup_runtime, stop_report_cleanup_runtime
@@ -52,12 +52,9 @@ from service.sandbox.status import (
     stop_sandbox_container_status_monitor,
 )
 from service.system_user.users import create_system_user, query_system_user_by_username
-from utils.urllib3_compat import install_urllib3_closed_file_close_patch
 
 
 logger = get_logger(__name__)
-
-install_urllib3_closed_file_close_patch()
 
 WEB_DIST_PATH = ROOT_PATH / "web" / "dist-app"
 API_PREFIX = "/api"
@@ -94,6 +91,28 @@ async def _shutdown_step(name: str, operation: Callable[[], Awaitable[None]]) ->
         logger.exception("%s shutdown failed", name)
 
 
+async def _reset_agent_tool_bindings() -> None:
+    try:
+        await invalidate_all_agent_tool_bindings()
+    finally:
+        set_agent_tool_binding_invalidator(None)
+
+
+async def _invalidate_current_agent_tool_bindings(container_id: int | None) -> None:
+    await get_agent_pool().invalidate_tool_bindings(container_id)
+
+
+async def _stop_current_agent_pool() -> None:
+    await get_agent_pool().stop()
+
+
+async def _shutdown_runtime(
+    steps: list[tuple[str, Callable[[], Awaitable[None]]]],
+) -> None:
+    for name, operation in reversed(steps):
+        await _shutdown_step(name, operation)
+
+
 def _mount_frontend(app: FastAPI) -> None:
     """serve built frontend assets when web/dist-app exists"""
     index_path = WEB_DIST_PATH / "index.html"
@@ -114,41 +133,48 @@ def _mount_frontend(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    shutdown_steps: list[tuple[str, Callable[[], Awaitable[None]]]] = []
     try:
-        init_engine()
-        await create_all_tables()
-        await _bootstrap_admin_user()
-        await _bootstrap_local_host()
-        await start_lightrag()
-        await start_knowledge_document_runtime()
+        try:
+            init_engine()
+            shutdown_steps.append(("database engine", close_engine))
+            shutdown_steps.extend((
+                ("control proxy HTTP client", close_control_proxy_http_client),
+                ("file HTTP client", close_file_http_client),
+                ("noVNC HTTP client", close_novnc_http_client),
+            ))
+            await create_all_tables()
+            await _bootstrap_admin_user()
+            await _bootstrap_local_host()
 
-        set_tracing_disabled(True)
-        await start_async_sandbox_runtime()
-        await start_subagent_runtime()
-        await start_report_cleanup_runtime()
-        await recover_pending_sessions()
-        await get_agent_pool().start()
-        set_agent_tool_binding_invalidator(get_agent_pool().invalidate_tool_bindings)
-        await start_sandbox_container_status_monitor()
+            await start_lightrag()
+            shutdown_steps.append(("LightRAG", stop_lightrag))
+            await start_knowledge_document_runtime()
+            shutdown_steps.append(("knowledge document runtime", stop_knowledge_document_runtime))
+
+            set_tracing_disabled(True)
+            await start_async_sandbox_runtime()
+            shutdown_steps.append(("sandbox command runtime", stop_async_sandbox_commands))
+            await start_subagent_runtime()
+            shutdown_steps.append(("subagent runtime", stop_subagent_runtime))
+            await start_report_cleanup_runtime()
+            shutdown_steps.append(("report cleanup runtime", stop_report_cleanup_runtime))
+
+            await get_agent_pool().start()
+            shutdown_steps.append(("agent pool", _stop_current_agent_pool))
+            set_agent_tool_binding_invalidator(_invalidate_current_agent_tool_bindings)
+            shutdown_steps.append(("agent tool bindings", _reset_agent_tool_bindings))
+
+            await recover_pending_sessions()
+            await start_sandbox_container_status_monitor()
+            shutdown_steps.append(("sandbox status monitor", stop_sandbox_container_status_monitor))
+        except Exception:
+            logger.exception("lifespan startup failed")
+            raise
 
         yield
-    except Exception:
-        logger.exception("lifespan startup failed")
-        raise
     finally:
-        await _shutdown_step("sandbox status monitor", stop_sandbox_container_status_monitor)
-        await _shutdown_step("agent tool bindings", invalidate_all_agent_tool_bindings)
-        set_agent_tool_binding_invalidator(None)
-        await _shutdown_step("report cleanup runtime", stop_report_cleanup_runtime)
-        await _shutdown_step("subagent runtime", stop_subagent_runtime)
-        await _shutdown_step("sandbox command runtime", stop_async_sandbox_commands)
-        await _shutdown_step("agent pool", get_agent_pool().stop)
-        await _shutdown_step("knowledge document runtime", stop_knowledge_document_runtime)
-        await _shutdown_step("LightRAG", stop_lightrag)
-        await _shutdown_step("noVNC HTTP client", close_novnc_http_client)
-        await _shutdown_step("file HTTP client", close_file_http_client)
-        await _shutdown_step("control proxy HTTP client", close_control_proxy_http_client)
-        await _shutdown_step("database engine", close_engine)
+        await _shutdown_runtime(shutdown_steps)
 
 
 def create_app() -> FastAPI:
@@ -163,7 +189,6 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, unhandled_exception_handler)
     logger.debug("exception handlers added")
 
-    app.add_middleware(CommonResponseStatusMiddleware)
     app.add_middleware(JwtAuthMiddleware)
     logger.debug("middleware added")
 
@@ -173,6 +198,7 @@ def create_app() -> FastAPI:
     app.include_router(sandbox_image_router, prefix=API_PREFIX)
     app.include_router(sandbox_container_router, prefix=API_PREFIX)
     app.include_router(work_project_router, prefix=API_PREFIX)
+    app.include_router(work_project_records_router, prefix=API_PREFIX)
     app.include_router(knowledge_router, prefix=API_PREFIX)
     app.include_router(agent_router, prefix=API_PREFIX)
     app.include_router(agent_session_router, prefix=API_PREFIX)

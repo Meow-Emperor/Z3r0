@@ -1,6 +1,5 @@
 import type { MutableRefObject } from "react";
 
-
 export type DockState = "normal" | "minimized";
 
 export type Rect = {

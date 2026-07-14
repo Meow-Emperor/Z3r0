@@ -12,28 +12,39 @@
   min-height: 0;
   overflow: hidden;
   color: var(--z-text);
-  background: var(--z-page-bg);
+  background: transparent;
 }
 
 .admin-sidebar {
+  position: relative;
   height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 22px 16px;
+  padding: 0;
   color: var(--z-text-muted);
-  background:
-    linear-gradient(180deg, var(--z-brand-tint), transparent 34%),
-    rgba(9, 13, 22, 0.82);
+  background: transparent;
   border-right: 1px solid var(--z-line-soft);
-  backdrop-filter: blur(14px);
+}
+
+.admin-sidebar::after {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 1px;
+  height: 22%;
+  background: linear-gradient(180deg, var(--z-brand), var(--z-accent), transparent);
+  content: "";
 }
 
 .brand-lockup {
+  height: 78px;
   display: flex;
+  flex: 0 0 78px;
   gap: 12px;
   align-items: center;
-  padding: 0 8px 24px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--z-line);
 }
 
 .brand-lockup > div:last-child {
@@ -63,6 +74,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding: 22px 16px;
 }
 
 .admin-sidebar-top {
@@ -84,19 +96,60 @@
 }
 
 .admin-nav-link {
+  position: relative;
   display: flex;
-  min-height: 44px;
+  min-height: 48px;
   align-items: center;
   gap: 10px;
   padding: 0 12px;
   color: var(--z-text-subtle);
   text-decoration: none;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
   transition:
     color var(--motion-fast) var(--ease-standard),
     background var(--motion-fast) var(--ease-standard),
     box-shadow var(--motion-normal) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard);
+}
+
+.admin-nav-link::after {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  content: "";
+  opacity: 0.28;
+  transform: translateY(-50%);
+}
+
+.admin-nav-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-nav-copy span,
+.admin-nav-copy small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-nav-copy span {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.admin-nav-copy small {
+  color: var(--z-text-subtle);
+  font-size: 9px;
+  text-transform: uppercase;
 }
 
 .admin-nav-link svg,
@@ -109,6 +162,7 @@
 .admin-nav-link:hover {
   color: var(--z-text-strong);
   background: var(--z-surface-muted);
+  border-color: var(--z-line);
 }
 
 .admin-nav-link:hover {
@@ -117,6 +171,14 @@
 
 .admin-nav-link.active {
   box-shadow: inset 3px 0 0 var(--z-brand);
+}
+
+.admin-nav-link.active::after {
+  color: var(--z-success);
+  background: currentColor;
+  border-color: currentColor;
+  box-shadow: 0 0 9px currentColor;
+  opacity: 1;
 }
 
 .admin-main {
@@ -129,15 +191,48 @@
 }
 
 .admin-topbar {
+  position: relative;
   height: 78px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   padding: 0 30px;
-  background: var(--z-surface);
+  background: transparent;
   border-bottom: 1px solid var(--z-line);
-  backdrop-filter: blur(14px);
+}
+
+.admin-topbar::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--z-brand), transparent 28%, var(--z-accent) 72%, transparent);
+  content: "";
+  opacity: 0.48;
+}
+
+.admin-topbar-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-module-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--z-accent);
+  border: 1px solid var(--z-line-strong);
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, var(--z-brand-tint), transparent 58%),
+    rgba(7, 11, 18, 0.72);
+  box-shadow: inset 0 0 18px rgba(156, 199, 203, 0.05);
 }
 
 .admin-topbar h1 {
@@ -150,8 +245,7 @@
 
 .topbar-actions,
 .topbar-resource-actions,
-.topbar-session-actions,
-.pager-row div {
+.topbar-session-actions {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -169,8 +263,58 @@
 }
 
 .topbar-session-actions {
-  padding-left: 4px;
+  padding-left: 12px;
   border-left: 1px solid var(--z-line);
+}
+
+.admin-control-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--z-success);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.admin-control-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 9px currentColor;
+  animation: streamPulse 1.8s ease-in-out infinite;
+}
+
+.admin-user-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-user-identity > span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.admin-user-identity strong,
+.admin-user-identity small {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-identity strong {
+  color: var(--z-text-strong);
+  font-size: 11px;
+}
+
+.admin-user-identity small {
+  color: var(--z-text-subtle);
+  font-size: 9px;
+  text-transform: uppercase;
 }
 
 .topbar-session-actions .semi-avatar {
@@ -193,9 +337,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 84% 12%, rgba(88, 156, 160, 0.08), transparent 28%),
-    rgba(9, 13, 22, 0.36);
+  background: transparent;
 }
 
 .admin-content-viewport {
@@ -262,6 +404,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    padding: 12px 16px;
   }
 
   .admin-sidebar-body {
@@ -269,6 +412,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
+    padding: 0;
   }
 
   .admin-sidebar-top,
@@ -281,12 +425,25 @@
   }
 
   .brand-lockup {
+    height: auto;
+    flex-basis: auto;
     padding: 0;
+    border-bottom: 0;
+  }
+
+  .brand-kicker,
+  .admin-nav-copy small,
+  .admin-nav-link::after {
+    display: none;
   }
 
   .admin-nav {
     display: flex;
     flex-wrap: wrap;
+  }
+
+  .admin-nav-link {
+    min-height: 40px;
   }
 
   .admin-topbar {
@@ -305,6 +462,11 @@
   .topbar-session-actions {
     padding-left: 0;
     border-left: 0;
+  }
+
+  .admin-control-state,
+  .admin-user-identity > span {
+    display: none;
   }
 
   .admin-content-viewport-scroll {

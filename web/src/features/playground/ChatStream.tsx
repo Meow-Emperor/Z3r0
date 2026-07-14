@@ -1,5 +1,6 @@
 import { AtSign, Sparkles } from "lucide-react";
 import { useMemo, useState, type RefObject } from "react";
+import { AGENT_INPUT_PART_TYPE } from "../../shared/api/generated/constants";
 import type { AgentImageInputPart, AgentInfo, AgentInputPart } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import { ImagePreview, imageDataUrl, type ImagePreviewState } from "./ImagePreview";
@@ -152,23 +153,33 @@ function UserBubble({
   createdAt: string;
   onPreviewImage: (image: AgentImageInputPart, index: number) => void;
 }) {
-  const textParts = content.filter((part): part is Extract<AgentInputPart, { type: "text" }> => part.type === "text");
-  const imageParts = content.filter((part): part is AgentImageInputPart => part.type === "image");
+  const textParts = content.filter(
+    (part): part is Extract<AgentInputPart, { type: typeof AGENT_INPUT_PART_TYPE.TEXT }> => (
+      part.type === AGENT_INPUT_PART_TYPE.TEXT
+    ),
+  );
+  const imageParts = content.filter(
+    (part): part is AgentImageInputPart => part.type === AGENT_INPUT_PART_TYPE.IMAGE,
+  );
+  const text = textParts.length
+    ? textParts.map((part) => part.text).join("\n\n")
+    : displayText;
+
   return (
     <div className="chat-row chat-row-user">
       <div className="chat-message chat-message-user">
         <MessageTimestamp value={createdAt} />
         <div className="user-bubble">
-          {targetName ? (
-            <span className="user-bubble-mention">
-              <AtSign size={11} />
-              <span>{targetName}</span>
-            </span>
-          ) : null}
-          {textParts.length ? (
-            <span className="user-bubble-text">{textParts.map((part) => part.text).join("\n\n")}</span>
-          ) : displayText ? (
-            <span className="user-bubble-text">{displayText}</span>
+          {targetName || text ? (
+            <div className="user-bubble-copy">
+              {targetName ? (
+                <span className="user-bubble-mention">
+                  <AtSign size={11} />
+                  <span>{targetName}</span>
+                </span>
+              ) : null}
+              {text ? <span className="user-bubble-text">{text}</span> : null}
+            </div>
           ) : null}
           {imageParts.length ? (
             <div className="user-bubble-images">

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
@@ -22,7 +21,6 @@ from schema.agent.notifications import (
 
 
 logger = get_logger(__name__)
-_notification_claim_lock = asyncio.Lock()
 _TERMINAL_NOTIFICATION_STATUSES = {
     AgentNotificationStatus.COMPLETED,
     AgentNotificationStatus.FAILED,
@@ -169,20 +167,6 @@ async def claim_next_pending_notification(
     session_id: str,
     target_agent_code: str | None = None,
     target_agent_instance_id: str | None = None,
-) -> AgentNotificationSnapshot | None:
-    async with _notification_claim_lock:
-        return await _claim_next_pending_notification_locked(
-            session_id=session_id,
-            target_agent_code=target_agent_code,
-            target_agent_instance_id=target_agent_instance_id,
-        )
-
-
-async def _claim_next_pending_notification_locked(
-    *,
-    session_id: str,
-    target_agent_code: str | None,
-    target_agent_instance_id: str | None,
 ) -> AgentNotificationSnapshot | None:
     now = datetime.now()
     async with get_async_session() as session:

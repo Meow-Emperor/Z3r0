@@ -1,13 +1,14 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
-import { BookOpenText, Box, Boxes, FolderKanban, LogOut, MessageSquareCode, Network, Server, Settings, Users } from "lucide-react";
-import { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, BookOpenText, Box, Boxes, FolderKanban, LogOut, MessageSquareCode, Network, Server, Settings, Users } from "lucide-react";
+import { ReactNode, Suspense, useCallback, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
 import { useAgentSessionContext } from "../../features/playground/AgentSessionProvider";
 import { useAuth } from "../../shared/auth/AuthProvider";
+import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import { cx } from "../../shared/lib/className";
 import z3r0Logo from "../../assets/z3r0-logo.png";
-import { preloadAdminRoute, preloadAdminRoutes } from "../routePreload";
+import { preloadAdminRoute } from "../routePreload";
 
 type AdminLayoutContext = {
   setHeaderActions: (actions: ReactNode) => void;
@@ -43,21 +44,19 @@ export function AdminLayout() {
   const {
     sessions,
     sessionsLoading,
+    sessionsLoadingMore,
+    sessionsHasMore,
     activeSessionId,
     selectSession,
     deleteSession,
     refreshSessions,
+    loadMoreSessions,
     dropSessionRuntime,
     syncSessionSummaries,
   } = useAgentSessionContext();
 
   const setHeaderActions = useCallback((actions: ReactNode) => {
     setHeaderActionsState((current) => (Object.is(current, actions) ? current : actions));
-  }, []);
-
-  useEffect(() => {
-    const id = window.setTimeout(preloadAdminRoutes, 300);
-    return () => window.clearTimeout(id);
   }, []);
 
   const refreshWorkProjects = useCallback(() => {
@@ -81,9 +80,10 @@ export function AdminLayout() {
     navigate("/login", { replace: true });
   };
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === SYSTEM_USER_ROLE.ADMIN;
   const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
   const activeItem = visibleNavItems.find((item) => location.pathname.startsWith(item.path));
+  const ActiveIcon = activeItem?.icon ?? Activity;
   const contentMode = location.pathname.startsWith("/playground") ? "fixed" : "scroll";
 
   return (
@@ -107,17 +107,23 @@ export function AdminLayout() {
               onPointerEnter={() => preloadAdminRoute("/playground")}
             >
               <MessageSquareCode size={18} />
-              <span>Playground</span>
+              <div className="admin-nav-copy">
+                <span>Playground</span>
+                <small>Agent Workbench</small>
+              </div>
             </NavLink>
             <div className="admin-sidebar-secondary">
               <SessionList
                 sessions={sessions}
                 loading={sessionsLoading}
+                loadingMore={sessionsLoadingMore}
+                hasMore={sessionsHasMore}
                 activeSessionId={activeSessionId}
                 projectListVersion={projectListVersion}
                 onSelect={handleSelectAgentSession}
                 onDelete={deleteSession}
                 onRefreshSessions={refreshSessions}
+                onLoadMoreSessions={loadMoreSessions}
                 onDropRuntime={dropSessionRuntime}
                 onSyncSessionSummaries={syncSessionSummaries}
               />
@@ -137,7 +143,10 @@ export function AdminLayout() {
                   onPointerEnter={() => preloadAdminRoute(item.path)}
                 >
                   <Icon size={18} />
-                  <span>{item.label}</span>
+                  <div className="admin-nav-copy">
+                    <span>{item.label}</span>
+                    <small>{item.eyebrow}</small>
+                  </div>
                 </NavLink>
               );
             })}
@@ -147,14 +156,21 @@ export function AdminLayout() {
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <div>
-            <div className="page-eyebrow">{activeItem?.eyebrow || "Operations"}</div>
-            <h1>{activeItem?.label || "Console"}</h1>
+          <div className="admin-topbar-title">
+            <span className="admin-module-icon"><ActiveIcon size={20} /></span>
+            <div>
+              <div className="page-eyebrow">{activeItem?.eyebrow || "Operations"}</div>
+              <h1>{activeItem?.label || "Console"}</h1>
+            </div>
           </div>
           <div className="topbar-actions">
             {headerActions ? <div className="topbar-resource-actions">{headerActions}</div> : null}
             <div className="topbar-session-actions">
-              <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
+              <span className="admin-control-state"><i /> Online</span>
+              <div className="admin-user-identity">
+                <Avatar size="small" color="red">{user?.username?.[0]?.toUpperCase() || "U"}</Avatar>
+                <span><strong>{user?.username || "User"}</strong><small>{user?.role || "operator"}</small></span>
+              </div>
               <Button icon={<LogOut size={16} />} theme="borderless" type="tertiary" onClick={handleSignOut} aria-label="Sign out" />
             </div>
           </div>

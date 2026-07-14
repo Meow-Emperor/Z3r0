@@ -1,15 +1,16 @@
 import asyncio
 import json
 from http import HTTPStatus
-from typing import Any
+from typing import Never
 from urllib.parse import quote
 
 from fastapi import UploadFile, WebSocket, WebSocketDisconnect, status as ws_status
-from fastapi.responses import JSONResponse, Response as FastAPIResponse, StreamingResponse
+from fastapi.responses import Response as FastAPIResponse, StreamingResponse
 from fastapi.websockets import WebSocketState
 
 from database import get_async_session
-from handler import (
+from handler.common.http import raise_api_error
+from handler.common.websocket import (
     authenticate_ws_token,
     bounded_int,
     cancel_ws_task as _cancel_task,
@@ -17,7 +18,7 @@ from handler import (
     finish_ws_reader_task,
 )
 from logger import get_logger
-from middleware.auth import AuthUser
+from middleware.auth import AuthUser, resolve_current_user
 from model.sandbox.containers import SandboxContainer
 from schema.common.responses import CommonResponse
 from schema.sandbox.containers import (
@@ -32,6 +33,8 @@ from schema.sandbox.containers import (
     CreateSandboxContainerRequest,
     DeleteSandboxContainerResponse,
     ListContainerFilesResponse,
+    QuerySandboxContainerHostOptionsResponse,
+    QuerySandboxContainerImageOptionsResponse,
     QuerySandboxContainersResponse,
     SandboxContainerStatus,
     UpdateSandboxContainerEgressRequest,
@@ -68,8 +71,9 @@ from service.sandbox.novnc import (
 )
 from service.sandbox.records import (
     query_available_sandbox_containers,
+    query_sandbox_container_host_options,
+    query_sandbox_container_image_options,
     query_sandbox_containers,
-    sandbox_container_create_options,
     sandbox_container_is_manageable_by_user,
     sandbox_container_schema,
 )
@@ -87,18 +91,15 @@ from service.sandbox.types import SandboxContainerMutationResult
 logger = get_logger(__name__)
 _NOVNC_ACCESS_COOKIE = "sandbox_novnc_access"
 _SHELL_KEEPALIVE_INTERVAL_SECONDS = 25
+_WEBSOCKET_ACCESS_CHECK_INTERVAL_SECONDS = 30
 
 
 def _mutation_response(result: SandboxContainerMutationResult, user: AuthUser) -> CommonResponse:
     if result.record is None:
         status = HTTPStatus.NOT_FOUND if result.not_found else HTTPStatus.BAD_REQUEST
-        return CommonResponse(code=status.value, message=result.message)
+        raise_api_error(status, result.message)
     if not result.succeeded:
-        return CommonResponse(
-            code=HTTPStatus.BAD_REQUEST.value,
-            message=result.message,
-            data=sandbox_container_schema(result.record, user_id=user.id, user_role=user.role),
-        )
+        raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(
         message=result.message,
         data=sandbox_container_schema(result.record, user_id=user.id, user_role=user.role),
@@ -110,10 +111,7 @@ async def create_sandbox_container_handler(
     user: AuthUser,
 ) -> CommonResponse:
     if user.role != SystemUserRole.ADMIN and request.owner_id not in {None, user.id}:
-        return CommonResponse(
-            code=HTTPStatus.FORBIDDEN.value,
-            message="no permission to assign sandbox container owner",
-        )
+        raise_api_error(HTTPStatus.FORBIDDEN, "no permission to assign sandbox container owner")
     owner_id = request.owner_id if user.role == SystemUserRole.ADMIN and request.owner_id is not None else user.id
     result = await create_sandbox_container(
         host_id=request.host_id,
@@ -127,30 +125,22 @@ async def create_sandbox_container_handler(
 
 
 async def start_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
-    permission_error = await _manage_permission_error(id, user)
-    if permission_error is not None:
-        return permission_error
+    await _require_manage_permission(id, user)
     return _mutation_response(await start_sandbox_container(id), user)
 
 
 async def stop_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
-    permission_error = await _manage_permission_error(id, user)
-    if permission_error is not None:
-        return permission_error
+    await _require_manage_permission(id, user)
     return _mutation_response(await stop_sandbox_container(id), user)
 
 
 async def pause_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
-    permission_error = await _manage_permission_error(id, user)
-    if permission_error is not None:
-        return permission_error
+    await _require_manage_permission(id, user)
     return _mutation_response(await pause_sandbox_container(id), user)
 
 
 async def resume_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
-    permission_error = await _manage_permission_error(id, user)
-    if permission_error is not None:
-        return permission_error
+    await _require_manage_permission(id, user)
     return _mutation_response(await resume_sandbox_container(id), user)
 
 
@@ -159,9 +149,7 @@ async def update_sandbox_container_egress_handler(
     request: UpdateSandboxContainerEgressRequest,
     user: AuthUser,
 ) -> CommonResponse:
-    permission_error = await _manage_permission_error(id, user)
-    if permission_error is not None:
-        return permission_error
+    await _require_manage_permission(id, user)
     return _mutation_response(await update_sandbox_container_egress(
         id,
         egress_mode=request.egress_mode,
@@ -170,11 +158,9 @@ async def update_sandbox_container_egress_handler(
 
 
 async def delete_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
-    permission_error = await _manage_permission_error(id, user)
-    if permission_error is not None:
-        return permission_error
+    await _require_manage_permission(id, user)
     if not await delete_sandbox_container(id):
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="sandbox container not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox container not found")
     return CommonResponse(data=DeleteSandboxContainerResponse(id=id))
 
 
@@ -232,28 +218,50 @@ async def query_available_sandbox_containers_handler(
     ))
 
 
-async def sandbox_container_create_options_handler() -> CommonResponse:
-    return CommonResponse(data=await sandbox_container_create_options())
+async def query_sandbox_container_host_options_handler(
+    page: int,
+    size: int,
+    keyword: str,
+) -> CommonResponse:
+    options = await query_sandbox_container_host_options(
+        page=page,
+        size=size,
+        keyword=keyword,
+    )
+    return CommonResponse(data=QuerySandboxContainerHostOptionsResponse(
+        **paginated_payload(options, options.items),
+    ))
 
 
-async def _manage_permission_error(id: int, user: AuthUser) -> CommonResponse | None:
+async def query_sandbox_container_image_options_handler(
+    page: int,
+    size: int,
+    keyword: str,
+) -> CommonResponse:
+    options = await query_sandbox_container_image_options(
+        page=page,
+        size=size,
+        keyword=keyword,
+    )
+    return CommonResponse(data=QuerySandboxContainerImageOptionsResponse(
+        **paginated_payload(options, options.items),
+    ))
+
+
+async def _require_manage_permission(id: int, user: AuthUser) -> None:
     manageable = await sandbox_container_is_manageable_by_user(
         id=id,
         user_id=user.id,
         user_role=user.role,
     )
     if manageable is None:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="sandbox container not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox container not found")
     if not manageable:
-        return CommonResponse(
-            code=HTTPStatus.FORBIDDEN.value,
-            message="no permission to operate this sandbox container",
-        )
-    return None
+        raise_api_error(HTTPStatus.FORBIDDEN, "no permission to operate this sandbox container")
 
 
 async def handle_container_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
-    user = authenticate_ws_token(token)
+    user = await authenticate_ws_token(token)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -280,11 +288,20 @@ async def handle_container_shell_stream(websocket: WebSocket, id: int, token: st
         keepalive = asyncio.create_task(_send_shell_keepalive(websocket, send_lock))
 
         while True:
-            receiver = asyncio.create_task(websocket.receive_text())
+            if receiver is None:
+                receiver = asyncio.create_task(websocket.receive_text())
             done, _ = await asyncio.wait(
                 {receiver, reader},
                 return_when=asyncio.FIRST_COMPLETED,
+                timeout=_WEBSOCKET_ACCESS_CHECK_INTERVAL_SECONDS,
             )
+            if not done:
+                current_user = await resolve_current_user(user)
+                if current_user is None or not await _can_access_container_by_id(current_user, id):
+                    await _close_silently(websocket, ws_status.WS_1008_POLICY_VIOLATION)
+                    return
+                user = current_user
+                continue
             if reader in done:
                 await reader
                 await _close_silently(websocket, ws_status.WS_1000_NORMAL_CLOSURE)
@@ -365,87 +382,58 @@ async def _can_access_container_by_id(user, container_id: int) -> bool:
         return container is not None and container.owner_id == user.id
 
 
-# ── container file manager handlers ───────────────────────────────────────────
+# Container file manager handlers
 
 
-def _file_container_common_response(data: Any = None, message: str = "success") -> CommonResponse:
-    return CommonResponse(data=data, message=message)
-
-
-def _file_container_error(code: int, message: str) -> CommonResponse:
-    return CommonResponse(code=code, message=message)
-
-
-def _file_container_json_error(code: int, message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=code,
-        content=_file_container_error(code, message).model_dump(),
-    )
-
-
-async def _validate_running_container_access(id: int, action: str, user=None) -> CommonResponse | None:
+async def _require_running_container_access(id: int, action: str, user=None) -> None:
     if user is not None and not await _can_access_container_by_id(user, id):
-        return _file_container_error(
-            HTTPStatus.FORBIDDEN.value,
-            "no permission to access this sandbox container",
-        )
+        raise_api_error(HTTPStatus.FORBIDDEN, "no permission to access this sandbox container")
     status = await resolve_file_container_status(id)
     if status is None:
-        return _file_container_error(HTTPStatus.NOT_FOUND.value, "sandbox container not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox container not found")
     if status != SandboxContainerStatus.RUNNING:
-        return _file_container_error(HTTPStatus.BAD_REQUEST.value, f"only running sandbox containers can {action}")
-    return None
+        raise_api_error(HTTPStatus.BAD_REQUEST, f"only running sandbox containers can {action}")
 
 
 async def handle_list_files(id: int, path: str, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "browse files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "browse files", user=user)
     try:
         files = await list_container_files(id, path)
-    except Exception:
-        logger.exception("failed to list container files: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to list container files")
-    return _file_container_common_response(ListContainerFilesResponse(path=path, files=files))
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "list container files")
+    return CommonResponse(data=ListContainerFilesResponse(path=path, files=files))
 
 
 async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "read files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "read files", user=user)
     try:
         info = await get_container_file_info(id, path)
-        if info is None:
-            return _file_container_error(HTTPStatus.NOT_FOUND.value, "file not found")
-        if info.type == ContainerFileType.DIRECTORY:
-            return _file_container_error(HTTPStatus.BAD_REQUEST.value, "cannot read a directory")
-    except Exception:
-        logger.exception("failed to get container file info: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to get container file info")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "get container file info")
+    if info is None:
+        raise_api_error(HTTPStatus.NOT_FOUND, "file not found")
+    if info.type == ContainerFileType.DIRECTORY:
+        raise_api_error(HTTPStatus.BAD_REQUEST, "cannot read a directory")
     try:
         content = await read_container_file(id, path, base64_mode=base64_mode)
-    except Exception:
-        logger.exception("failed to read container file: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to read container file")
-    return _file_container_common_response(ContainerFileReadResponse(
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "read container file")
+    return CommonResponse(data=ContainerFileReadResponse(
         path=path,
         content=content,
-        size=len(content.encode()),
+        size=info.size,
     ))
 
 
 async def handle_write_file(id: int, body: ContainerFileWriteRequest, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "write files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "write files", user=user)
     try:
         ok = await write_container_file(id, body.path, body.content)
-    except Exception:
-        logger.exception("failed to write container file: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to write container file")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "write container file")
     if not ok:
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to write container file")
-    return _file_container_common_response(message="file written")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to write container file")
+    return CommonResponse(message="file written")
 
 
 async def handle_upload_files(
@@ -455,47 +443,31 @@ async def handle_upload_files(
     overwrite: bool,
     user=None,
 ) -> CommonResponse:
-    error = await _validate_running_container_access(id, "upload files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "upload files", user=user)
     if not files:
-        return _file_container_error(HTTPStatus.BAD_REQUEST.value, "no files uploaded")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "no files uploaded")
 
     try:
         sources = [ContainerUploadSource(filename=file.filename or "", stream=file.file) for file in files]
         uploaded = await upload_container_files(id, path, sources, overwrite)
-    except ValueError as exc:
-        return _file_container_error(HTTPStatus.BAD_REQUEST.value, str(exc))
-    except FileExistsError as exc:
-        return _file_container_error(HTTPStatus.CONFLICT.value, str(exc))
-    except FileNotFoundError as exc:
-        return _file_container_error(HTTPStatus.NOT_FOUND.value, str(exc))
-    except Exception:
-        logger.exception("failed to upload container files: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to upload container files")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "upload container files")
 
-    return _file_container_common_response(
+    return CommonResponse(
         data=ContainerFileUploadResponse(path=path, files=uploaded),
         message="files uploaded",
     )
 
 
-async def handle_download_files(id: int, paths: list[str], user=None) -> StreamingResponse | JSONResponse:
-    error = await _validate_running_container_access(id, "download files", user=user)
-    if error:
-        return JSONResponse(status_code=error.code, content=error.model_dump())
+async def handle_download_files(id: int, paths: list[str], user=None) -> StreamingResponse:
+    await _require_running_container_access(id, "download files", user=user)
     if not paths:
-        return _file_container_json_error(HTTPStatus.BAD_REQUEST.value, "download path is required")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "download path is required")
 
     try:
         download = await download_container_paths(id, paths)
-    except ValueError as exc:
-        return _file_container_json_error(HTTPStatus.BAD_REQUEST.value, str(exc))
-    except FileNotFoundError as exc:
-        return _file_container_json_error(HTTPStatus.NOT_FOUND.value, str(exc))
-    except Exception:
-        logger.exception("failed to download container files: %s", id)
-        return _file_container_json_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to download container files")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "download container files")
 
     filename = download.filename.replace('"', "_")
     encoded_filename = quote(download.filename)
@@ -510,67 +482,70 @@ async def handle_download_files(id: int, paths: list[str], user=None) -> Streami
 
 
 async def handle_copy_files(id: int, body: ContainerFileCopyRequest, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "copy files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "copy files", user=user)
     try:
         ok = await copy_container_files(id, body.sources, body.destination)
-    except Exception:
-        logger.exception("failed to copy container files: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to copy container files")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "copy container files")
     if not ok:
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to copy container files")
-    return _file_container_common_response(message="files copied")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to copy container files")
+    return CommonResponse(message="files copied")
 
 
 async def handle_move_files(id: int, body: ContainerFileMoveRequest, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "move files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "move files", user=user)
     try:
         ok = await move_container_files(id, body.sources, body.destination)
-    except Exception:
-        logger.exception("failed to move container files: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to move container files")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "move container files")
     if not ok:
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to move container files")
-    return _file_container_common_response(message="files moved")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to move container files")
+    return CommonResponse(message="files moved")
 
 
 async def handle_delete_files(id: int, body: ContainerFileDeleteRequest, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "delete files", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "delete files", user=user)
     try:
         ok = await delete_container_files(id, body.paths)
-    except Exception:
-        logger.exception("failed to delete container files: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to delete container files")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "delete container files")
     if not ok:
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to delete container files")
-    return _file_container_common_response(message="files deleted")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to delete container files")
+    return CommonResponse(message="files deleted")
 
 
 async def handle_mkdir(id: int, body: ContainerFileMkdirRequest, user=None) -> CommonResponse:
-    error = await _validate_running_container_access(id, "create directories", user=user)
-    if error:
-        return error
+    await _require_running_container_access(id, "create directories", user=user)
     try:
         ok = await create_container_directory(id, body.path)
-    except Exception:
-        logger.exception("failed to create container directory: %s", id)
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to create container directory")
+    except Exception as exc:
+        _raise_container_file_operation_error(exc, id, "create container directory")
     if not ok:
-        return _file_container_error(HTTPStatus.INTERNAL_SERVER_ERROR.value, "failed to create container directory")
-    return _file_container_common_response(message="directory created")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to create container directory")
+    return CommonResponse(message="directory created")
 
 
-# ── noVNC proxy handlers ───────────────────────────────────────────────────────
+def _raise_container_file_operation_error(error: Exception, container_id: int, operation: str) -> Never:
+    message = str(error).strip()
+    if isinstance(error, FileNotFoundError):
+        raise_api_error(HTTPStatus.NOT_FOUND, message or "path not found")
+    if isinstance(error, FileExistsError):
+        raise_api_error(HTTPStatus.CONFLICT, message or "path already exists")
+    if isinstance(error, ValueError):
+        raise_api_error(HTTPStatus.BAD_REQUEST, message or f"failed to {operation}")
+    if isinstance(error, (RuntimeError, OSError)):
+        logger.warning("sandbox control proxy operation failed: container=%s operation=%s", container_id, operation)
+        raise_api_error(HTTPStatus.BAD_GATEWAY, f"failed to {operation}")
+    logger.exception("failed to %s: %s", operation, container_id)
+    raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"failed to {operation}")
+
+
+# noVNC proxy handlers
 
 
 async def handle_novnc_http_proxy(id: int, path: str, token: str, cookie_token: str = "") -> FastAPIResponse:
     effective_token = token or cookie_token
-    user = authenticate_ws_token(effective_token)
+    user = await authenticate_ws_token(effective_token)
     if user is None or not await _can_access_container_by_id(user, id):
         return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not Found")
 
@@ -609,7 +584,7 @@ def _filter_proxy_headers(headers) -> dict[str, str]:
 
 
 async def handle_novnc_ws_proxy(websocket: WebSocket, id: int, token: str) -> None:
-    user = authenticate_ws_token(token)
+    user = await authenticate_ws_token(token)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -634,9 +609,9 @@ async def handle_novnc_ws_proxy(websocket: WebSocket, id: int, token: str) -> No
             message = await websocket.receive()
             if message.get("type") == "websocket.disconnect":
                 return None
-            if "bytes" in message and message["bytes"]:
+            if message.get("bytes"):
                 return message["bytes"]
-            if "text" in message and message["text"]:
+            if message.get("text"):
                 return message["text"]
             return None
         except WebSocketDisconnect:
@@ -658,12 +633,37 @@ async def handle_novnc_ws_proxy(websocket: WebSocket, id: int, token: str) -> No
             and websocket.application_state == WebSocketState.CONNECTED
         )
 
+    proxy_task: asyncio.Task | None = None
+    access_guard: asyncio.Task | None = None
     try:
-        await proxy_novnc_websocket(
+        proxy_task = asyncio.create_task(proxy_novnc_websocket(
             target, receive_from_client, send_to_client, client_connected,
             subprotocols=requested_protocols or None,
+        ))
+        access_guard = asyncio.create_task(_guard_container_websocket_access(websocket, id, user))
+        done, _ = await asyncio.wait(
+            {proxy_task, access_guard},
+            return_when=asyncio.FIRST_COMPLETED,
         )
+        for task in done:
+            task.result()
     except Exception:
         logger.debug("novnc ws proxy handler error: %s", id, exc_info=True)
     finally:
+        await _cancel_task(proxy_task)
+        await _cancel_task(access_guard)
         await _close_silently(websocket, ws_status.WS_1000_NORMAL_CLOSURE)
+
+
+async def _guard_container_websocket_access(websocket: WebSocket, id: int, user: AuthUser) -> None:
+    current_user = user
+    while (
+        websocket.client_state == WebSocketState.CONNECTED
+        and websocket.application_state == WebSocketState.CONNECTED
+    ):
+        await asyncio.sleep(_WEBSOCKET_ACCESS_CHECK_INTERVAL_SECONDS)
+        resolved_user = await resolve_current_user(current_user)
+        if resolved_user is None or not await _can_access_container_by_id(resolved_user, id):
+            await _close_silently(websocket, ws_status.WS_1008_POLICY_VIOLATION)
+            return
+        current_user = resolved_user

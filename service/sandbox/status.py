@@ -18,6 +18,7 @@ from service.sandbox.docker_ops import (
     docker_status_to_sandbox_status,
     inspect_container_state_sync,
 )
+from service.sandbox.locking import try_sandbox_container_mutation_lock
 from service.sandbox.records import load_sandbox_container_record
 from service.sandbox.types import (
     SandboxContainerRecord,
@@ -29,6 +30,7 @@ from service.sandbox.types import (
 logger = get_logger(__name__)
 
 _STATUS_MONITOR_INTERVAL_SECONDS = 5
+_STATUS_MONITOR_BATCH_SIZE = 32
 _TOOL_BINDING_INSPECT_TTL_SECONDS = 3
 _status_monitor_task: asyncio.Task[None] | None = None
 _tool_invalidation_tasks: set[asyncio.Task[None]] = set()
@@ -174,6 +176,13 @@ async def _load_container_status_snapshots() -> list[ContainerStatusSnapshot]:
 
 
 async def sync_container_status(snapshot: ContainerStatusSnapshot) -> None:
+    async with try_sandbox_container_mutation_lock(snapshot.id) as acquired:
+        if not acquired:
+            return
+        await sync_container_status_unlocked(snapshot)
+
+
+async def sync_container_status_unlocked(snapshot: ContainerStatusSnapshot) -> None:
     host = await _load_host(snapshot.host_id)
     if host is None:
         await save_sandbox_container_status(snapshot.id, SandboxContainerStatus.ERROR)
@@ -194,11 +203,18 @@ async def sync_container_status(snapshot: ContainerStatusSnapshot) -> None:
 
 async def sync_sandbox_container_statuses() -> None:
     snapshots = await _load_container_status_snapshots()
-    for snapshot in snapshots:
-        try:
-            await sync_container_status(snapshot)
-        except Exception:
-            logger.exception("sandbox container status sync failed: %s", snapshot.id)
+    for offset in range(0, len(snapshots), _STATUS_MONITOR_BATCH_SIZE):
+        await asyncio.gather(*(
+            _sync_container_status_safely(snapshot)
+            for snapshot in snapshots[offset:offset + _STATUS_MONITOR_BATCH_SIZE]
+        ))
+
+
+async def _sync_container_status_safely(snapshot: ContainerStatusSnapshot) -> None:
+    try:
+        await sync_container_status(snapshot)
+    except Exception:
+        logger.exception("sandbox container status sync failed: %s", snapshot.id)
 
 
 async def _status_monitor_loop() -> None:

@@ -7,15 +7,6 @@ import { CytoscapeGraph, type CytoscapeLayoutOptions } from "../../shared/compon
 
 const FIT_PADDING = 52;
 
-const LAYOUT_OPTIONS: CytoscapeLayoutOptions = {
-  name: "fcose",
-  animate: false,
-  randomize: true,
-  nodeSeparation: 100,
-  idealEdgeLength: 110,
-  nodeRepulsion: 8000,
-};
-
 const GRAPH_STYLES: cytoscape.StylesheetJson = [
   {
     selector: "node",
@@ -30,6 +21,9 @@ const GRAPH_STYLES: cytoscape.StylesheetJson = [
       "text-background-opacity": 0.86,
       "text-background-padding": "4px",
       "text-margin-y": -18,
+      "text-wrap": "ellipsis",
+      "text-max-width": "120px",
+      "min-zoomed-font-size": 7,
       width: 14,
       height: 14,
     },
@@ -70,6 +64,10 @@ export function KnowledgeGraphView({
 }: KnowledgeGraphViewProps) {
   const [selected, setSelected] = useState<KnowledgeGraphNode | null>(null);
   const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph.nodes]);
+  const layoutOptions = useMemo(
+    () => knowledgeGraphLayoutOptions(graph.nodes.length),
+    [graph.nodes.length],
+  );
   const elements = useMemo<cytoscape.ElementDefinition[]>(() => [
     ...graph.nodes.map((node) => ({
       group: "nodes" as const,
@@ -118,7 +116,7 @@ export function KnowledgeGraphView({
       ariaLabel="Knowledge graph"
       elements={elements}
       stylesheet={GRAPH_STYLES}
-      layoutOptions={LAYOUT_OPTIONS}
+      layoutOptions={layoutOptions}
       fitPadding={FIT_PADDING}
       minZoom={0.08}
       wheelSensitivity={1.2}
@@ -164,4 +162,18 @@ function nodeElementId(id: string) {
 
 function edgeElementId(id: string) {
   return `knowledge-edge:${id}`;
+}
+
+function knowledgeGraphLayoutOptions(nodeCount: number): CytoscapeLayoutOptions {
+  const largeGraph = nodeCount > 300;
+  return {
+    name: "fcose",
+    quality: largeGraph ? "draft" : "default",
+    animate: false,
+    randomize: true,
+    nodeSeparation: largeGraph ? 72 : 100,
+    idealEdgeLength: largeGraph ? 82 : 110,
+    nodeRepulsion: largeGraph ? 5200 : 8000,
+    numIter: largeGraph ? 900 : 1800,
+  };
 }

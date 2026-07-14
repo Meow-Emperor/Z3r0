@@ -105,8 +105,7 @@ class WorkProjectOwnerSchema(BaseModel):
     username: str
 
 
-# work project public data schema
-class WorkProjectSchema(BaseModel):
+class WorkProjectSummarySchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -116,9 +115,9 @@ class WorkProjectSchema(BaseModel):
     owners: list[WorkProjectOwnerSchema]
     sandbox_container_id: int | None = None
     sandbox_container: SandboxContainerSchema | None = None
-    assets: list[WorkProjectAssetSchema]
-    tasks: list[WorkProjectTaskSchema]
-    agent_summaries: list[WorkProjectAgentSummarySchema]
+    asset_count: int = Field(default=0, ge=0)
+    task_count: int = Field(default=0, ge=0)
+    agent_summary_count: int = Field(default=0, ge=0)
     progress: float = Field(default=0, ge=0, le=100)
     session_count: int = 0
     status: WorkProjectStatus
@@ -133,6 +132,12 @@ class WorkProjectSchema(BaseModel):
     @classmethod
     def validate_progress_precision(cls, value: float) -> float:
         return _two_decimal_progress(value)
+
+
+class WorkProjectSchema(WorkProjectSummarySchema):
+    assets: list[WorkProjectAssetSchema]
+    tasks: list[WorkProjectTaskSchema]
+    agent_summaries: list[WorkProjectAgentSummarySchema]
 
 
 class WorkProjectMetadataRequest(BaseModel):
@@ -173,12 +178,12 @@ class CreateWorkProjectSessionResponse(BaseModel):
     session_id: str
 
 
-class ListWorkProjectSessionsResponse(BaseModel):
-    items: list[AgentSessionSummarySchema]
+class ListWorkProjectSessionsResponse(PaginatedResponse[AgentSessionSummarySchema]):
+    pass
 
 
 # query work projects response schema
-class QueryWorkProjectsResponse(PaginatedResponse[WorkProjectSchema]):
+class QueryWorkProjectsResponse(PaginatedResponse[WorkProjectSummarySchema]):
     pass
 
 

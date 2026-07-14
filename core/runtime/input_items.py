@@ -1,6 +1,6 @@
 """Helpers for constructing SDK input items consistently."""
 
-from typing import TYPE_CHECKING
+from typing import Protocol
 
 from agents import TResponseInputItem
 from openai.types.responses import (
@@ -12,8 +12,13 @@ from openai.types.responses import (
 from core.conversation.formats import TASK_RESUMPTION_CONTEXT_ITEM_ID
 from schema.agent.events import AgentImageInputPart, AgentInputPart, AgentTextInputPart
 
-if TYPE_CHECKING:
-    from core.task_runtime.trigger import TurnTrigger
+
+class TurnTriggerProtocol(Protocol):
+    content: list[AgentInputPart]
+
+    @property
+    def content_is_retrieval_input(self) -> bool:
+        ...
 
 
 def text_input_content(text: str) -> list[AgentInputPart]:
@@ -37,7 +42,7 @@ def retrieval_text_from_content(content: list[AgentInputPart]) -> str:
     )
 
 
-def build_turn_input_item(trigger: "TurnTrigger") -> TResponseInputItem:
+def build_turn_input_item(trigger: TurnTriggerProtocol) -> TResponseInputItem:
     message_id = "" if trigger.content_is_retrieval_input else TASK_RESUMPTION_CONTEXT_ITEM_ID
     return build_user_message_item(trigger.content, message_id=message_id)
 
@@ -55,7 +60,7 @@ def build_user_message_item(
         elif isinstance(part, AgentImageInputPart):
             image_item: ResponseInputImageParam = {
                 "type": "input_image",
-                "image_url": f"data:{str(part.media_type)};base64,{part.data}",
+                "image_url": f"data:{part.media_type!s};base64,{part.data}",
                 "detail": str(part.detail),
             }
             content.append(image_item)

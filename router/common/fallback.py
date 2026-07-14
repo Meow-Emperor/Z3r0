@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from schema.common.responses import CommonResponse
+from handler.common.http import raise_api_error
 
 
 # 404 fallback for unmatched /api/* paths; declared after the real api routers
@@ -10,8 +10,8 @@ api_not_found_router = APIRouter(include_in_schema=False)
 _METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 
-async def _api_not_found(path: str = "") -> CommonResponse[None]:
-    return CommonResponse(code=404, message="not found")
+async def _api_not_found(path: str = "") -> None:
+    raise_api_error(404, "not found")
 
 
 api_not_found_router.add_api_route("", _api_not_found, methods=_METHODS)

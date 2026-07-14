@@ -7,12 +7,14 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from agents import Agent, RunContextWrapper, Runner, Tool, function_tool
 
 from config import get_config
-from core import extract_message_text
+from core.agent.protocols import AgentRegistryProtocol, SessionAgentGraphProtocol
+from core.agent.tool_snapshot import AgentToolSnapshot
+from core.conversation.items import extract_message_text
 from core.conversation.context_budget import build_context_run_config
 from core.conversation.retrieval import build_conversation_retrieval_query
 from core.conversation.store import Z3r0Session, fetch_stored_items
@@ -21,6 +23,12 @@ from core.runtime.context import (
     SUBAGENT_INSTANCE_PREFIX,
     AgentRuntimeContext,
     subagent_instance_id,
+)
+from core.runtime.coordination import (
+    publish_agent_event,
+    resume_main_agent_session,
+    set_subagent_cancel_handlers,
+    set_target_agent_resume_handler,
 )
 from core.runtime.input_items import build_turn_input_item, retrieval_text_from_content, text_input_content
 from core.runtime.notification_dispatch import forget_target_notifications, is_main_agent_instance
@@ -50,10 +58,8 @@ from schema.agent.subordinates import (
 )
 from service.agent import notifications as agent_notifications
 from service.agent import subordinates as agent_subordinates
-
-if TYPE_CHECKING:
-    # Type-only import: avoids a runtime cycle with core.agent.registry.
-    from core.agent.registry import AgentRegistry, SessionAgentGraph
+from service.agent.event_log import persist_subagent_event_unpooled
+from service.agent.session_state import mark_session_running
 
 
 logger = get_logger(__name__)
@@ -66,7 +72,7 @@ class _SubagentDriver:
     # ``graph`` is owned solely by this driver and closed at terminal state.
     snapshot: AgentSubordinateTaskSnapshot
     child_agent: Agent
-    graph: "SessionAgentGraph"
+    graph: SessionAgentGraphProtocol
     code_to_name: dict[str, str]
     context: AgentRuntimeContext
     start_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -108,7 +114,7 @@ def build_subagent_tools(
     parent_code: str,
     mounted_codes: Iterable[str],
     *,
-    registry: "AgentRegistry",
+    registry: AgentRegistryProtocol,
 ) -> list[Tool]:
     allowed = frozenset(mounted_codes)
     allowed_codes = ", ".join(sorted(allowed))
@@ -354,7 +360,7 @@ def _log_subagent_start_result(task: asyncio.Task[AgentSubordinateTaskSnapshot])
 
 async def start_subagent_task_run(
     *,
-    registry: "AgentRegistry",
+    registry: AgentRegistryProtocol,
     context: AgentRuntimeContext,
     parent_agent_code: str,
     agent_code: str,
@@ -363,8 +369,6 @@ async def start_subagent_task_run(
 ) -> AgentSubordinateTaskSnapshot:
     # Each driver owns a dedicated graph (Agent + httpx client) bound from the
     # current snapshot, so churn elsewhere can't kill this sub-agent's stream.
-    from core.agent.registry import AgentToolSnapshot
-
     own_graph = registry.bind(AgentToolSnapshot.from_context(context))
     try:
         child_agent = own_graph.get(agent_code)
@@ -404,7 +408,7 @@ async def start_subagent_task_run(
     return snapshot
 
 
-async def _safe_close_graph(graph: "SessionAgentGraph") -> None:
+async def _safe_close_graph(graph: SessionAgentGraphProtocol) -> None:
     try:
         await graph.close()
     except Exception:
@@ -551,19 +555,13 @@ async def stop_subagent_runtime() -> None:
 
 def _publish_event(session_id: str, event: AgentEventSchema) -> None:
     """Publish an event through the unified session event bus."""
-    from core.runtime.session import get_agent_pool
-
-    get_agent_pool().publish(session_id, event)
+    publish_agent_event(session_id, event)
 
 
 async def _publish_task_snapshot(snapshot: AgentSubordinateTaskSnapshot) -> None:
-    from core.runtime.session import get_agent_pool
-
     event = _task_event(snapshot)
-    if not get_agent_pool().publish(snapshot.session_id, event):
+    if not publish_agent_event(snapshot.session_id, event):
         # No pooled session (e.g. boot-time stale failure): persist directly.
-        from service.agent.event_log import persist_subagent_event_unpooled
-
         await persist_subagent_event_unpooled(snapshot.session_id, event)
 
 
@@ -572,9 +570,7 @@ async def resume_target_instance(session_id: str, agent_instance_id: str) -> Non
     if not agent_instance_id:
         return
     if is_main_agent_instance(agent_instance_id):
-        from core.runtime.session import get_agent_pool
-
-        await get_agent_pool().resume_session(session_id)
+        await resume_main_agent_session(session_id)
         return
     await resume_subagent_instance(agent_instance_id.removeprefix(SUBAGENT_INSTANCE_PREFIX))
 
@@ -845,11 +841,10 @@ async def _mark_parent_session_running(
     context: AgentRuntimeContext,
 ) -> None:
     try:
-        from service.agent import sessions as agent_sessions
-
-        await agent_sessions.mark_session_running(
+        await mark_session_running(
             snapshot.session_id,
             agent_code=snapshot.parent_agent_code,
+            user_id=context.user.id,
             sandbox_container_id=context.sandbox_container_id,
             sandbox_container_generation=context.sandbox_container_generation,
         )
@@ -898,3 +893,7 @@ def _assistant_message_text(item: dict[str, Any]) -> str:
     if item.get("type") == "message" and item.get("role") == "assistant":
         return extract_message_text(item.get("content")).strip()
     return ""
+
+
+set_subagent_cancel_handlers(cancel_sandbox_subagent_runs, cancel_session_subagent_runs)
+set_target_agent_resume_handler(resume_target_instance)

@@ -1,15 +1,19 @@
 import asyncio
 from http import HTTPStatus
-from typing import Any
 
 from fastapi.websockets import WebSocketState
 from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 
 from core.runtime.session import get_agent_pool
-from handler import authenticate_ws_token, cancel_ws_task as _cancel_task, close_ws_silently as _close_silently
+from handler.common.http import raise_api_error
+from handler.common.websocket import (
+    authenticate_ws_token,
+    cancel_ws_task as _cancel_task,
+    close_ws_silently as _close_silently,
+)
 from logger import get_logger
-from middleware.auth import AuthUser
+from middleware.auth import AuthUser, resolve_current_user
 from schema.agent.events import AgentEventSchema
 from schema.agent.sessions import (
     AgentSessionSummarySchema,
@@ -24,6 +28,7 @@ from schema.common.responses import CommonResponse
 from service.agent import runtime as agent_runtime
 from service.agent import reports as agent_reports
 from service.agent import sessions as agent_sessions
+from service.common.pagination import paginated_payload
 
 
 logger = get_logger(__name__)
@@ -41,9 +46,7 @@ async def create_agent_session_turn_handler(
             requested_agent_code=request.agent_code,
         )
     except Exception as exc:
-        error = _runtime_error_response(exc)
-        if error is not None:
-            return error
+        _raise_runtime_error(exc)
         raise
     return await _turn_response(session_id, user, events)
 
@@ -62,9 +65,7 @@ async def submit_agent_session_turn_handler(
             requested_agent_code=request.agent_code,
         )
     except Exception as exc:
-        error = _runtime_error_response(exc)
-        if error is not None:
-            return error
+        _raise_runtime_error(exc)
         raise
     return await _turn_response(session_id, user, events)
 
@@ -73,9 +74,7 @@ async def interrupt_agent_session_handler(session_id: str, user: AuthUser) -> Co
     try:
         events = await agent_runtime.interrupt_turn(session_id=session_id, user=user)
     except Exception as exc:
-        error = _runtime_error_response(exc)
-        if error is not None:
-            return error
+        _raise_runtime_error(exc)
         raise
     return await _turn_response(session_id, user, events)
 
@@ -84,9 +83,7 @@ async def cancel_agent_session_tasks_handler(session_id: str, user: AuthUser) ->
     try:
         events = await agent_runtime.cancel_all_tasks(session_id=session_id, user=user)
     except Exception as exc:
-        error = _runtime_error_response(exc)
-        if error is not None:
-            return error
+        _raise_runtime_error(exc)
         raise
     return await _turn_response(session_id, user, events)
 
@@ -98,7 +95,7 @@ async def delete_agent_session_handler(session_id: str, user: AuthUser) -> Commo
         user_role=user.role,
     )
     if not deleted:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
     return CommonResponse(message="agent session deleted")
 
 
@@ -114,7 +111,7 @@ async def update_agent_session_title_handler(
         user_role=user.role,
     )
     if session is None:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
     return CommonResponse(message="agent session title updated", data=session)
 
 
@@ -130,20 +127,25 @@ async def update_agent_session_sandbox_container_handler(
             user=user,
         )
     except Exception as exc:
-        error = _runtime_error_response(exc)
-        if error is not None:
-            return error
+        _raise_runtime_error(exc)
         raise
     return CommonResponse(message="sandbox container updated", data=session)
 
 
-async def list_agent_sessions_handler(limit: int, user: AuthUser) -> CommonResponse[ListAgentSessionsResponse]:
+async def list_agent_sessions_handler(
+    page: int,
+    size: int,
+    user: AuthUser,
+) -> CommonResponse[ListAgentSessionsResponse]:
     sessions = await agent_sessions.list_sessions(
-        limit=limit,
+        page=page,
+        size=size,
         user_id=user.id,
         user_role=user.role,
     )
-    return CommonResponse(data=ListAgentSessionsResponse(items=sessions))
+    return CommonResponse(data=ListAgentSessionsResponse(
+        **paginated_payload(sessions, sessions.items)
+    ))
 
 
 async def list_agent_events_handler(
@@ -160,7 +162,7 @@ async def list_agent_events_handler(
         limit=limit,
     )
     if result is None:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
     events, has_more, next_before_seq = result
     return CommonResponse(data=ListAgentEventsResponse(
         session_id=session_id,
@@ -170,17 +172,17 @@ async def list_agent_events_handler(
     ))
 
 
-async def download_agent_report_handler(report_id: str, user: AuthUser) -> FileResponse | JSONResponse:
+async def download_agent_report_handler(report_id: str, user: AuthUser) -> FileResponse:
     try:
         report_path = agent_reports.resolve_report_download_path(report_id)
     except ValueError as exc:
-        return _download_error(HTTPStatus.BAD_REQUEST.value, str(exc))
+        raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     except FileNotFoundError as exc:
-        return _download_error(HTTPStatus.NOT_FOUND.value, str(exc))
+        raise_api_error(HTTPStatus.NOT_FOUND, str(exc))
 
     session_id = agent_reports.report_session_id(report_path)
     if not session_id or not await agent_sessions.can_access_session(session_id, user.id, user.role):
-        return _download_error(HTTPStatus.NOT_FOUND.value, "report file not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "report file not found")
 
     return FileResponse(
         report_path,
@@ -190,7 +192,7 @@ async def download_agent_report_handler(report_id: str, user: AuthUser) -> FileR
 
 
 async def handle_agent_stream(websocket: WebSocket, session_id: str, token: str) -> None:
-    user = authenticate_ws_token(token)
+    user = await authenticate_ws_token(token)
     if user is None:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -257,7 +259,7 @@ async def _send_event(
         return False
 
 
-_ACCESS_CHECK_INTERVAL = 50
+_ACCESS_CHECK_INTERVAL_SECONDS = 30
 
 async def _forward_events(
     websocket: WebSocket,
@@ -266,18 +268,33 @@ async def _forward_events(
     user: AuthUser,
 ) -> None:
     try:
-        events_since_check = 0
+        loop = asyncio.get_running_loop()
+        next_access_check = loop.time() + _ACCESS_CHECK_INTERVAL_SECONDS
         while True:
-            event = await queue.get()
+            timeout = max(0.0, next_access_check - loop.time())
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=timeout)
+            except asyncio.TimeoutError:
+                event = None
+                timed_out = True
+            else:
+                timed_out = False
+
+            if timed_out or loop.time() >= next_access_check:
+                next_access_check = loop.time() + _ACCESS_CHECK_INTERVAL_SECONDS
+                current_user = await resolve_current_user(user)
+                if current_user is None or not await agent_sessions.can_access_session(
+                    session_id,
+                    current_user.id,
+                    current_user.role,
+                ):
+                    await _close_silently(websocket, code=ws_status.WS_1008_POLICY_VIOLATION)
+                    return
+            if timed_out:
+                continue
             if event is None:
                 await _close_silently(websocket, code=ws_status.WS_1000_NORMAL_CLOSURE)
                 return
-            events_since_check += 1
-            if events_since_check >= _ACCESS_CHECK_INTERVAL:
-                events_since_check = 0
-                if not await agent_sessions.can_access_session(session_id, user.id, user.role):
-                    await _close_silently(websocket, code=ws_status.WS_1008_POLICY_VIOLATION)
-                    return
             if not await _send_event(websocket, event):
                 return
     except asyncio.CancelledError:
@@ -297,26 +314,18 @@ async def _turn_response(
         user_role=user.role,
     )
     if summary is None:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
     return CommonResponse(data=AgentTurnResponse(session_id=session_id, session=summary, events=events))
 
 
-def _runtime_error_response(exc: Exception) -> CommonResponse[Any] | None:
+def _raise_runtime_error(exc: Exception) -> None:
     if isinstance(exc, agent_runtime.SessionNotRunnableError):
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message="work project is canceled")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "work project is canceled")
     if isinstance(exc, agent_runtime.SandboxContainerUnavailableError):
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
+        raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     if isinstance(exc, agent_runtime.AgentUnavailableError):
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
+        raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     if isinstance(exc, agent_runtime.SessionBusyError):
-        return CommonResponse(code=HTTPStatus.CONFLICT.value, message=str(exc))
+        raise_api_error(HTTPStatus.CONFLICT, str(exc))
     if isinstance(exc, PermissionError):
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="agent session not found")
-    return None
-
-
-def _download_error(code: int, message: str) -> JSONResponse:
-    return JSONResponse(
-        status_code=code,
-        content=CommonResponse(code=code, message=message).model_dump(),
-    )
+        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")

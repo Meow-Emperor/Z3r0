@@ -1,4 +1,5 @@
 import type { AgentContentEvent, AgentStreamEvent } from "../../shared/api/types";
+import { AGENT_EVENT_TYPE } from "../../shared/api/generated/constants";
 import { buildChatNodesFromEvents, type ChatState } from "./chatState";
 
 // One entry per logical timeline item, addressed by a stable key so history
@@ -27,26 +28,26 @@ export function emptyTimelineStore(): TimelineStore {
 // control frames (run_state/done) that never enter the timeline.
 export function clientItemKey(event: AgentStreamEvent): string | null {
   switch (event.type) {
-    case "run_state":
-    case "done":
+    case AGENT_EVENT_TYPE.RUN_STATE:
+    case AGENT_EVENT_TYPE.DONE:
       return null;
-    case "text_delta":
-    case "text_complete":
+    case AGENT_EVENT_TYPE.TEXT_DELTA:
+    case AGENT_EVENT_TYPE.TEXT_COMPLETE:
       return `text:${event.nested_call_id}:${event.segment_id}`;
-    case "thinking_delta":
-    case "thinking_complete":
+    case AGENT_EVENT_TYPE.THINKING_DELTA:
+    case AGENT_EVENT_TYPE.THINKING_COMPLETE:
       return `thinking:${event.nested_call_id}:${event.segment_id}`;
-    case "tool_call":
+    case AGENT_EVENT_TYPE.TOOL_CALL:
       return `tc:${event.nested_call_id}:${event.call_id}`;
-    case "tool_result":
+    case AGENT_EVENT_TYPE.TOOL_RESULT:
       return `tr:${event.nested_call_id}:${event.call_id}`;
-    case "subagent_task":
+    case AGENT_EVENT_TYPE.SUBAGENT_TASK:
       return `sa:${event.run_id}`;
-    case "user_message":
+    case AGENT_EVENT_TYPE.USER_MESSAGE:
       return event.seq > 0 ? `user:${event.seq}` : "";
-    case "turn_boundary":
+    case AGENT_EVENT_TYPE.TURN_BOUNDARY:
       return event.seq > 0 ? `turn:${event.seq}` : "";
-    case "error":
+    case AGENT_EVENT_TYPE.ERROR:
       return event.seq > 0 ? `error:${event.seq}` : "";
   }
 }
@@ -60,13 +61,13 @@ export function ingestEvents(store: TimelineStore, events: readonly AgentStreamE
   let localCounter = store.localCounter;
 
   for (const event of events) {
-    if (event.type === "run_state") {
+    if (event.type === AGENT_EVENT_TYPE.RUN_STATE) {
       // Tracks the main agent only (idle-live): toggles per continuation and
       // flips just the streaming flag — never clears the keyed item map.
       streaming = event.running;
       continue;
     }
-    if (event.type === "done") {
+    if (event.type === AGENT_EVENT_TYPE.DONE) {
       // per-turn control frame: a turn delimiter only, never rendered or stored
       continue;
     }

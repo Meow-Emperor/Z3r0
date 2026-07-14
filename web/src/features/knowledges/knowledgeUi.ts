@@ -8,7 +8,6 @@ export const KNOWLEDGE_STATUS_COLORS: Record<
   parsing: "blue",
   analyzing: "cyan",
   processing: "amber",
-  preprocessed: "cyan",
   processed: "green",
   failed: "red",
 };

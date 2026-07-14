@@ -1,15 +1,24 @@
-import { Empty, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
+import { TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
 import { Boxes, Bug, FileText, Network, Route } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { WORK_PROJECT_ASSET_TYPE } from "../../shared/api/contract";
+import { showApiError } from "../../shared/api/feedback";
 import type {
   WorkProjectAsset,
-  WorkProjectAttackPathStep,
-  WorkProjectFinding,
-  WorkProjectGraphEdge,
-  WorkProjectGraphSnapshot,
-  WorkProjectRecords,
+  WorkProjectAttackPathRecord,
+  WorkProjectFindingRecord,
+  WorkProjectGraphView,
 } from "../../shared/api/types";
+import {
+  getWorkProjectGraph,
+  queryWorkProjectAssets,
+  queryWorkProjectAttackPaths,
+  queryWorkProjectFindings,
+} from "../../shared/api/workProjects";
+import { ResourcePager } from "../../shared/components/ResourcePageShell";
+import { AsyncContent } from "../../shared/components/AsyncContent";
+import { TabLabel } from "../../shared/components/TabLabel";
+import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { cx } from "../../shared/lib/className";
 import { formatDateTime } from "../../shared/lib/date";
 import {
@@ -24,46 +33,137 @@ import {
   WORK_PROJECT_FINDING_STATUS_LABEL,
 } from "../../shared/lib/labels";
 import { ProjectGraphCanvas } from "./ProjectGraphCanvas";
-import { filledDetailItems, type DetailItem } from "./workProjectDetails";
+import { filledDetailItems, type DetailItem } from "./recordDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
 
 export type ProjectRecordTab = "assets" | "findings" | "attack-paths" | "graph";
 
 type WorkProjectRecordTabsProps = {
-  records: WorkProjectRecords;
+  projectId: number;
   initialTab?: ProjectRecordTab;
   className?: string;
 };
 
-export function WorkProjectRecordTabs({
-  records,
-  initialTab = "assets",
-  className,
-}: WorkProjectRecordTabsProps) {
+const EMPTY_GRAPH: WorkProjectGraphView = { assets: [], edges: [], is_truncated: false };
+
+export function WorkProjectRecordTabs(props: WorkProjectRecordTabsProps) {
+  return <ProjectRecordTabs key={props.projectId} {...props} />;
+}
+
+function ProjectRecordTabs({ projectId, initialTab = "assets", className }: WorkProjectRecordTabsProps) {
+  const [activeTab, setActiveTab] = useState<ProjectRecordTab>(initialTab);
+  const queryAssets = useCallback(
+    (params: { page: number; size: number; keyword: string }) => queryWorkProjectAssets(projectId, params),
+    [projectId],
+  );
+  const queryFindings = useCallback(
+    ({ page, size }: { page: number; size: number }) => queryWorkProjectFindings(projectId, { page, size }),
+    [projectId],
+  );
+  const queryAttackPaths = useCallback(
+    ({ page, size }: { page: number; size: number }) => queryWorkProjectAttackPaths(projectId, { page, size }),
+    [projectId],
+  );
+  const assets = usePagedResourceList<WorkProjectAsset>({ query: queryAssets, enabled: activeTab === "assets" });
+  const findings = usePagedResourceList<WorkProjectFindingRecord>({
+    query: queryFindings,
+    enabled: activeTab === "findings",
+  });
+  const attackPaths = usePagedResourceList<WorkProjectAttackPathRecord>({
+    query: queryAttackPaths,
+    enabled: activeTab === "attack-paths",
+  });
+  const [graph, setGraph] = useState<WorkProjectGraphView>(EMPTY_GRAPH);
+  const [graphLoading, setGraphLoading] = useState(false);
+  const [graphLoaded, setGraphLoaded] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "graph" || graphLoaded) return;
+    let canceled = false;
+    setGraphLoading(true);
+    getWorkProjectGraph(projectId)
+      .then((response) => {
+        if (!canceled) {
+          setGraph(response.data ?? EMPTY_GRAPH);
+          setGraphLoaded(true);
+        }
+      })
+      .catch((error) => {
+        if (!canceled) showApiError(error);
+      })
+      .finally(() => {
+        if (!canceled) setGraphLoading(false);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [activeTab, graphLoaded, projectId]);
+
   return (
     <Tabs
       type="line"
       className={cx("project-record-tabs", className)}
-      defaultActiveKey={initialTab}
+      activeKey={activeTab}
+      onChange={(key) => setActiveTab(key as ProjectRecordTab)}
     >
       <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="Assets" />} itemKey="assets">
-        <AssetList assets={records.assets} />
+        <PagedRecordView state={assets} emptyTitle="No assets."><AssetList assets={assets.items} /></PagedRecordView>
       </TabPane>
       <TabPane tab={<TabLabel icon={<Bug size={14} />} text="Findings" />} itemKey="findings">
-        <FindingList findings={records.findings} assets={records.assets} />
+        <PagedRecordView state={findings} emptyTitle="No findings."><FindingList records={findings.items} /></PagedRecordView>
       </TabPane>
       <TabPane tab={<TabLabel icon={<Route size={14} />} text="Attack Paths" />} itemKey="attack-paths">
-        <AttackPathList assets={records.assets} graph={records.graph} />
+        <PagedRecordView state={attackPaths} emptyTitle="No attack paths."><AttackPathList records={attackPaths.items} /></PagedRecordView>
       </TabPane>
       <TabPane tab={<TabLabel icon={<Network size={14} />} text="Graph" />} itemKey="graph">
-        <GraphView assets={records.assets} graph={records.graph} />
+        <AsyncContent
+          loading={graphLoading}
+          empty={graph.assets.length === 0}
+          emptyIcon={<FileText size={42} />}
+          emptyTitle="No assets to graph."
+          wrapperClassName="project-record-spin"
+        >
+          <GraphView graph={graph} />
+        </AsyncContent>
       </TabPane>
     </Tabs>
   );
 }
 
-export function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
-  if (!assets.length) return <RecordEmpty title="No assets." />;
+type PagedState = ReturnType<typeof usePagedResourceList<unknown>>;
+
+function PagedRecordView({ state, emptyTitle, children }: {
+  state: PagedState;
+  emptyTitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="project-record-page">
+      <AsyncContent
+        loading={state.loading}
+        empty={state.items.length === 0}
+        emptyIcon={<FileText size={42} />}
+        emptyTitle={emptyTitle}
+        wrapperClassName="project-record-spin"
+      >
+        {children}
+      </AsyncContent>
+      <ResourcePager
+        page={state.page}
+        rangeStart={state.rangeStart}
+        rangeEnd={state.rangeEnd}
+        total={state.total}
+        loading={state.loading}
+        canGoBack={state.canGoBack}
+        canGoNext={state.canGoNext}
+        onPrevious={state.previous}
+        onNext={state.next}
+      />
+    </div>
+  );
+}
+
+function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
   return (
     <div className="project-record-list">
       {assets.map((asset) => (
@@ -76,21 +176,17 @@ export function AssetList({ assets }: { assets: WorkProjectAsset[] }) {
             </div>
           </header>
           <RecordDetails items={assetBaseMeta(asset)} />
-          <RecordDetails className="project-record-details-extension" items={[
-            ["Banner", asset.extra?.banner],
-          ]} />
+          <RecordDetails className="project-record-details-extension" items={[["Banner", asset.extra?.banner]]} />
         </article>
       ))}
     </div>
   );
 }
 
-export function FindingList({ findings, assets }: { findings: WorkProjectFinding[]; assets: WorkProjectAsset[] }) {
-  const assetLabels = useAssetLabels(assets);
-  if (!findings.length) return <RecordEmpty title="No findings." />;
+function FindingList({ records }: { records: WorkProjectFindingRecord[] }) {
   return (
     <div className="project-record-list">
-      {findings.map((finding) => (
+      {records.map(({ finding, asset }) => (
         <article key={finding.id} className="project-record-row">
           <header>
             <strong>{finding.title}</strong>
@@ -101,7 +197,7 @@ export function FindingList({ findings, assets }: { findings: WorkProjectFinding
           </header>
           <p>{finding.description || finding.impact || "No description"}</p>
           <RecordDetails items={[
-            ["Asset", finding.asset_id ? assetLabels.get(finding.asset_id) ?? `#${finding.asset_id}` : undefined],
+            ["Asset", asset ? formatWorkProjectAsset(asset) : finding.asset_id ? `#${finding.asset_id}` : undefined],
             ["Substantiates edge", finding.edge_id ? `#${finding.edge_id}` : undefined],
             ["Updated", formatDateTime(finding.updated_at)],
           ]} />
@@ -111,51 +207,41 @@ export function FindingList({ findings, assets }: { findings: WorkProjectFinding
   );
 }
 
-export function AttackPathList({ assets, graph }: { assets: WorkProjectAsset[]; graph: WorkProjectGraphSnapshot }) {
-  const assetLabels = useAssetLabels(assets);
-  const edgesById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge])), [graph.edges]);
-  if (!graph.attack_paths.length) return <RecordEmpty title="No attack paths." />;
-  const stepsByPath = groupSteps(graph.attack_path_steps);
+function AttackPathList({ records }: { records: WorkProjectAttackPathRecord[] }) {
   return (
     <div className="project-record-list">
-      {graph.attack_paths.map((path) => (
-        <article key={path.id} className="project-record-row project-attack-path">
-          <header>
-            <strong>{path.title}</strong>
-            <Tag color={WORK_PROJECT_ATTACK_PATH_STATUS_COLOR[path.status]}>{WORK_PROJECT_ATTACK_PATH_STATUS_LABEL[path.status]}</Tag>
-          </header>
-          {path.summary ? <p>{path.summary}</p> : null}
-          <ol>
-            {(stepsByPath.get(path.id) ?? []).map((step) => {
-              const edge = edgesById.get(step.edge_id);
-              return (
-                <li key={step.id}>
-                  <strong>{edgeLabel(edge, assetLabels)}</strong>
-                  {edge?.label ? <span>{edge.label}</span> : null}
-                </li>
-              );
-            })}
-          </ol>
-        </article>
-      ))}
+      {records.map(({ path, steps, edges, assets }) => {
+        const edgeById = new Map(edges.map((edge) => [edge.id, edge]));
+        const assetLabels = new Map(assets.map((asset) => [asset.id, formatWorkProjectAsset(asset)]));
+        return (
+          <article key={path.id} className="project-record-row project-attack-path">
+            <header>
+              <strong>{path.title}</strong>
+              <Tag color={WORK_PROJECT_ATTACK_PATH_STATUS_COLOR[path.status]}>{WORK_PROJECT_ATTACK_PATH_STATUS_LABEL[path.status]}</Tag>
+            </header>
+            {path.summary ? <p>{path.summary}</p> : null}
+            <ol>
+              {steps.map((step) => {
+                const edge = edgeById.get(step.edge_id);
+                const source = edge ? assetLabels.get(edge.source_asset_id) ?? `#${edge.source_asset_id}` : "Unknown";
+                const target = edge ? assetLabels.get(edge.target_asset_id) ?? `#${edge.target_asset_id}` : "Unknown";
+                return <li key={step.id}><strong>{source} to {target}</strong>{edge?.label ? <span>{edge.label}</span> : null}</li>;
+              })}
+            </ol>
+          </article>
+        );
+      })}
     </div>
   );
 }
 
-export function GraphView({ assets, graph }: { assets: WorkProjectAsset[]; graph: WorkProjectGraphSnapshot }) {
-  if (!assets.length) return <RecordEmpty title="No assets to graph." />;
-  return <ProjectGraphCanvas assets={assets} edges={graph.edges} />;
-}
-
-function useAssetLabels(assets: WorkProjectAsset[]) {
-  return useMemo(() => new Map(assets.map((asset) => [asset.id, formatWorkProjectAsset(asset)])), [assets]);
-}
-
-function edgeLabel(edge: WorkProjectGraphEdge | undefined, assetLabels: Map<number, string>): string {
-  if (!edge) return "Unknown edge";
-  const source = assetLabels.get(edge.source_asset_id) ?? `#${edge.source_asset_id}`;
-  const target = assetLabels.get(edge.target_asset_id) ?? `#${edge.target_asset_id}`;
-  return `${source} → ${target}`;
+function GraphView({ graph }: { graph: WorkProjectGraphView }) {
+  return (
+    <div className="project-graph-view">
+      {graph.is_truncated ? <span className="project-graph-limit">Showing a bounded view of up to 1,000 assets and 4,000 relationships.</span> : null}
+      <ProjectGraphCanvas assets={graph.assets} edges={graph.edges} />
+    </div>
+  );
 }
 
 function RecordDetails({ className, items }: { className?: string; items: DetailItem[] }) {
@@ -163,38 +249,12 @@ function RecordDetails({ className, items }: { className?: string; items: Detail
   if (!visible.length) return null;
   return (
     <div className={cx("project-record-details", className)}>
-      {visible.map(([label, value]) => (
-        <span key={label}><strong>{label}</strong>{value}</span>
-      ))}
+      {visible.map(([label, value]) => <span key={label}><strong>{label}</strong>{value}</span>)}
     </div>
   );
 }
 
 function assetBaseMeta(asset: WorkProjectAsset): DetailItem[] {
-  if (asset.type === WORK_PROJECT_ASSET_TYPE.BINARY) {
-    return [["Path", asset.path]];
-  }
-  return [
-    ["Host", asset.host],
-    ["Port", asset.port?.toString()],
-  ];
-}
-
-function RecordEmpty({ title }: { title: string }) {
-  return <Empty className="empty-state" image={<FileText size={42} />} title={title} description="" />;
-}
-
-function TabLabel({ icon, text }: { icon: ReactNode; text: string }) {
-  return <span className="workspace-tab-label">{icon}{text}</span>;
-}
-
-function groupSteps(steps: WorkProjectAttackPathStep[]) {
-  const map = new Map<number, WorkProjectAttackPathStep[]>();
-  for (const step of steps) {
-    const items = map.get(step.path_id) ?? [];
-    items.push(step);
-    map.set(step.path_id, items);
-  }
-  for (const items of map.values()) items.sort((a, b) => a.sequence - b.sequence);
-  return map;
+  if (asset.type === WORK_PROJECT_ASSET_TYPE.BINARY) return [["Path", asset.path]];
+  return [["Host", asset.host], ["Port", asset.port?.toString()]];
 }

@@ -14,11 +14,11 @@ import {
   SquareTerminal,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
-import { SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
+import { SANDBOX_CONTAINER_STATUS, SESSION_TYPE } from "../../shared/api/generated/constants";
 import {
   canManageSandboxContainer,
   canOpenContainerNoVNC,
@@ -30,12 +30,13 @@ import {
   stopSandboxContainer,
 } from "../../shared/api/sandboxContainers";
 import type { AgentInputPart, SandboxContainer } from "../../shared/api/types";
-import { getWorkProjectRecordSnapshot } from "../../shared/api/workProjects";
+import { getWorkProject } from "../../shared/api/workProjects";
+import { useOptionList } from "../../shared/hooks/useOptionList";
 import { cx } from "../../shared/lib/className";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
-import { useAgentSessionContext } from "./AgentSessionProvider";
+import { useAgentSessionContext, type AgentSessionConnectionStatus } from "./AgentSessionProvider";
 import { ChatStream } from "./ChatStream";
 import { Composer } from "./Composer";
 import { MessageScrollPanel } from "./MessageScrollPanel";
@@ -43,6 +44,7 @@ import { PlaygroundSandboxCreateModal } from "./PlaygroundSandboxCreateModal";
 import { SandboxSelector } from "./SandboxSelector";
 import { SubagentSidePanel } from "./SubagentSidePanel";
 import { useSubagentPanel } from "./useSubagentPanel";
+import { isSubagentRunning } from "./subagentView";
 
 type PlaygroundLocationState = { sessionId?: string };
 
@@ -55,7 +57,7 @@ type SandboxActionButtonProps = {
   onClick: () => void;
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<AgentSessionConnectionStatus, string> = {
   open: "Live",
   connecting: "Connecting",
   closed: "Disconnected",
@@ -73,8 +75,6 @@ export function PlaygroundPage() {
   } = useAgentSessionContext();
   const location = useLocation();
   const navigate = useNavigate();
-  const [availableSandboxContainers, setAvailableSandboxContainers] = useState<SandboxContainer[]>([]);
-  const [sandboxLoading, setSandboxLoading] = useState(false);
   const [sandboxContainerId, setSandboxContainerId] = useState<number | null>(null);
   const [projectSandboxContainerId, setProjectSandboxContainerId] = useState<number | null>(null);
   const [projectSandboxContainer, setProjectSandboxContainer] = useState<SandboxContainer | null>(null);
@@ -82,12 +82,27 @@ export function PlaygroundPage() {
   const [projectRecordsOpen, setProjectRecordsOpen] = useState(false);
   const [createSandboxOpen, setCreateSandboxOpen] = useState(false);
   const [sandboxAction, setSandboxAction] = useState<string | null>(null);
+  const activeSessionIdRef = useRef(activeSessionId);
+  const sandboxOperationRef = useRef({ busy: false, generation: 0 });
+  activeSessionIdRef.current = activeSessionId;
   const { openFileManager, openNoVNC, openShell, syncContainerWindows } = useContainerShell();
   const { selectedSubagent, setSelectedSubagent, subagentTabs, closeSubagentPanel } = useSubagentPanel(chatState, activeSessionId);
-  const hasRunningSubagents = subagentTabs.some((tab) => tab.status === "running");
+  const hasRunningSubagents = subagentTabs.some((tab) => isSubagentRunning(tab.status));
   const agentSwitchDisabled = activeAgentCode === defaultAgentCode && hasRunningSubagents;
+  const sandboxOperationBusy = sandboxAction !== null;
 
-  const activeProjectId = activeSessionSummary?.session_type === "project" ? activeSessionSummary.project_id ?? null : null;
+  const activeProjectId = activeSessionSummary?.session_type === SESSION_TYPE.PROJECT ? activeSessionSummary.project_id ?? null : null;
+  const querySandboxOptions = useCallback((params: { page: number; size: number; keyword: string }) => (
+    queryAvailableSandboxContainers({
+      ...params,
+      work_project_id: activeProjectId ?? undefined,
+      include_non_running: true,
+    })
+  ), [activeProjectId]);
+  const sandboxOptions = useOptionList<SandboxContainer>({ query: querySandboxOptions });
+  const availableSandboxContainers = sandboxOptions.items;
+  const knownSandboxContainers = sandboxOptions.knownItems;
+  const sandboxLoading = sandboxOptions.busy;
   const currentProjectSandboxContainer = useMemo(() => {
     if (!activeProjectId) return null;
     if (projectSandboxContainerId === null) return projectSandboxContainer;
@@ -98,8 +113,11 @@ export function PlaygroundPage() {
     return availableSandboxContainers;
   }, [activeProjectId, availableSandboxContainers, currentProjectSandboxContainer]);
   const selectedSandboxContainer = useMemo(
-    () => findSandboxContainerById(selectableSandboxContainers, sandboxContainerId),
-    [sandboxContainerId, selectableSandboxContainers],
+    () => findSandboxContainerById(
+      activeProjectId ? selectableSandboxContainers : knownSandboxContainers,
+      sandboxContainerId,
+    ),
+    [activeProjectId, knownSandboxContainers, sandboxContainerId, selectableSandboxContainers],
   );
   const sandboxAccessUnavailableReason = getSandboxAccessUnavailableReason(selectedSandboxContainer);
   const sandboxManageUnavailableReason = sandboxAccessUnavailableReason ? "No permission to operate this sandbox" : null;
@@ -123,7 +141,7 @@ export function PlaygroundPage() {
     setProjectRecordsOpen(true);
   }, []);
   const openSubagentPanel = useCallback(() => {
-    const tab = [...subagentTabs].reverse().find((item) => item.status === "running") ?? subagentTabs[subagentTabs.length - 1];
+    const tab = [...subagentTabs].reverse().find((item) => isSubagentRunning(item.status)) ?? subagentTabs[subagentTabs.length - 1];
     if (tab) setSelectedSubagent(tab.agentCode);
   }, [setSelectedSubagent, subagentTabs]);
 
@@ -139,24 +157,6 @@ export function PlaygroundPage() {
     if (selectedSandboxContainer) openNoVNC(selectedSandboxContainer);
   }, [openNoVNC, selectedSandboxContainer]);
 
-  const loadSandboxes = useCallback(async () => {
-    setSandboxLoading(true);
-    try {
-      const availableResponse = await queryAvailableSandboxContainers({
-        page: 1,
-        size: 100,
-        keyword: "",
-        work_project_id: activeProjectId ?? undefined,
-        include_non_running: true,
-      });
-      setAvailableSandboxContainers(availableResponse.data?.items ?? []);
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setSandboxLoading(false);
-    }
-  }, [activeProjectId]);
-
   // consume sessionId from navigate state (e.g. project "Go") then clear so
   // back-navigation does not retrigger the jump
   useEffect(() => {
@@ -168,12 +168,14 @@ export function PlaygroundPage() {
   }, [location.pathname, location.state, navigate, selectSession]);
 
   useEffect(() => {
-    void loadSandboxes();
-  }, [loadSandboxes]);
-
-  useEffect(() => {
     setSandboxContainerId(activeSessionSummary?.selected_sandbox_container_id ?? null);
   }, [activeSessionSummary?.selected_sandbox_container_id]);
+
+  useEffect(() => {
+    sandboxOperationRef.current.generation += 1;
+    sandboxOperationRef.current.busy = false;
+    setSandboxAction(null);
+  }, [activeSessionId]);
 
   useEffect(() => {
     syncContainerWindows(selectedSandboxContainer);
@@ -196,10 +198,10 @@ export function PlaygroundPage() {
     setProjectSandboxContainerId(null);
     setProjectSandboxContainer(null);
     setProjectSandboxScopeLoaded(false);
-    getWorkProjectRecordSnapshot(activeProjectId)
+    getWorkProject(activeProjectId)
       .then((response) => {
         if (!active) return;
-        const project = response.data?.project;
+        const project = response.data;
         const containerId = project?.sandbox_container_id ?? null;
         setProjectSandboxContainerId(containerId);
         setProjectSandboxContainer(project?.sandbox_container ?? null);
@@ -225,25 +227,29 @@ export function PlaygroundPage() {
       syncContainerWindows(nextContainer);
       return;
     }
+    const operation = beginSandboxOperation(sandboxOperationRef, activeSessionId, "select", setSandboxAction);
+    if (!operation) return;
     try {
       const summary = await updateSelectedSandboxContainer(activeSessionId, nextContainerId);
+      if (!isCurrentSandboxOperation(sandboxOperationRef, activeSessionIdRef, operation)) return;
       const selectedId = summary?.selected_sandbox_container_id ?? null;
       setSandboxContainerId(selectedId);
       syncContainerWindows(findSandboxContainerById(selectableSandboxContainers, selectedId));
     } catch (error) {
-      showApiError(error);
+      if (isCurrentSandboxOperation(sandboxOperationRef, activeSessionIdRef, operation)) showApiError(error);
+    } finally {
+      finishSandboxOperation(sandboxOperationRef, operation, setSandboxAction);
     }
   }, [activeSessionId, selectableSandboxContainers, syncContainerWindows, updateSelectedSandboxContainer]);
 
   const handleSandboxCreated = useCallback((container: SandboxContainer) => {
     setCreateSandboxOpen(false);
-    setAvailableSandboxContainers((current) => upsertSandboxContainer(current, container));
+    sandboxOptions.updateItems((current) => upsertSandboxContainer(current, container));
     if (!activeProjectId) {
       setSandboxContainerId(container.id);
       syncContainerWindows(container);
     }
-    void loadSandboxes();
-  }, [activeProjectId, loadSandboxes, syncContainerWindows]);
+  }, [activeProjectId, sandboxOptions.updateItems, syncContainerWindows]);
 
   const runSandboxMutation = useCallback(async (
     action: "start" | "stop" | "pause" | "resume",
@@ -251,55 +257,58 @@ export function PlaygroundPage() {
   ) => {
     if (!container) return;
     const actionKey = `${action}:${container.id}`;
-    setSandboxAction(actionKey);
+    const operation = beginSandboxOperation(sandboxOperationRef, activeSessionId, actionKey, setSandboxAction);
+    if (!operation) return;
     try {
       const response = action === "start"
         ? await startSandboxContainer(container.id)
         : action === "stop"
           ? await stopSandboxContainer(container.id)
           : action === "pause"
-            ? await pauseSandboxContainer(container.id)
+          ? await pauseSandboxContainer(container.id)
             : await resumeSandboxContainer(container.id);
+      if (!isCurrentSandboxOperation(sandboxOperationRef, activeSessionIdRef, operation)) return;
       showApiSuccess(response);
       const updatedContainer = response.data;
       if (updatedContainer) {
-        setAvailableSandboxContainers((current) => upsertSandboxContainer(current, updatedContainer));
+        sandboxOptions.updateItems((current) => upsertSandboxContainer(current, updatedContainer));
         if (updatedContainer.id === projectSandboxContainerId) setProjectSandboxContainer(updatedContainer);
         setSandboxContainerId(updatedContainer.id);
         syncContainerWindows(updatedContainer);
       }
-      await loadSandboxes();
     } catch (error) {
-      showApiError(error);
+      if (isCurrentSandboxOperation(sandboxOperationRef, activeSessionIdRef, operation)) showApiError(error);
     } finally {
-      setSandboxAction(null);
+      finishSandboxOperation(sandboxOperationRef, operation, setSandboxAction);
     }
-  }, [loadSandboxes, projectSandboxContainerId, syncContainerWindows]);
+  }, [activeSessionId, projectSandboxContainerId, sandboxOptions.updateItems, syncContainerWindows]);
 
   const deleteSelectedSandboxContainer = useCallback(async () => {
     if (!selectedSandboxContainer) return;
     const actionKey = `delete:${selectedSandboxContainer.id}`;
-    setSandboxAction(actionKey);
+    const operation = beginSandboxOperation(sandboxOperationRef, activeSessionId, actionKey, setSandboxAction);
+    if (!operation) return;
     try {
       const response = await deleteSandboxContainer(selectedSandboxContainer.id);
+      if (!isCurrentSandboxOperation(sandboxOperationRef, activeSessionIdRef, operation)) return;
       showApiSuccess(response);
-      setAvailableSandboxContainers((current) => current.filter((container) => container.id !== selectedSandboxContainer.id));
+      sandboxOptions.updateItems((current) => current.filter((container) => container.id !== selectedSandboxContainer.id));
       if (projectSandboxContainerId === selectedSandboxContainer.id) {
         setProjectSandboxContainerId(null);
         setProjectSandboxContainer(null);
       }
       setSandboxContainerId(null);
       syncContainerWindows(null);
-      await Promise.all([loadSandboxes(), refreshSessions()]);
+      await refreshSessions();
     } catch (error) {
-      showApiError(error);
+      if (isCurrentSandboxOperation(sandboxOperationRef, activeSessionIdRef, operation)) showApiError(error);
     } finally {
-      setSandboxAction(null);
+      finishSandboxOperation(sandboxOperationRef, operation, setSandboxAction);
     }
-  }, [loadSandboxes, projectSandboxContainerId, refreshSessions, selectedSandboxContainer, syncContainerWindows]);
+  }, [activeSessionId, projectSandboxContainerId, refreshSessions, sandboxOptions.updateItems, selectedSandboxContainer, syncContainerWindows]);
 
   useEffect(() => {
-    if (activeSessionSummary?.session_type === "project" && projectSandboxScopeLoaded) {
+    if (activeSessionSummary?.session_type === SESSION_TYPE.PROJECT && projectSandboxScopeLoaded) {
       setSandboxContainerId(projectSandboxContainerId);
     }
   }, [activeSessionSummary?.session_type, projectSandboxContainerId, projectSandboxScopeLoaded]);
@@ -311,7 +320,9 @@ export function PlaygroundPage() {
         loading={sandboxLoading}
         value={sandboxContainerId}
         className="sandbox-selector-topbar"
-        disabled={Boolean(activeProjectId)}
+        disabled={Boolean(activeProjectId) || sandboxOperationBusy}
+        onSearch={sandboxOptions.search}
+        onListScroll={sandboxOptions.onListScroll}
         onChange={(id) => void changeSandboxContainer(id)}
       />
       <div className="sandbox-container-actions" aria-label="Selected sandbox actions">
@@ -324,7 +335,7 @@ export function PlaygroundPage() {
         />
         <SandboxActionButton
           ariaLabel={`Start ${selectedSandboxName}`}
-          disabled={!canStartSelectedSandbox}
+          disabled={sandboxOperationBusy || !canStartSelectedSandbox}
           icon={<Play size={15} />}
           loading={sandboxAction === `start:${selectedSandboxActionId}`}
           tooltip={sandboxManageUnavailableReason ?? (canStartSelectedSandbox ? `Start ${selectedSandboxName}` : "Select a created or stopped sandbox")}
@@ -332,7 +343,7 @@ export function PlaygroundPage() {
         />
         <SandboxActionButton
           ariaLabel={`Stop ${selectedSandboxName}`}
-          disabled={!canStopSelectedSandbox}
+          disabled={sandboxOperationBusy || !canStopSelectedSandbox}
           icon={<SquareStop size={15} />}
           loading={sandboxAction === `stop:${selectedSandboxActionId}`}
           tooltip={sandboxManageUnavailableReason ?? (canStopSelectedSandbox ? `Stop ${selectedSandboxName}` : "Select a running sandbox")}
@@ -340,7 +351,7 @@ export function PlaygroundPage() {
         />
         <SandboxActionButton
           ariaLabel={`Pause ${selectedSandboxName}`}
-          disabled={!canPauseSelectedSandbox}
+          disabled={sandboxOperationBusy || !canPauseSelectedSandbox}
           icon={<Pause size={15} />}
           loading={sandboxAction === `pause:${selectedSandboxActionId}`}
           tooltip={sandboxManageUnavailableReason ?? (canPauseSelectedSandbox ? `Pause ${selectedSandboxName}` : "Select a running sandbox")}
@@ -348,7 +359,7 @@ export function PlaygroundPage() {
         />
         <SandboxActionButton
           ariaLabel={`Resume ${selectedSandboxName}`}
-          disabled={!canResumeSelectedSandbox}
+          disabled={sandboxOperationBusy || !canResumeSelectedSandbox}
           icon={<RotateCcw size={15} />}
           loading={sandboxAction === `resume:${selectedSandboxActionId}`}
           tooltip={sandboxManageUnavailableReason ?? (canResumeSelectedSandbox ? `Resume ${selectedSandboxName}` : "Select a paused sandbox")}
@@ -364,7 +375,7 @@ export function PlaygroundPage() {
           <span>
             <SandboxActionButton
               ariaLabel={`Delete ${selectedSandboxName}`}
-              disabled={!selectedSandboxContainer || Boolean(sandboxManageUnavailableReason)}
+              disabled={sandboxOperationBusy || !selectedSandboxContainer || Boolean(sandboxManageUnavailableReason)}
               icon={<Trash2 size={15} />}
               loading={sandboxAction === `delete:${selectedSandboxActionId}`}
               tooltip={sandboxManageUnavailableReason ?? (selectedSandboxContainer ? `Delete ${selectedSandboxName}` : "Select a sandbox first")}
@@ -415,7 +426,7 @@ export function PlaygroundPage() {
       </Button>
       <span className={cx("stream-status", `stream-status-${status}`)}>
         <Activity size={14} />
-        <span>{STATUS_LABEL[status] ?? "Idle"}</span>
+        <span>{STATUS_LABEL[status]}</span>
       </span>
     </>
   ), [
@@ -434,9 +445,12 @@ export function PlaygroundPage() {
     runSandboxMutation,
     sandboxAction,
     sandboxManageUnavailableReason,
+    sandboxOperationBusy,
     sandboxContainerId,
     selectableSandboxContainers,
     sandboxLoading,
+    sandboxOptions.onListScroll,
+    sandboxOptions.search,
     screenUnavailableReason,
     selectSession,
     selectedSandboxActionId,
@@ -579,4 +593,46 @@ function upsertSandboxContainer(containers: SandboxContainer[], nextContainer: S
 function findSandboxContainerById(containers: SandboxContainer[], id: number | null) {
   if (id === null) return null;
   return containers.find((container) => container.id === id) ?? null;
+}
+
+type SandboxOperation = {
+  generation: number;
+  sessionId: string | null;
+};
+
+type SandboxOperationState = {
+  busy: boolean;
+  generation: number;
+};
+
+function beginSandboxOperation(
+  operationRef: { current: SandboxOperationState },
+  sessionId: string | null,
+  action: string,
+  setAction: (action: string | null) => void,
+): SandboxOperation | null {
+  if (operationRef.current.busy) return null;
+  const generation = operationRef.current.generation + 1;
+  operationRef.current = { busy: true, generation };
+  setAction(action);
+  return { generation, sessionId };
+}
+
+function isCurrentSandboxOperation(
+  operationRef: { current: SandboxOperationState },
+  activeSessionIdRef: { current: string | null },
+  operation: SandboxOperation,
+) {
+  return operationRef.current.generation === operation.generation
+    && activeSessionIdRef.current === operation.sessionId;
+}
+
+function finishSandboxOperation(
+  operationRef: { current: SandboxOperationState },
+  operation: SandboxOperation,
+  setAction: (action: string | null) => void,
+) {
+  if (operationRef.current.generation !== operation.generation) return;
+  operationRef.current.busy = false;
+  setAction(null);
 }

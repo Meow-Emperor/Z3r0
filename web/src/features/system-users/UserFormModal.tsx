@@ -1,7 +1,8 @@
 import { Input, Select } from "@douyinfe/semi-ui";
-import { KeyRound, Mail, Shield, User } from "lucide-react";
+import { KeyRound, Mail, Shield, User, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getSystemUserRoles, isSystemUserRole } from "../../shared/api/contract";
+import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import type { CreateSystemUserRequest, SystemUser, SystemUserRole, UpdateSystemUserRequest } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import { SYSTEM_USER_ROLE_LABEL } from "../../shared/lib/labels";
@@ -31,7 +32,7 @@ type UserFormModalProps =
       onSubmit: (payload: UpdateSystemUserRequest) => Promise<void>;
     };
 
-const EMPTY: UserFormValues = { username: "", email: "", password: "", role: "user" };
+const EMPTY: UserFormValues = { username: "", email: "", password: "", role: SYSTEM_USER_ROLE.USER };
 
 function initial(user: SystemUser | null): UserFormValues {
   if (!user) return EMPTY;
@@ -59,6 +60,7 @@ export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: 
     <ResourceModal
       open={open}
       title={mode === "create" ? "Create User" : "Edit User"}
+      titleIcon={<UserRound size={17} />}
       saving={saving}
       submitLabel={mode === "create" ? "Create" : "Save"}
       onCancel={onCancel}

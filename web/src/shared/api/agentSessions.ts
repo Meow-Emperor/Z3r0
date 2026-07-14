@@ -1,4 +1,5 @@
 import { apiBlob, apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { buildQuery } from "./query";
 import type {
   AgentTurnRequest,
   CancelAllAgentSessionTasksResponse,
@@ -6,7 +7,9 @@ import type {
   DeleteAgentSessionResponse,
   DownloadAgentReportPathParams,
   InterruptAgentSessionResponse,
+  ListAgentEventsParams,
   ListAgentEventsResponse,
+  ListAgentSessionsParams,
   ListAgentSessionsResponse,
   SubmitAgentSessionTurnResponse,
   UpdateAgentSessionSandboxContainerRequest,
@@ -17,8 +20,8 @@ import type {
 
 const AGENT_SESSIONS_PATH = "/api/agent-sessions";
 
-export function listAgentSessions(limit = 100) {
-  return apiGet<ListAgentSessionsResponse>(`${AGENT_SESSIONS_PATH}?limit=${limit}`);
+export function listAgentSessions(params: ListAgentSessionsParams) {
+  return apiGet<ListAgentSessionsResponse>(`${AGENT_SESSIONS_PATH}${buildQuery(params)}`);
 }
 
 export function createAgentSessionTurn(payload: AgentTurnRequest) {
@@ -46,14 +49,10 @@ export function cancelAllAgentSessionTasks(sessionId: string) {
 
 export function listAgentEvents(
   sessionId: string,
-  options: { beforeSeq?: number | null; limit?: number } = {},
+  params: ListAgentEventsParams = {},
 ) {
-  const params = new URLSearchParams();
-  if (options.beforeSeq) params.set("before_seq", String(options.beforeSeq));
-  if (options.limit) params.set("limit", String(options.limit));
-  const query = params.toString();
   return apiGet<ListAgentEventsResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/events${query ? `?${query}` : ""}`,
+    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/events${buildQuery(params)}`,
   );
 }
 

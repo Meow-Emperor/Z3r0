@@ -11,8 +11,8 @@ from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from schema.sandbox.containers import SandboxContainerStatus
 from service.host.docker import docker_client_for_host
-from service.sandbox import close_docker_response_sync as _close_response_sync
 from service.sandbox.control_proxy import resolve_container_egress_environment
+from service.sandbox.docker_streams import close_docker_response_sync as _close_response_sync
 from service.sandbox.docker_ops import (
     docker_status_to_sandbox_status,
     inspect_container_state_sync,
@@ -200,7 +200,7 @@ def _execute_container_command_sync(
                     stderr_parts.append(stderr)
         except Exception:
             if cancel_requested.is_set():
-                raise _SandboxCommandCancelled()
+                raise _SandboxCommandCancelled() from None
             raise
         if cancel_requested.is_set():
             raise _SandboxCommandCancelled()
@@ -242,7 +242,7 @@ def _close_command_stream(stream: object) -> None:
             logger.debug("failed to close sandbox command stream", exc_info=True)
     _close_response_sync(stream, response)
     try:
-        setattr(stream, "_response", None)
+        stream._response = None
     except Exception:
         pass
 
@@ -366,9 +366,9 @@ async def execute_sandbox_container_command(
 
     try:
         state = await asyncio.to_thread(inspect_container_state_sync, host, container_hash)
-    except Exception:
+    except Exception as exc:
         logger.exception("sandbox container inspect failed before command execution: %s", id)
-        raise RuntimeError("failed to inspect sandbox container")
+        raise RuntimeError("failed to inspect sandbox container") from exc
 
     status = SandboxContainerStatus.ERROR if not state.exists else docker_status_to_sandbox_status(state.status)
     if status != SandboxContainerStatus.RUNNING:
@@ -381,10 +381,10 @@ async def execute_sandbox_container_command(
         raise
     except SandboxContainerCommandTimeoutError:
         raise
-    except docker.errors.NotFound:
+    except docker.errors.NotFound as exc:
         logger.debug("sandbox container instance not found while executing command: %s", id)
         await save_sandbox_container_status(id, SandboxContainerStatus.ERROR)
-        raise RuntimeError("sandbox container instance not found")
-    except Exception:
+        raise RuntimeError("sandbox container instance not found") from exc
+    except Exception as exc:
         logger.exception("sandbox container command execution failed: %s", id)
-        raise RuntimeError("failed to execute sandbox container command")
+        raise RuntimeError("failed to execute sandbox container command") from exc

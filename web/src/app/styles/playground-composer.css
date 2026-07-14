@@ -96,7 +96,6 @@
   max-width: min(1120px, 100%);
   margin: 0 auto;
   pointer-events: auto;
-  box-shadow: var(--z-shadow);
   border-radius: 20px;
 }
 

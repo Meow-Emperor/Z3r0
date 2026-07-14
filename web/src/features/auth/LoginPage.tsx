@@ -1,6 +1,6 @@
 import { Button, Input } from "@douyinfe/semi-ui";
 import { Crosshair, KeyRound, Mail } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { login } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
@@ -15,6 +15,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -22,6 +23,8 @@ export function LoginPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const response = await login({ email, password });
@@ -32,6 +35,7 @@ export function LoginPage() {
     } catch (error) {
       showApiError(error);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

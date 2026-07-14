@@ -1,4 +1,5 @@
 import type { AgentContentEvent, AgentInputPart } from "../../shared/api/types";
+import { AGENT_EVENT_TYPE, AGENT_INPUT_PART_TYPE } from "../../shared/api/generated/constants";
 import { stableJson } from "../../shared/lib/json";
 import type {
   AgentTranscript,
@@ -10,29 +11,29 @@ import type {
 
 export function contentSignature(content: AgentInputPart[]): string {
   return content.map((part) => {
-    if (part.type === "text") return `text:${part.text}`;
+    if (part.type === AGENT_INPUT_PART_TYPE.TEXT) return `text:${part.text}`;
     return `image:${part.media_type}:${part.data.length}:${part.data.slice(0, 64)}`;
   }).join("\n");
 }
 
 export function transcriptHasEvent(transcript: AgentTranscript, event: AgentContentEvent): boolean {
   switch (event.type) {
-    case "thinking_delta":
+    case AGENT_EVENT_TYPE.THINKING_DELTA:
       return hasCoveredCompletedText(transcript.blocks, "thinking", event.text);
-    case "thinking_complete":
+    case AGENT_EVENT_TYPE.THINKING_COMPLETE:
       return hasCoveredCompletedText(transcript.blocks, "thinking", event.text);
-    case "text_delta":
+    case AGENT_EVENT_TYPE.TEXT_DELTA:
       return hasCoveredCompletedText(transcript.blocks, "text", event.text);
-    case "text_complete":
+    case AGENT_EVENT_TYPE.TEXT_COMPLETE:
       return hasCoveredCompletedText(transcript.blocks, "text", event.text);
-    case "tool_call":
+    case AGENT_EVENT_TYPE.TOOL_CALL:
       return findToolBlockIndex(transcript.blocks, event.call_id, event.name, event.arguments ?? {}) !== -1;
-    case "tool_result": {
+    case AGENT_EVENT_TYPE.TOOL_RESULT: {
       const index = findToolBlockIndex(transcript.blocks, event.call_id);
       const block = index === -1 ? null : transcript.blocks[index];
       return Boolean(block?.kind === "tool" && block.resolved && block.output === event.output && block.isError === event.is_error);
     }
-    case "subagent_task":
+    case AGENT_EVENT_TYPE.SUBAGENT_TASK:
       return transcript.blocks.some((block) => (
         block.kind === "subagent"
         && block.runId === event.run_id

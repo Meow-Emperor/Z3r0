@@ -122,11 +122,11 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
     <ResourceModal
       open={open}
       title={editing ? "Edit Host" : "Create Host"}
+      titleIcon={<Server size={17} />}
       saving={saving}
       submitLabel={editing ? "Save" : "Create"}
       submitDisabled={submitDisabled}
-      width={640}
-      className="host-form-modal"
+      size="standard"
       onCancel={onCancel}
       onSubmit={submit}
     >

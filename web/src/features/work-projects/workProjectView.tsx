@@ -2,7 +2,7 @@ import { Progress, Tag } from "@douyinfe/semi-ui";
 import { ClipboardList, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { WORK_PROJECT_ASSET_TYPE } from "../../shared/api/contract";
-import type { WorkProject, WorkProjectAsset } from "../../shared/api/types";
+import type { WorkProject, WorkProjectAsset, WorkProjectSummary } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import {
   WORK_PROJECT_ASSET_TYPE_LABEL,
@@ -16,15 +16,15 @@ import {
 
 type WorkProjectViewMode = "expanded" | "info";
 
-export function workProjectOwnerNames(project: WorkProject): string {
+export function workProjectOwnerNames(project: WorkProjectSummary): string {
   return project.owners.map((owner) => owner.username).join(", ") || "No owners";
 }
 
-export function WorkProjectTypeTag({ project }: { project: WorkProject }) {
+export function WorkProjectTypeTag({ project }: { project: WorkProjectSummary }) {
   return <Tag color={WORK_PROJECT_TYPE_COLOR[project.type]}>{WORK_PROJECT_TYPE_LABEL[project.type]}</Tag>;
 }
 
-export function WorkProjectStatusTag({ project }: { project: WorkProject }) {
+export function WorkProjectStatusTag({ project }: { project: WorkProjectSummary }) {
   return <Tag color={WORK_PROJECT_STATUS_COLOR[project.status]}>{WORK_PROJECT_STATUS_LABEL[project.status]}</Tag>;
 }
 

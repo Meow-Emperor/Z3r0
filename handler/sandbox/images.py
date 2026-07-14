@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+from handler.common.http import raise_api_error
 from schema.common.responses import CommonResponse
 from schema.sandbox.images import (
     CreateSandboxImageRequest,
@@ -30,9 +31,9 @@ async def create_sandbox_image_handler(request: CreateSandboxImageRequest) -> Co
 async def delete_sandbox_image_handler(id: int) -> CommonResponse:
     result = await delete_sandbox_image(id)
     if result.not_found:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="sandbox image not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox image not found")
     if not result.deleted:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
+        raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=DeleteSandboxImageResponse(id=id))
 
 

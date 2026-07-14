@@ -21,6 +21,7 @@ Z3r0 requires the following configuration and infrastructure:
 | --- | --- |
 | `.z3r0/config.json` | System runtime configuration |
 | `.z3r0/agents/*` | Agent role and instruction files |
+| `.lightrag/` | Temporary parser inputs and local LightRAG working files |
 | `sandbox` | Isolated execution environment |
 | Docker | Runtime for sandbox containers |
 | PostgreSQL | Persistent application and LightRAG storage with pgvector and Apache AGE extensions |
@@ -65,12 +66,12 @@ Edit the system runtime configuration in `.z3r0/config.json`, mainly updating th
 | `agents.*` | LLM API configuration for each Agent. Providers and models can be configured separately by role. |
 | `lightrag.embedding_*` | OpenAI-compatible embedding API, key, model, and vector dimension. |
 | `lightrag.llm_*` | Independent OpenAI-compatible LLM API, key, and model used for entity and relationship extraction. |
-| `lightrag.graph_matches` | Entity and relationship candidates retrieved for current-turn graph context. |
-| `lightrag.chunk_matches` | Original document chunks retrieved for current-turn text context. |
+| `lightrag.graph_matches` | Number of entity and relationship matches included in graph retrieval context. |
+| `lightrag.chunk_matches` | Number of original document chunks included in text retrieval context. |
 
 LightRAG uses `lightrag.llm_*` for entity and relationship extraction. These settings are configured independently from each Agent model in `agents.*`. Both bundled Compose files pull `ghcr.io/yv1ing/postgres-for-rag:latest` and `ghcr.io/yv1ing/pgadmin4:latest` from GitHub Container Registry. The PostgreSQL image includes the pgvector and Apache AGE extensions required by LightRAG storage.
 
-The embedding API, model, and dimension define the stored vector representation. Configure them before uploading documents; they can be changed through `System Config` only while the LightRAG document store is empty. Embedding credentials, extraction LLM settings, and graph and document retrieval counts can be updated independently.
+The embedding API, model, and dimension define the knowledge collection's vector representation and should be selected before the first document import. Moving an existing collection to a different embedding model or dimension requires removing its indexed documents and importing them again. Embedding credentials, extraction LLM settings, and graph and document retrieval breadth can otherwise be managed independently through `System Config`.
 
 ### Start Containers
 
@@ -130,7 +131,7 @@ Use the following setup for local development.
 ### Configure the Environment
 
 - Python version: 3.13.5
-- Node.js version: 24.16.0
+- Node.js version: 24.18.0
 
 Create a virtual environment with the following commands:
 

@@ -49,9 +49,3 @@ export function preloadAdminRoute(path: string) {
   preloadedRoutes.add(path);
   void loader().catch(() => preloadedRoutes.delete(path));
 }
-
-export function preloadAdminRoutes() {
-  for (const path of Object.keys(adminRouteLoaders)) {
-    preloadAdminRoute(path);
-  }
-}

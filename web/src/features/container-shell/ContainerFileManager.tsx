@@ -4,12 +4,24 @@ import {
   Copy, Download, File, FilePlus, Folder, FolderOpen, FolderPlus, Grid3X3, List,
   RefreshCw, Scissors, Trash2, Upload,
 } from "lucide-react";
-import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import {
   copyContainerFiles, createContainerDirectory, deleteContainerFiles,
   downloadContainerFiles, listContainerFiles, moveContainerFiles, uploadContainerFiles, writeContainerFile,
 } from "../../shared/api/sandboxContainers";
 import { showApiError } from "../../shared/api/feedback";
+import { CONTAINER_FILE_TYPE } from "../../shared/api/generated/constants";
 import type { ContainerFileInfo } from "../../shared/api/types";
 import { formatDateTime } from "../../shared/lib/date";
 import { saveBlob } from "../../shared/lib/download";
@@ -38,6 +50,8 @@ export function ContainerFileManager({ containerId }: Props) {
   const [viewingFile, setViewingFile] = useState<ContainerFileInfo | null>(null);
   const [createType, setCreateType] = useState<"file" | "dir" | null>(null);
   const requestIdRef = useRef(0);
+  const actionRunningRef = useRef(false);
+  const mountedRef = useRef(true);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadFiles = useCallback(async (dir: string) => {
@@ -46,27 +60,28 @@ export function ContainerFileManager({ containerId }: Props) {
     setLoading(true);
     try {
       const response = await listContainerFiles(containerId, { path: dir });
-      if (requestIdRef.current !== requestId) return;
-      const fileList = response.data?.files ?? [];
+      if (!mountedRef.current || requestIdRef.current !== requestId) return;
+      const fileList = [...(response.data?.files ?? [])];
       fileList.sort((a, b) => {
-        if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+        if (a.type !== b.type) return a.type === CONTAINER_FILE_TYPE.DIRECTORY ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
       setFiles(fileList);
       setPath(dir);
       setSelectedPaths(new Set());
     } catch (error) {
-      if (requestIdRef.current === requestId) {
+      if (mountedRef.current && requestIdRef.current === requestId) {
         showApiError(error);
       }
     } finally {
-      if (requestIdRef.current === requestId) {
+      if (mountedRef.current && requestIdRef.current === requestId) {
         setLoading(false);
       }
     }
   }, [containerId]);
 
   useEffect(() => {
+    mountedRef.current = true;
     requestIdRef.current += 1;
     setPath("/");
     setFiles([]);
@@ -77,6 +92,11 @@ export function ContainerFileManager({ containerId }: Props) {
     setViewingFile(null);
     setCreateType(null);
     void loadFiles("/");
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+      actionRunningRef.current = false;
+    };
   }, [containerId, loadFiles]);
 
   const navigateTo = useCallback((dir: string) => {
@@ -112,17 +132,22 @@ export function ContainerFileManager({ containerId }: Props) {
   }, [path, loadFiles]);
 
   const runFileAction = useCallback(async (action: () => Promise<void>) => {
+    if (actionRunningRef.current) return false;
+    actionRunningRef.current = true;
     setLoading(true);
     try {
       await action();
+      return true;
     } catch (error) {
-      showApiError(error);
+      if (mountedRef.current) showApiError(error);
+      return false;
     } finally {
-      setLoading(false);
+      actionRunningRef.current = false;
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
-  const handleFileClick = useCallback((file: ContainerFileInfo, event: React.MouseEvent) => {
+  const handleFileClick = useCallback((file: ContainerFileInfo, event: ReactMouseEvent) => {
     if (event.ctrlKey || event.metaKey) {
       setSelectedPaths((prev) => {
         const next = new Set(prev);
@@ -140,7 +165,7 @@ export function ContainerFileManager({ containerId }: Props) {
   }, []);
 
   const handleFileDoubleClick = useCallback((file: ContainerFileInfo) => {
-    if (file.type === "directory") {
+    if (file.type === CONTAINER_FILE_TYPE.DIRECTORY) {
       navigateTo(file.path);
       return;
     }
@@ -166,8 +191,10 @@ export function ContainerFileManager({ containerId }: Props) {
         await copyContainerFiles(containerId, { sources: clipboard.paths, destination: path });
       } else {
         await moveContainerFiles(containerId, { sources: clipboard.paths, destination: path });
+        if (!mountedRef.current) return;
         setClipboard(null);
       }
+      if (!mountedRef.current) return;
       Toast.success(`${clipboard.action === "copy" ? "Copied" : "Moved"} ${clipboard.paths.length} item(s)`);
       await loadFiles(path);
     });
@@ -177,6 +204,7 @@ export function ContainerFileManager({ containerId }: Props) {
     if (selectedPaths.size === 0) return;
     await runFileAction(async () => {
       await deleteContainerFiles(containerId, { paths: Array.from(selectedPaths) });
+      if (!mountedRef.current) return;
       Toast.success(`${selectedPaths.size} item(s) deleted`);
       await loadFiles(path);
     });
@@ -190,16 +218,17 @@ export function ContainerFileManager({ containerId }: Props) {
   const handleCreateConfirm = useCallback(async (name: string) => {
     if (!name.trim() || !createType) return;
     const itemPath = path.replace(/\/$/, "") + "/" + name.trim();
-    await runFileAction(async () => {
+    const created = await runFileAction(async () => {
       if (createType === "dir") {
         await createContainerDirectory(containerId, { path: itemPath });
       } else {
         await writeContainerFile(containerId, { path: itemPath, content: "" });
       }
+      if (!mountedRef.current) return;
       Toast.success(createType === "dir" ? "Directory created" : "File created");
       await loadFiles(path);
     });
-      setCreateType(null);
+    if (created && mountedRef.current) setCreateType(null);
   }, [createType, containerId, path, loadFiles, runFileAction]);
 
   const handleCreateCancel = useCallback(() => {
@@ -210,13 +239,14 @@ export function ContainerFileManager({ containerId }: Props) {
     uploadInputRef.current?.click();
   }, []);
 
-  const handleUploadChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadChange = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     const uploadFiles = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (uploadFiles.length === 0) return;
 
     await runFileAction(async () => {
       await uploadContainerFiles(containerId, path, uploadFiles, true);
+      if (!mountedRef.current) return;
       Toast.success(`${uploadFiles.length} file(s) uploaded`);
       await loadFiles(path);
     });
@@ -226,6 +256,7 @@ export function ContainerFileManager({ containerId }: Props) {
     if (selectedPaths.size === 0) return;
     await runFileAction(async () => {
       const { blob, filename } = await downloadContainerFiles(containerId, { path: Array.from(selectedPaths) });
+      if (!mountedRef.current) return;
       saveBlob(blob, filename);
     });
   }, [containerId, selectedPaths, runFileAction]);
@@ -369,7 +400,6 @@ export function ContainerFileManager({ containerId }: Props) {
   );
 }
 
-
 const FILE_LIST_GRID_STYLE: CSSProperties = {
   gridTemplateColumns: "minmax(0, 1.2fr) 92px 168px 92px",
 };
@@ -388,7 +418,7 @@ function FileListHeader() {
 function FileListRow({ file, selected, onClick, onDoubleClick }: {
   file: ContainerFileInfo;
   selected: boolean;
-  onClick: (e: React.MouseEvent) => void;
+  onClick: (event: ReactMouseEvent) => void;
   onDoubleClick: () => void;
 }) {
   return (
@@ -399,10 +429,10 @@ function FileListRow({ file, selected, onClick, onDoubleClick }: {
       onDoubleClick={onDoubleClick}
     >
       <div className="file-manager-name">
-        {file.type === "directory" ? <Folder size={15} /> : file.type === "symlink" ? <File size={15} /> : <File size={15} />}
+        {file.type === CONTAINER_FILE_TYPE.DIRECTORY ? <Folder size={15} /> : <File size={15} />}
         <span>{file.name}</span>
       </div>
-      <div className="file-manager-cell-muted">{file.type === "directory" ? "—" : formatBytes(file.size)}</div>
+      <div className="file-manager-cell-muted">{file.type === CONTAINER_FILE_TYPE.DIRECTORY ? "—" : formatBytes(file.size)}</div>
       <div className="file-manager-cell-muted">{formatDateTime(new Date(file.modified_at * 1000).toISOString())}</div>
       <div><Tag size="small">{file.permissions}</Tag></div>
     </div>
@@ -412,7 +442,7 @@ function FileListRow({ file, selected, onClick, onDoubleClick }: {
 function FileIconItem({ file, selected, onClick, onDoubleClick }: {
   file: ContainerFileInfo;
   selected: boolean;
-  onClick: (e: React.MouseEvent) => void;
+  onClick: (event: ReactMouseEvent) => void;
   onDoubleClick: () => void;
 }) {
   return (
@@ -422,7 +452,7 @@ function FileIconItem({ file, selected, onClick, onDoubleClick }: {
       onDoubleClick={onDoubleClick}
       title={file.name}
     >
-      {file.type === "directory" ? <FolderOpen size={32} /> : <File size={32} />}
+      {file.type === CONTAINER_FILE_TYPE.DIRECTORY ? <FolderOpen size={32} /> : <File size={32} />}
       <span>{file.name}</span>
     </div>
   );

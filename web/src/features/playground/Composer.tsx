@@ -2,6 +2,14 @@ import { Button, TextArea, Toast } from "@douyinfe/semi-ui";
 import { AtSign, ImagePlus, OctagonX, Send, Square, X } from "lucide-react";
 import { ClipboardEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentPicker } from "./AgentPicker";
+import {
+  AGENT_IMAGE_DETAIL,
+  AGENT_IMAGE_MEDIA_TYPE_VALUES,
+  AGENT_INPUT_PART_TYPE,
+  MAX_AGENT_IMAGES,
+  MAX_AGENT_IMAGE_BYTES,
+  MAX_AGENT_TOTAL_IMAGE_BYTES,
+} from "../../shared/api/generated/constants";
 import type { AgentImageInputPart, AgentInfo, AgentInputPart } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
 
@@ -18,10 +26,10 @@ type ComposerProps = {
   onCancelAll: () => void;
 };
 
-const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-const MAX_IMAGES = 4;
-const MAX_IMAGE_BYTES = 3.75 * 1024 * 1024;
-const MAX_TOTAL_IMAGE_BYTES = 6 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set<string>(AGENT_IMAGE_MEDIA_TYPE_VALUES);
+const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = AGENT_IMAGE_MEDIA_TYPE_VALUES.join(",");
+const MAX_AGENT_IMAGE_SIZE_LABEL = formatBinaryMegabytes(MAX_AGENT_IMAGE_BYTES);
+const MAX_AGENT_TOTAL_IMAGE_SIZE_LABEL = formatBinaryMegabytes(MAX_AGENT_TOTAL_IMAGE_BYTES);
 
 export function Composer({
   streaming,
@@ -42,6 +50,8 @@ export function Composer({
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submittingRef = useRef(false);
+  const addingImagesRef = useRef(false);
 
   const activeAgent = useMemo(
     () => agents.find((agent) => agent.code === activeAgentCode) ?? null,
@@ -76,48 +86,60 @@ export function Composer({
   }, []);
 
   const submit = async () => {
+    if (submittingRef.current) return;
     const trimmed = text.trim();
     if ((!trimmed && images.length === 0) || streaming || disabled) return;
+    submittingRef.current = true;
     const content: AgentInputPart[] = [
-      ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+      ...(trimmed ? [{ type: AGENT_INPUT_PART_TYPE.TEXT, text: trimmed }] : []),
       ...images,
     ];
-    const sent = await onSend(content);
-    if (!sent) return;
-    setText("");
-    setImages([]);
-    closePicker();
+    try {
+      const sent = await onSend(content);
+      if (!sent) return;
+      setText("");
+      setImages([]);
+      closePicker();
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   const addImageFiles = useCallback(async (files: File[]) => {
+    if (addingImagesRef.current) return;
     const imageFiles = files.filter((file) => ACCEPTED_IMAGE_TYPES.has(file.type));
     if (!imageFiles.length) return;
-    const available = Math.max(0, MAX_IMAGES - images.length);
+    const available = Math.max(0, MAX_AGENT_IMAGES - images.length);
     if (available === 0) {
-      Toast.warning(`At most ${MAX_IMAGES} images allowed`);
+      Toast.warning(`At most ${MAX_AGENT_IMAGES} images allowed`);
       return;
     }
-    const next: AgentImageInputPart[] = [];
-    const currentBytes = images.reduce((total, image) => total + base64DecodedSize(image.data), 0);
-    let nextBytes = 0;
-    for (const file of imageFiles.slice(0, available)) {
-      if (file.size > MAX_IMAGE_BYTES) {
-        Toast.warning(`${file.name} exceeds 3.75 MB, skipped`);
-        continue;
+    addingImagesRef.current = true;
+    try {
+      const next: AgentImageInputPart[] = [];
+      const currentBytes = images.reduce((total, image) => total + base64DecodedSize(image.data), 0);
+      let nextBytes = 0;
+      for (const file of imageFiles.slice(0, available)) {
+        if (file.size > MAX_AGENT_IMAGE_BYTES) {
+          Toast.warning(`${file.name} exceeds ${MAX_AGENT_IMAGE_SIZE_LABEL}, skipped`);
+          continue;
+        }
+        if (currentBytes + nextBytes + file.size > MAX_AGENT_TOTAL_IMAGE_BYTES) {
+          Toast.warning(`Total image size exceeds ${MAX_AGENT_TOTAL_IMAGE_SIZE_LABEL}, some images skipped`);
+          continue;
+        }
+        try {
+          next.push(await fileToImagePart(file));
+          nextBytes += file.size;
+        } catch {
+          Toast.error(`Failed to read ${file.name}`);
+        }
       }
-      if (currentBytes + nextBytes + file.size > MAX_TOTAL_IMAGE_BYTES) {
-        Toast.warning("Total image size exceeds 6 MB, some images skipped");
-        continue;
+      if (next.length) {
+        setImages((current) => [...current, ...next].slice(0, MAX_AGENT_IMAGES));
       }
-      try {
-        next.push(await fileToImagePart(file));
-        nextBytes += file.size;
-      } catch {
-        Toast.error(`Failed to read ${file.name}`);
-      }
-    }
-    if (next.length) {
-      setImages((current) => [...current, ...next].slice(0, MAX_IMAGES));
+    } finally {
+      addingImagesRef.current = false;
     }
   }, [images]);
 
@@ -243,7 +265,7 @@ export function Composer({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={ACCEPTED_IMAGE_TYPES_ATTRIBUTE}
             multiple
             className="composer-file-input"
             onChange={(event) => {
@@ -271,7 +293,7 @@ export function Composer({
                 theme="borderless"
                 type="tertiary"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={disabled || streaming || images.length >= MAX_IMAGES}
+                disabled={disabled || streaming || images.length >= MAX_AGENT_IMAGES}
                 aria-label="Attach image"
                 title="Attach image"
               />
@@ -314,19 +336,28 @@ function fileToImagePart(file: File): Promise<AgentImageInputPart> {
     reader.onload = () => {
       const value = typeof reader.result === "string" ? reader.result : "";
       const [prefix, data] = value.split(",", 2);
-      const match = /^data:(image\/(?:png|jpeg|webp));base64$/.exec(prefix);
-      if (!match || !data) {
+      const match = /^data:([^;]+);base64$/.exec(prefix);
+      const mediaType = match?.[1] ?? "";
+      if (!isAcceptedImageType(mediaType) || !data) {
         reject(new Error("invalid image data"));
         return;
       }
       resolve({
-        type: "image",
-        media_type: match[1] as AgentImageInputPart["media_type"],
+        type: AGENT_INPUT_PART_TYPE.IMAGE,
+        media_type: mediaType,
         data,
-        detail: "auto",
+        detail: AGENT_IMAGE_DETAIL.AUTO,
       });
     };
     reader.onerror = () => reject(reader.error ?? new Error("failed to read image"));
     reader.readAsDataURL(file);
   });
+}
+
+function isAcceptedImageType(value: string): value is AgentImageInputPart["media_type"] {
+  return ACCEPTED_IMAGE_TYPES.has(value);
+}
+
+function formatBinaryMegabytes(bytes: number): string {
+  return `${Number((bytes / (1024 * 1024)).toFixed(2))} MB`;
 }

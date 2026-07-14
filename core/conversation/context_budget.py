@@ -9,9 +9,9 @@ from agents import TResponseInputItem
 from agents.run import CallModelData, ModelInputData, RunConfig
 
 from config import AgentConfig, get_config
-from core import tool_call_id
 from core.conversation.compaction import estimate_items_tokens, resolve_context_window
 from core.conversation.formats import is_context_summary_item
+from core.conversation.items import tool_call_id
 from logger import get_logger
 
 

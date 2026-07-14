@@ -28,6 +28,7 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
     <ResourceModal
       open={open}
       title="Create Sandbox Image"
+      titleIcon={<Package size={17} />}
       saving={saving}
       submitLabel="Create"
       submitDisabled={!values.image_name.trim() || values.control_proxy_port < 1 || values.control_proxy_port > 65535}

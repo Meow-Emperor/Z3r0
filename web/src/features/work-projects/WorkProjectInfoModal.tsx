@@ -1,8 +1,9 @@
-import { Empty, Modal, Progress, Spin } from "@douyinfe/semi-ui";
-import { FileText, UserRound } from "lucide-react";
-import type { WorkProject } from "../../shared/api/types";
+import { Progress } from "@douyinfe/semi-ui";
+import { FileText, FolderKanban, UserRound } from "lucide-react";
+import { AppModal } from "../../shared/components/AppModal";
+import { AsyncContent } from "../../shared/components/AsyncContent";
 import { type ProjectRecordTab, WorkProjectRecordTabs } from "./ProjectRecordViews";
-import { useWorkProjectRecordSnapshot } from "./workProjectRecords";
+import { useWorkProjectDetails } from "./useWorkProjectDetails";
 import {
   WorkProjectPanel,
   WorkProjectStatusTag,
@@ -20,17 +21,22 @@ type WorkProjectInfoModalProps = {
 };
 
 export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", onClose }: WorkProjectInfoModalProps) {
-  const { project, records, loading } = useWorkProjectRecordSnapshot(projectId, open);
+  const { project, loading } = useWorkProjectDetails(projectId, open);
 
   return (
-    <Modal
-      visible={open}
-      title={<ProjectInfoTitle project={project} />}
+    <AppModal
+      open={open}
+      title={project?.name ?? "Work Project"}
+      titleIcon={<FolderKanban size={17} />}
       width="min(1440px, calc(100vw - 24px))"
-      footer={null}
       onCancel={onClose}
     >
-      <Spin spinning={loading}>
+      <AsyncContent
+        loading={loading}
+        empty={project === null}
+        emptyIcon={<FileText size={42} />}
+        emptyTitle="No project selected."
+      >
         {project ? (
           <div className="project-info-content project-record-content">
             <section className="project-info-main">
@@ -81,23 +87,13 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
 
             <section className="project-record-panel">
               <WorkProjectRecordTabs
-                records={records}
+                projectId={project.id}
                 initialTab={initialTab}
               />
             </section>
           </div>
-        ) : (
-          <Empty className="empty-state" image={<FileText size={42} />} title="No project selected." description="" />
-        )}
-      </Spin>
-    </Modal>
-  );
-}
-
-function ProjectInfoTitle({ project }: { project: WorkProject | null }) {
-  return (
-    <div className="project-info-title">
-      <strong>{project?.name ?? "Work Project"}</strong>
-    </div>
+        ) : null}
+      </AsyncContent>
+    </AppModal>
   );
 }

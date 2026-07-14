@@ -21,6 +21,7 @@ Z3r0 需要以下配置与基础设施：
 | --- | --- |
 | `.z3r0/config.json` | 系统的运行时配置 |
 | `.z3r0/agents/*` | Agent 角色与指令文件 |
+| `.lightrag/` | LightRAG 临时解析输入与本地工作文件 |
 | `sandbox` | 隔离执行环境 |
 | Docker | sandbox 容器运行时 |
 | PostgreSQL | 应用与 LightRAG 持久化存储，需同时包含 pgvector 和 Apache AGE 扩展 |
@@ -65,12 +66,12 @@ cp .z3r0/config.json.example .z3r0/config.json
 | `agents.*` | 各 Agent 的 LLM API 配置，可按角色分别配置供应商和模型。 |
 | `lightrag.embedding_*` | OpenAI 兼容的 embedding API、key、model 和向量维度。 |
 | `lightrag.llm_*` | 用于实体与关系抽取的独立 OpenAI 兼容 LLM API、key 和 model。 |
-| `lightrag.graph_matches` | 当前 turn 图谱上下文检索的实体与关系候选数量。 |
-| `lightrag.chunk_matches` | 当前 turn 文本上下文检索的原始文档 chunk 数量。 |
+| `lightrag.graph_matches` | 图谱检索上下文包含的实体与关系匹配数量。 |
+| `lightrag.chunk_matches` | 文本检索上下文包含的原始文档分块数量。 |
 
 LightRAG 使用 `lightrag.llm_*` 完成实体与关系抽取，该配置与 `agents.*` 中的 Agent model 独立。项目提供的两份 Compose 文件均从 GitHub Container Registry 拉取 `ghcr.io/yv1ing/postgres-for-rag:latest` 和 `ghcr.io/yv1ing/pgadmin4:latest`；PostgreSQL 镜像包含 LightRAG 存储所需的 pgvector 与 Apache AGE 扩展。
 
-Embedding API、model 和维度共同定义已存储向量的表示方式，应在上传文档前完成配置。仅当 LightRAG 文档库为空时，才可通过 `System Config` 修改这些字段；embedding 凭据、关系抽取 LLM 配置、图谱候选数量和文档 chunk 数量可独立更新。
+Embedding API、model 和维度共同定义知识集合的向量表示方式，应在首次导入文档前完成选择。已有知识集合如需更换 embedding model 或维度，需要先移除已索引文档，再重新导入。Embedding 凭据、关系抽取 LLM 配置，以及图谱与文档检索范围可通过 `System Config` 分别管理。
 
 ### 启动容器
 
@@ -130,7 +131,7 @@ server {
 ### 配置环境
 
 - Python 版本：3.13.5
-- Node.js 版本：24.16.0
+- Node.js 版本：24.18.0
 
 使用以下命令创建虚拟环境：
 

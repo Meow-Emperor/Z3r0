@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from schema.agent.events import AgentContentEventSchema, AgentEventSchema, AgentInputPart, validate_agent_input_content
+from schema.common.responses import PaginatedResponse
 
 
 # canonical agent session type; reused by the model and by the public schema
@@ -37,8 +38,8 @@ class AgentSessionSummarySchema(BaseModel):
 
 
 # list agent sessions response schema
-class ListAgentSessionsResponse(BaseModel):
-    items: list[AgentSessionSummarySchema]
+class ListAgentSessionsResponse(PaginatedResponse[AgentSessionSummarySchema]):
+    pass
 
 
 # a page of the persisted UI timeline log, ordered ascending by seq

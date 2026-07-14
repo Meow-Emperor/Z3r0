@@ -66,33 +66,32 @@ class Z3r0Session(SQLAlchemySession):
         meta_table = AgentMessageMeta.__table__
 
         async def _write() -> None:
-            async with self._session_factory() as sess:
-                async with sess.begin():
-                    await self._ensure_session_row(sess)
+            async with self._session_factory() as sess, sess.begin():
+                await self._ensure_session_row(sess)
 
-                    # bulk insert messages and capture the assigned ids in payload order
-                    result = await sess.execute(
-                        insert(self._messages).returning(self._messages.c.id),
-                        message_payload,
-                    )
-                    inserted_ids = [row[0] for row in result]
+                # bulk insert messages and capture the assigned ids in payload order
+                result = await sess.execute(
+                    insert(self._messages).returning(self._messages.c.id),
+                    message_payload,
+                )
+                inserted_ids = [row[0] for row in result]
 
-                    if inserted_ids:
-                        await sess.execute(insert(meta_table), [
-                            {
-                                "message_id": mid,
-                                "owner_code": owner,
-                                "nested_for": nested_for,
-                                "nested_call_id": nested_call_id,
-                            }
-                            for mid in inserted_ids
-                        ])
+                if inserted_ids:
+                    await sess.execute(insert(meta_table), [
+                        {
+                            "message_id": mid,
+                            "owner_code": owner,
+                            "nested_for": nested_for,
+                            "nested_call_id": nested_call_id,
+                        }
+                        for mid in inserted_ids
+                    ])
 
-                    await sess.execute(
-                        update(self._sessions)
-                        .where(self._sessions.c.session_id == self.session_id)
-                        .values(updated_at=sql_text("CURRENT_TIMESTAMP"))
-                    )
+                await sess.execute(
+                    update(self._sessions)
+                    .where(self._sessions.c.session_id == self.session_id)
+                    .values(updated_at=sql_text("CURRENT_TIMESTAMP"))
+                )
 
         await self._run_sqlite_write_with_retry(_write)
 
@@ -135,8 +134,12 @@ class Z3r0Session(SQLAlchemySession):
 
     async def _context_projection(self) -> ContextProjection:
         async with self._session_factory() as sess:
-            stored = await fetch_stored_items(sess, self.session_id)
             compaction = await get_latest_compaction(sess, self._compaction_scope())
+            stored = await fetch_stored_items(
+                sess,
+                self.session_id,
+                after_id=compaction.end_message_id if compaction is not None else None,
+            )
         return project_context(
             stored,
             viewing_agent_code=self._viewing_agent_code,
@@ -173,6 +176,7 @@ async def fetch_stored_items(
     session_id: str,
     *,
     before_id: int | None = None,
+    after_id: int | None = None,
     limit: int | None = None,
 ) -> list[StoredItem]:
     """Load messages + owner attribution for one conversation, in ascending order."""
@@ -193,6 +197,8 @@ async def fetch_stored_items(
     )
     if before_id is not None:
         stmt = stmt.where(agent_messages.c.id < before_id)
+    if after_id is not None:
+        stmt = stmt.where(agent_messages.c.id > after_id)
     if limit is None:
         stmt = stmt.order_by(agent_messages.c.created_at.asc(), agent_messages.c.id.asc())
     else:

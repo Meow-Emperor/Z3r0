@@ -43,7 +43,7 @@ from service.work_project.graph import (
     delete_work_project_attack_path,
     delete_work_project_attack_path_step,
     delete_work_project_graph_edge,
-    get_work_project_graph_snapshot,
+    query_work_project_graph,
     update_work_project_attack_path,
     update_work_project_attack_path_step,
     update_work_project_graph_edge,
@@ -406,21 +406,25 @@ async def load_work_project_graph(
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    snapshot = await get_work_project_graph_snapshot(project_id)
     page = _agent_page(page)
+    graph_page = await query_work_project_graph(
+        project_id,
+        page=page,
+        size=_AGENT_GRAPH_ITEMS,
+    )
     return work_project_success({
         "counts": {
-            "edges": len(snapshot.edges),
-            "attack_paths": len(snapshot.attack_paths),
-            "attack_path_steps": len(snapshot.attack_path_steps),
+            "edges": graph_page.edge_total,
+            "attack_paths": graph_page.attack_path_total,
+            "attack_path_steps": graph_page.attack_path_step_total,
         },
         "page": page,
         "size": _AGENT_GRAPH_ITEMS,
-        "edges": [_compact_edge(item.model_dump(mode="json")) for item in _page_slice(snapshot.edges, page, _AGENT_GRAPH_ITEMS)],
-        "attack_paths": [_compact_attack_path(item.model_dump(mode="json")) for item in _page_slice(snapshot.attack_paths, page, _AGENT_GRAPH_ITEMS)],
+        "edges": [_compact_edge(item.model_dump(mode="json")) for item in graph_page.edges],
+        "attack_paths": [_compact_attack_path(item.model_dump(mode="json")) for item in graph_page.attack_paths],
         "attack_path_steps": [
             _compact_attack_path_step(item.model_dump(mode="json"))
-            for item in _page_slice(snapshot.attack_path_steps, page, _AGENT_GRAPH_ITEMS)
+            for item in graph_page.attack_path_steps
         ],
     })
 
@@ -656,11 +660,6 @@ def _project_id(ctx: RunContextWrapper[AgentRuntimeContext]) -> int | None:
 
 def _agent_page(page: int) -> int:
     return page if page > 0 else 1
-
-
-def _page_slice(items: list, page: int, size: int) -> list:
-    start = (page - 1) * size
-    return items[start:start + size]
 
 
 def _compact_asset(item: dict) -> dict:

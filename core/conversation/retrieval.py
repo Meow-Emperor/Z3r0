@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from core import extract_message_text
 from core.conversation.formats import (
+    CONTEXT_SUMMARY_USER_GOALS_SECTION,
     context_summary_section,
     is_context_summary_item,
     is_internal_context_item,
     sanitize_context_text,
 )
+from core.conversation.items import extract_message_text
 from core.conversation.utterances import canonical_utterance_key, is_non_topic_utterance
 from logger import get_logger
 
@@ -89,7 +90,7 @@ def _history_context(items: list[Any], current: str) -> tuple[str, str]:
 
 def _summary_retrieval_text(summary: str) -> str:
     user_goals = _clip_text(
-        _normalize_text(context_summary_section(summary, "User Goals")),
+        _normalize_text(context_summary_section(summary, CONTEXT_SUMMARY_USER_GOALS_SECTION)),
         _RECENT_TOPICS_MAX_CHARS,
     )
     return "" if canonical_utterance_key(user_goals) in _EMPTY_SUMMARY_KEYS else user_goals

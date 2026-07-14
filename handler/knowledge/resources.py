@@ -1,10 +1,12 @@
 from http import HTTPStatus
 
 from fastapi import UploadFile
-from lightrag.base import DocStatus
-
+from handler.common.http import raise_api_error
 from schema.common.responses import CommonResponse
-from schema.knowledge.resources import DeleteKnowledgeDocumentResponse
+from schema.knowledge.resources import (
+    DeleteKnowledgeDocumentResponse,
+    KnowledgeDocumentStatus,
+)
 from service.knowledge.runtime import request_knowledge_document_processing
 from service.knowledge.resources import (
     KnowledgeDocumentError,
@@ -22,7 +24,7 @@ from service.knowledge.resources import (
 async def query_knowledge_documents_handler(
     page: int,
     size: int,
-    status: DocStatus | None,
+    status: KnowledgeDocumentStatus | None,
 ) -> CommonResponse:
     result = await query_knowledge_documents(page=page, size=size, status=status)
     return CommonResponse(data=result)
@@ -31,10 +33,7 @@ async def query_knowledge_documents_handler(
 async def get_knowledge_document_handler(document_id: str) -> CommonResponse:
     document = await get_knowledge_document(document_id)
     if document is None:
-        return CommonResponse(
-            code=HTTPStatus.NOT_FOUND.value,
-            message="knowledge document not found",
-        )
+        raise_api_error(HTTPStatus.NOT_FOUND, "knowledge document not found")
     return CommonResponse(data=document)
 
 
@@ -44,7 +43,7 @@ async def upload_knowledge_documents_handler(
     try:
         result = await upload_knowledge_documents(files)
     except KnowledgeDocumentError as exc:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
+        raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     if result.track_ids:
         request_knowledge_document_processing(result.track_ids)
     if result.queued_files and result.rejected_files:
@@ -59,7 +58,7 @@ async def upload_knowledge_documents_handler(
 async def delete_knowledge_document_handler(document_id: str) -> CommonResponse:
     result = await delete_knowledge_document(document_id)
     if result.status != "success":
-        return CommonResponse(code=result.status_code, message=result.message)
+        raise_api_error(result.status_code, result.message)
     return CommonResponse(
         message="knowledge document deleted",
         data=DeleteKnowledgeDocumentResponse(id=document_id),
@@ -74,10 +73,7 @@ async def query_knowledge_vectors_handler(page: int, size: int) -> CommonRespons
 async def get_knowledge_vector_handler(vector_id: str) -> CommonResponse:
     vector = await get_knowledge_vector(vector_id)
     if vector is None:
-        return CommonResponse(
-            code=HTTPStatus.NOT_FOUND.value,
-            message="knowledge vector not found",
-        )
+        raise_api_error(HTTPStatus.NOT_FOUND, "knowledge vector not found")
     return CommonResponse(data=vector)
 
 
@@ -98,5 +94,5 @@ async def search_knowledge_graph_handler(query: str, max_nodes: int) -> CommonRe
     try:
         result = await search_knowledge_graph(query=query, max_nodes=max_nodes)
     except KnowledgeDocumentError as exc:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=str(exc))
+        raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     return CommonResponse(data=result)

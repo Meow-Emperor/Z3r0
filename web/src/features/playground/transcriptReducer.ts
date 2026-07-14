@@ -1,4 +1,5 @@
 import type { AgentContentEvent, SubagentTaskEvent } from "../../shared/api/types";
+import { AGENT_EVENT_TYPE } from "../../shared/api/generated/constants";
 import { createClientId } from "../../shared/lib/id";
 import {
   findCompletedTextIndex,
@@ -18,30 +19,30 @@ import type {
 
 export function applyEventToTranscript(transcript: AgentTranscript, event: AgentContentEvent): boolean {
   switch (event.type) {
-    case "user_message":
-    case "turn_boundary":
+    case AGENT_EVENT_TYPE.USER_MESSAGE:
+    case AGENT_EVENT_TYPE.TURN_BOUNDARY:
       return false;
-    case "thinking_delta":
+    case AGENT_EVENT_TYPE.THINKING_DELTA:
       setAgentName(transcript, event.agent_name);
       upsertStreamingBlock(transcript.blocks, "thinking", event.segment_id, { text: event.text });
       return false;
-    case "thinking_complete":
+    case AGENT_EVENT_TYPE.THINKING_COMPLETE:
       setAgentName(transcript, event.agent_name);
       upsertStreamingBlock(transcript.blocks, "thinking", event.segment_id, { text: event.text, complete: true });
       return false;
-    case "text_delta":
+    case AGENT_EVENT_TYPE.TEXT_DELTA:
       setAgentName(transcript, event.agent_name);
       upsertStreamingBlock(transcript.blocks, "text", event.segment_id, { text: event.text });
       return false;
-    case "text_complete":
+    case AGENT_EVENT_TYPE.TEXT_COMPLETE:
       setAgentName(transcript, event.agent_name);
       upsertStreamingBlock(transcript.blocks, "text", event.segment_id, { text: event.text, complete: true });
       return false;
-    case "tool_call":
+    case AGENT_EVENT_TYPE.TOOL_CALL:
       setAgentName(transcript, event.agent_name);
       upsertToolCall(transcript.blocks, event.call_id, event.name, event.arguments ?? {});
       return false;
-    case "tool_result":
+    case AGENT_EVENT_TYPE.TOOL_RESULT:
       setAgentName(transcript, event.agent_name);
       upsertToolResult(transcript.blocks, event.call_id, event.output, event.is_error);
       upsertTranscriptAttachment(
@@ -49,11 +50,11 @@ export function applyEventToTranscript(transcript: AgentTranscript, event: Agent
         attachmentFromToolResult(event),
       );
       return false;
-    case "subagent_task":
+    case AGENT_EVENT_TYPE.SUBAGENT_TASK:
       setAgentName(transcript, event.agent_name);
       upsertSubagentTask(transcript.blocks, subagentExecutionItemFromEvent(event));
       return false;
-    case "error":
+    case AGENT_EVENT_TYPE.ERROR:
       setAgentName(transcript, event.agent_name);
       transcript.blocks.push({ kind: "error", id: `error:${event.seq}:${event.created_at}`, message: event.message || "agent run failed" });
       return true;

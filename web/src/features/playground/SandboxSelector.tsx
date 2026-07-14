@@ -1,5 +1,6 @@
 import { Select, Spin, Tag } from "@douyinfe/semi-ui";
 import { Box } from "lucide-react";
+import type { UIEvent } from "react";
 import type { SandboxContainer } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
@@ -10,12 +11,23 @@ type SandboxSelectorProps = {
   value: number | null;
   className?: string;
   disabled?: boolean;
+  onSearch: (keyword: string) => void;
+  onListScroll: (event: UIEvent<HTMLDivElement>) => void;
   onChange: (containerId: number | null) => void;
 };
 
 const CONTAINER_ID_PREVIEW_LENGTH = 12;
 
-export function SandboxSelector({ containers, loading, value, className = "", disabled = false, onChange }: SandboxSelectorProps) {
+export function SandboxSelector({
+  containers,
+  loading,
+  value,
+  className = "",
+  disabled = false,
+  onSearch,
+  onListScroll,
+  onChange,
+}: SandboxSelectorProps) {
   const optionList = containers.map((container) => ({
     label: renderContainerOption(container),
     value: container.id,
@@ -31,7 +43,10 @@ export function SandboxSelector({ containers, loading, value, className = "", di
         renderSelectedItem={() => renderContainerId(selectedContainer?.container_hash ?? "")}
         placeholder={loading ? "Loading sandboxes" : "Select sandbox"}
         emptyContent={loading ? <Spin size="small" /> : "No sandbox"}
-        disabled={disabled || loading || containers.length === 0}
+        disabled={disabled || containers.length === 0}
+        remote
+        onSearch={onSearch}
+        onListScroll={onListScroll}
         showClear={!disabled}
         onClear={() => onChange(null)}
         onChange={(nextValue) => onChange(typeof nextValue === "number" ? nextValue : null)}

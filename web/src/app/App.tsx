@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
+import { SYSTEM_USER_ROLE } from "../shared/api/generated/constants";
 import {
   loadLandingPage,
   loadEgressProxiesPage,
@@ -50,7 +51,7 @@ function ProtectedRoute() {
 function AdminOnlyRoute() {
   const { user } = useAuth();
   const outletContext = useOutletContext();
-  if (user?.role !== "admin") {
+  if (user?.role !== SYSTEM_USER_ROLE.ADMIN) {
     return <Navigate to="/playground" replace />;
   }
   return <Outlet context={outletContext} />;

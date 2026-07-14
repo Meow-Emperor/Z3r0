@@ -1,16 +1,27 @@
 import { Select, Spin } from "@douyinfe/semi-ui";
 import { Boxes, Route, Server } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { createSandboxContainer, getSandboxContainerCreateOptions } from "../../shared/api/sandboxContainers";
+import {
+  createSandboxContainer,
+  querySandboxContainerHostOptions,
+  querySandboxContainerImageOptions,
+} from "../../shared/api/sandboxContainers";
 import { SANDBOX_CONTAINER_EGRESS_MODE } from "../../shared/api/generated/constants";
-import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import type {
+  CreateSandboxContainerResponse,
   SandboxContainer,
   SandboxContainerEgressMode,
   SandboxContainerHostOption,
   SandboxImage,
 } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
+import { useOptionList } from "../../shared/hooks/useOptionList";
+import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import {
+  sandboxEgressModeOptions,
+  sandboxHostOption,
+  sandboxImageOption,
+} from "../../shared/lib/sandboxOptions";
 
 type PlaygroundSandboxCreateModalProps = {
   open: boolean;
@@ -19,63 +30,49 @@ type PlaygroundSandboxCreateModalProps = {
 };
 
 export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: PlaygroundSandboxCreateModalProps) {
-  const [hosts, setHosts] = useState<SandboxContainerHostOption[]>([]);
-  const [images, setImages] = useState<SandboxImage[]>([]);
   const [hostId, setHostId] = useState<number | undefined>();
   const [imageId, setImageId] = useState<number | undefined>();
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const selectedImage = useMemo(() => images.find((image) => image.id === imageId) ?? null, [imageId, images]);
+  const hostOptions = useOptionList<SandboxContainerHostOption>({
+    enabled: open,
+    query: querySandboxContainerHostOptions,
+  });
+  const imageOptions = useOptionList<SandboxImage>({
+    enabled: open,
+    query: querySandboxContainerImageOptions,
+  });
+  const hosts = hostOptions.items;
+  const images = imageOptions.items;
+  const selectedImage = useMemo(
+    () => imageOptions.knownItems.find((image) => image.id === imageId) ?? null,
+    [imageId, imageOptions.knownItems],
+  );
+  const { saving, submit: submitResource } = useResourceSubmit<CreateSandboxContainerResponse>({
+    onSuccess: (response) => {
+      if (response.data) onCreated(response.data);
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
-    let active = true;
     setHostId(undefined);
     setImageId(undefined);
     setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
-    setLoading(true);
-    getSandboxContainerCreateOptions()
-      .then((response) => {
-        if (!active) return;
-        const options = response.data;
-        setHosts(options?.hosts ?? []);
-        setImages(options?.images ?? []);
-      })
-      .catch((error) => {
-        if (active) showApiError(error);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
   }, [open]);
 
-  const submit = async () => {
+  const submit = () => {
     if (!hostId || !imageId) return;
-    setSaving(true);
-    try {
-      const response = await createSandboxContainer({
+    void submitResource(() => createSandboxContainer({
         host_id: hostId,
         image_id: imageId,
         egress_mode: egressMode,
         port_mappings: [],
-      });
-      if (response.data) {
-        showApiSuccess(response);
-        onCreated(response.data);
-      }
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setSaving(false);
-    }
+      }));
   };
 
   const submitDisabled = (
-    loading
+    (hostOptions.loading && hosts.length === 0)
+    || (imageOptions.loading && images.length === 0)
     || !hostId
     || !imageId
     || (egressMode === SANDBOX_CONTAINER_EGRESS_MODE.TOR && !selectedImage?.supports_tor)
@@ -85,10 +82,10 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
     <ResourceModal
       open={open}
       title="Create Sandbox Container"
+      titleIcon={<Boxes size={17} />}
       saving={saving}
       submitLabel="Create"
       submitDisabled={submitDisabled}
-      width={520}
       onCancel={onCancel}
       onSubmit={submit}
     >
@@ -97,14 +94,14 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
         <Select
           prefix={<Server size={16} />}
           value={hostId}
-          loading={loading}
-          disabled={loading || hosts.length === 0}
-          placeholder={loading ? "Loading hosts" : "Select managed host"}
-          emptyContent={loading ? <Spin size="small" /> : "No hosts"}
-          optionList={hosts.map((host) => ({
-            label: `${host.ip_address}:${host.docker_management_port}`,
-            value: host.id,
-          }))}
+          loading={hostOptions.busy}
+          disabled={hosts.length === 0}
+          placeholder={hostOptions.loading ? "Loading hosts" : "Select managed host"}
+          emptyContent={hostOptions.busy ? <Spin size="small" /> : "No hosts"}
+          optionList={hosts.map(sandboxHostOption)}
+          remote
+          onSearch={hostOptions.search}
+          onListScroll={hostOptions.onListScroll}
           onChange={(value) => typeof value === "number" && setHostId(value)}
         />
       </label>
@@ -114,17 +111,17 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
         <Select
           prefix={<Boxes size={16} />}
           value={imageId}
-          loading={loading}
-          disabled={loading || images.length === 0}
-          placeholder={loading ? "Loading images" : "Select sandbox image"}
-          emptyContent={loading ? <Spin size="small" /> : "No images"}
-          optionList={images.map((image) => ({
-            label: `${image.image_name} · control ${image.control_proxy_port}`,
-            value: image.id,
-          }))}
+          loading={imageOptions.busy}
+          disabled={images.length === 0}
+          placeholder={imageOptions.loading ? "Loading images" : "Select sandbox image"}
+          emptyContent={imageOptions.busy ? <Spin size="small" /> : "No images"}
+          optionList={images.map(sandboxImageOption)}
+          remote
+          onSearch={imageOptions.search}
+          onListScroll={imageOptions.onListScroll}
           onChange={(value) => {
             if (typeof value !== "number") return;
-            const nextImage = images.find((image) => image.id === value) ?? null;
+            const nextImage = imageOptions.knownItems.find((image) => image.id === value) ?? null;
             setImageId(value);
             if (!nextImage?.supports_tor && egressMode === SANDBOX_CONTAINER_EGRESS_MODE.TOR) {
               setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
@@ -138,10 +135,7 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
-          optionList={[
-            { label: "Direct", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
-            { label: "Tor", value: SANDBOX_CONTAINER_EGRESS_MODE.TOR, disabled: !selectedImage?.supports_tor },
-          ]}
+          optionList={sandboxEgressModeOptions({ includeProxy: false, supportsTor: Boolean(selectedImage?.supports_tor) })}
           onChange={(value) => {
             if (typeof value === "string") setEgressMode(value as SandboxContainerEgressMode);
           }}

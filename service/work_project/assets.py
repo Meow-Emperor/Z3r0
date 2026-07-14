@@ -15,6 +15,7 @@ from schema.work_project.assets import (
 )
 from service.common.pagination import Page, paginate_statement
 from service.work_project.graph import purge_edges_touching_asset
+from service.work_project.locking import lock_active_work_project
 
 
 _ASSET_ALREADY_EXISTS = "asset already exists"
@@ -62,6 +63,8 @@ async def create_work_project_asset(
 ) -> tuple[WorkProjectAssetSchema | None, str]:
     now = datetime.now()
     async with get_async_session() as session:
+        if error := await lock_active_work_project(session, project_id):
+            return None, error
         if await _get_asset_by_identity(session, project_id, request.type, request.identifier) is not None:
             return None, _ASSET_ALREADY_EXISTS
         asset = WorkProjectAsset(
@@ -90,7 +93,11 @@ async def update_work_project_asset(
 ) -> tuple[WorkProjectAssetSchema | None, str]:
     now = datetime.now()
     async with get_async_session() as session:
-        asset = await session.get(WorkProjectAsset, asset_id)
+        if error := await lock_active_work_project(session, project_id):
+            return None, error
+        asset = (await session.exec(
+            select(WorkProjectAsset).where(WorkProjectAsset.id == asset_id).with_for_update()
+        )).one_or_none()
         if asset is None or asset.project_id != project_id:
             return None, "asset not found"
         if (
@@ -146,7 +153,11 @@ async def upsert_work_project_asset(
 
 async def delete_work_project_asset(project_id: int, asset_id: int) -> str:
     async with get_async_session() as session:
-        asset = await session.get(WorkProjectAsset, asset_id)
+        if error := await lock_active_work_project(session, project_id):
+            return error
+        asset = (await session.exec(
+            select(WorkProjectAsset).where(WorkProjectAsset.id == asset_id).with_for_update()
+        )).one_or_none()
         if asset is None or asset.project_id != project_id:
             return "asset not found"
         if asset.origin == WorkProjectAssetOrigin.SCOPE:

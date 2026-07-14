@@ -1,8 +1,8 @@
 {
   "devDependencies": {
     "medium-zoom": "^1.1.0",
-    "mermaid": "^11.15.0",
-    "vitepress": "^2.0.0-alpha.17"
+    "mermaid": "^11.16.0",
+    "vitepress": "^2.0.0-alpha.18"
   },
   "scripts": {
     "docs:dev": "vitepress dev",

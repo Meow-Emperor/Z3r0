@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import fcntl
-import importlib
-import inspect
 import os
 import pty
 import signal
@@ -13,14 +11,10 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+import asyncssh
+
 from model.host.hosts import ManagedHost
 from service.host.hosts import DEFAULT_LOCAL_HOST_ID, query_managed_host_by_id
-
-
-try:
-    asyncssh = importlib.import_module("asyncssh")
-except ImportError:
-    asyncssh = None
 
 
 _DEFAULT_SHELL_ROWS = 24
@@ -153,9 +147,6 @@ async def _open_ssh_shell(
     rows: int,
     cols: int,
 ) -> HostShellSession:
-    if asyncssh is None:
-        raise RuntimeError("asyncssh is required for remote host shell access")
-
     connection = await asyncssh.connect(
         host.ip_address,
         port=host.ssh_port,
@@ -245,11 +236,7 @@ async def _read_ssh_shell(session: HostShellSession) -> bytes:
 async def _write_ssh_shell(session: HostShellSession, data: str) -> None:
     payload = data.encode()
     session.process.stdin.write(payload)
-    drain = getattr(session.process.stdin, "drain", None)
-    if callable(drain):
-        result = drain()
-        if inspect.isawaitable(result):
-            await result
+    await session.process.stdin.drain()
 
 
 def _set_terminal_size(fd: int, rows: int, cols: int) -> None:

@@ -5,7 +5,8 @@ from http import HTTPStatus
 from fastapi import WebSocket, WebSocketDisconnect, status as ws_status
 from fastapi.websockets import WebSocketState
 
-from handler import (
+from handler.common.http import raise_api_error
+from handler.common.websocket import (
     authenticate_ws_token,
     bounded_int,
     cancel_ws_task as _cancel_task,
@@ -13,6 +14,7 @@ from handler import (
     finish_ws_reader_task,
 )
 from logger import get_logger
+from middleware.auth import resolve_current_user
 from schema.common.responses import CommonResponse
 from schema.host.hosts import (
     CreateManagedHostRequest,
@@ -48,6 +50,8 @@ from service.host.shell import (
 
 logger = get_logger(__name__)
 
+_SHELL_ACCESS_CHECK_INTERVAL_SECONDS = 30
+
 
 async def create_managed_host_handler(request: CreateManagedHostRequest) -> CommonResponse:
     host = await create_managed_host(
@@ -78,18 +82,18 @@ async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest
         docker_client_key=request.docker_client_key,
     )
     if result.not_found:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
     if result.host is None or result.message:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
+        raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=ManagedHostSchema.model_validate(result.host))
 
 
 async def delete_managed_host_handler(id: int) -> CommonResponse:
     result = await delete_managed_host(id)
     if result.not_found:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
     if not result.deleted:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
+        raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=DeleteManagedHostResponse(id=id))
 
 
@@ -108,9 +112,9 @@ async def list_managed_host_images_handler(id: int) -> CommonResponse:
         images = await list_managed_host_images(id)
     except Exception as exc:
         logger.warning("list host images failed: id=%s error=%s", id, exc)
-        return CommonResponse(code=HTTPStatus.BAD_GATEWAY.value, message="failed to connect to docker host")
+        raise_api_error(HTTPStatus.BAD_GATEWAY, "failed to connect to docker host")
     if images is None:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
     return CommonResponse(data=ListManagedHostImagesResponse(items=images))
 
 
@@ -119,9 +123,9 @@ async def pull_managed_host_images_handler(id: int, request: PullManagedHostImag
         results = await pull_managed_host_images(id, request.image_names)
     except Exception as exc:
         logger.warning("pull host images failed: id=%s error=%s", id, exc)
-        return CommonResponse(code=HTTPStatus.BAD_GATEWAY.value, message="failed to connect to docker host")
+        raise_api_error(HTTPStatus.BAD_GATEWAY, "failed to connect to docker host")
     if results is None:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
     return CommonResponse(data=PullManagedHostImagesResponse(items=results))
 
 
@@ -129,12 +133,12 @@ async def delete_managed_host_image_handler(id: int, request: DeleteManagedHostI
     error = await delete_managed_host_image(id, request.image_id, force=request.force)
     if error:
         code = HTTPStatus.NOT_FOUND.value if "not found" in error.lower() else HTTPStatus.BAD_REQUEST.value
-        return CommonResponse(code=code, message=error)
+        raise_api_error(code, error)
     return CommonResponse(message="image removed")
 
 
 async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
-    user = authenticate_ws_token(token)
+    user = await authenticate_ws_token(token)
     if user is None or user.role != SystemUserRole.ADMIN:
         await websocket.close(code=ws_status.WS_1008_POLICY_VIOLATION)
         return
@@ -166,11 +170,20 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
         reader = asyncio.create_task(_forward_shell_output(websocket, shell))
 
         while True:
-            receiver = asyncio.create_task(websocket.receive_text())
+            if receiver is None:
+                receiver = asyncio.create_task(websocket.receive_text())
             done, _ = await asyncio.wait(
                 {receiver, reader},
                 return_when=asyncio.FIRST_COMPLETED,
+                timeout=_SHELL_ACCESS_CHECK_INTERVAL_SECONDS,
             )
+            if not done:
+                current_user = await resolve_current_user(user)
+                if current_user is None or current_user.role != SystemUserRole.ADMIN:
+                    await _close_silently(websocket, ws_status.WS_1008_POLICY_VIOLATION)
+                    return
+                user = current_user
+                continue
             if reader in done:
                 await reader
                 await _close_silently(websocket, ws_status.WS_1000_NORMAL_CLOSURE)

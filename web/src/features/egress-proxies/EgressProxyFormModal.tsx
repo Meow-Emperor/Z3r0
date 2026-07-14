@@ -1,7 +1,7 @@
 import { Input, InputNumber, Select } from "@douyinfe/semi-ui";
 import { KeyRound, Network, Server, User } from "lucide-react";
 import { useEffect, useState } from "react";
-import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPES } from "../../shared/api/generated/constants";
+import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPE_VALUES } from "../../shared/api/generated/constants";
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 
@@ -71,6 +71,7 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
     <ResourceModal
       open={open}
       title={mode === "create" ? "Create Egress Proxy" : "Edit Egress Proxy"}
+      titleIcon={<Network size={17} />}
       saving={saving}
       submitLabel={mode === "create" ? "Create" : "Save"}
       submitDisabled={submitDisabled}
@@ -82,7 +83,7 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
         <Select
           prefix={<Network size={16} />}
           value={values.proxy_type}
-          optionList={EGRESS_PROXY_TYPES.map((type) => ({ label: type.toUpperCase(), value: type }))}
+          optionList={EGRESS_PROXY_TYPE_VALUES.map((type) => ({ label: type.toUpperCase(), value: type }))}
           onChange={(proxy_type) => {
             if (typeof proxy_type === "string") setValues((current) => ({ ...current, proxy_type }));
           }}

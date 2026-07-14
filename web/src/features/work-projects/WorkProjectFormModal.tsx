@@ -76,14 +76,18 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       work_project_id: project?.id,
     })
   ), [project?.id]);
-  const { items: sandboxContainers, loading: sandboxLoading } = useOptionList<SandboxContainer>({
+  const sandboxOptions = useOptionList<SandboxContainer>({
     enabled: open,
     query: loadProjectSandboxContainers,
   });
-  const { items: users, loading: usersLoading } = useOptionList<SystemUser>({
+  const userOptions = useOptionList<SystemUser>({
     enabled: open,
     query: querySystemUsers,
   });
+  const sandboxContainers = sandboxOptions.items;
+  const users = userOptions.items;
+  const sandboxLoading = sandboxOptions.busy;
+  const usersLoading = userOptions.busy;
   const editing = Boolean(project);
 
   useEffect(() => {
@@ -137,10 +141,11 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
     <ResourceModal
       open={open}
       title={editing ? "Edit Work Project" : "Create Work Project"}
+      titleIcon={<FolderKanban size={17} />}
       saving={saving}
       submitLabel={editing ? "Save" : "Create"}
       submitDisabled={!canSubmit}
-      width={980}
+      size="wide"
       onCancel={onCancel}
       onSubmit={submit}
     >
@@ -168,9 +173,12 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             emptyContent={usersLoading ? <Spin size="small" /> : "No users"}
             loading={usersLoading}
             multiple
+            remote
+            onSearch={userOptions.search}
+            onListScroll={userOptions.onListScroll}
             renderSelectedItem={(option: SelectedOption) => ({
               isRenderInTag: true,
-              content: users.find((user) => user.id === option.value)?.username ?? String(option.value ?? ""),
+              content: userOptions.knownItems.find((user) => user.id === option.value)?.username ?? String(option.value ?? ""),
             })}
             showClear
             onClear={() => setValues((v) => ({ ...v, owner_user_ids: [] }))}
@@ -189,9 +197,12 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
             placeholder={sandboxLoading ? "Loading sandbox containers" : "Select sandbox container"}
             emptyContent={sandboxLoading ? <Spin size="small" /> : "No running sandbox containers"}
             loading={sandboxLoading}
+            remote
+            onSearch={sandboxOptions.search}
+            onListScroll={sandboxOptions.onListScroll}
             showClear
             renderSelectedItem={(option: { value?: number }) => (
-              sandboxContainers.find((container) => container.id === option.value)?.container_name ?? String(option.value ?? "")
+              sandboxOptions.knownItems.find((container) => container.id === option.value)?.container_name ?? String(option.value ?? "")
             )}
             onClear={() => setValues((v) => ({ ...v, sandbox_container_id: null }))}
             onChange={(value) => setValues((v) => ({

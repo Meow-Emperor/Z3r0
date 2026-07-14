@@ -25,6 +25,7 @@ LIGHTRAG_WORKING_DIR = ROOT_PATH / ".lightrag"
 LIGHTRAG_INPUT_DIR = LIGHTRAG_WORKING_DIR / "inputs"
 
 _PGVECTOR_HNSW_MAX_DIMENSIONS = 2000
+_PGVECTOR_HNSW_HALFVEC_MAX_DIMENSIONS = 4000
 
 _NO_CONTEXT_SUFFIX = "[no-context]"
 _RAG_CONTEXT_HEADER = "# Current-Turn RAG Context"
@@ -54,15 +55,8 @@ async def start_lightrag() -> None:
         if _rag is not None:
             return
         _rag_transitioning = True
-    rag: LightRAG | None = None
     try:
-        rag = _build_lightrag(get_config().lightrag)
-        await rag.initialize_storages()
-    except BaseException:
-        if rag is not None:
-            await _finalize_after_failure(rag, "initialization")
-        raise
-    else:
+        rag = await _initialize_lightrag(get_config().lightrag, "initialization")
         async with _rag_condition:
             _rag = rag
     finally:
@@ -86,7 +80,7 @@ async def stop_lightrag() -> None:
         rag, _rag = _rag, None
     try:
         if rag is not None:
-            await rag.finalize_storages()
+            await _finalize_lightrag(rag)
             logger.info("LightRAG finalized")
     finally:
         async with _rag_condition:
@@ -96,7 +90,7 @@ async def stop_lightrag() -> None:
 
 async def restart_lightrag(
     config: LightRAGConfig,
-    fallback_config: LightRAGConfig | None = None,
+    rollback_config: LightRAGConfig | None = None,
 ) -> None:
     global _rag, _rag_transitioning
     async with _rag_condition:
@@ -110,19 +104,25 @@ async def restart_lightrag(
             raise
         previous, _rag = _rag, None
 
-    replacement: LightRAG | None = None
     try:
         if previous is not None:
-            await previous.finalize_storages()
-        replacement = _build_lightrag(config)
-        await replacement.initialize_storages()
+            await _finalize_lightrag(previous)
+        replacement = await _initialize_lightrag(config, "restart")
         async with _rag_condition:
             _rag = replacement
-    except BaseException:
-        if replacement is not None:
-            await _finalize_after_failure(replacement, "restart")
-        if fallback_config is not None:
-            await _restore_lightrag(fallback_config)
+    except BaseException as exc:
+        if rollback_config is not None:
+            try:
+                rollback = await _initialize_lightrag(
+                    rollback_config,
+                    "rollback initialization",
+                )
+            except BaseException as rollback_error:
+                logger.exception("LightRAG rollback initialization failed")
+                exc.add_note(f"LightRAG rollback also failed: {rollback_error}")
+            else:
+                async with _rag_condition:
+                    _rag = rollback
         raise
     finally:
         async with _rag_condition:
@@ -272,26 +272,75 @@ def _build_lightrag(cfg: LightRAGConfig) -> LightRAG:
     )
 
 
-async def _restore_lightrag(config: LightRAGConfig) -> None:
-    global _rag
-    fallback: LightRAG | None = None
+async def _initialize_lightrag(config: LightRAGConfig, operation: str) -> LightRAG:
+    rag = _build_lightrag(config)
     try:
-        fallback = _build_lightrag(config)
-        await fallback.initialize_storages()
-    except Exception:
-        if fallback is not None:
-            await _finalize_after_failure(fallback, "fallback initialization")
-        logger.exception("LightRAG fallback initialization failed")
-    else:
-        async with _rag_condition:
-            _rag = fallback
+        await rag.initialize_storages()
+    except BaseException as exc:
+        await _finalize_after_failure(rag, operation, exc)
+        raise
+    return rag
 
 
-async def _finalize_after_failure(rag: LightRAG, operation: str) -> None:
+async def _finalize_lightrag(rag: LightRAG) -> None:
+    """Stop SDK queue workers before releasing the storages they depend on."""
+    cleanup_errors: list[Exception] = []
+
+    try:
+        await rag.wait_for_retired_llm_queues()
+    except Exception as exc:
+        cleanup_errors.append(_cleanup_error("retired LLM queues", exc))
+
+    for name, queue_func in _queue_managed_functions(rag):
+        shutdown = getattr(queue_func, "shutdown", None)
+        if not callable(shutdown):
+            continue
+        try:
+            await shutdown(graceful=True)
+        except Exception as exc:
+            cleanup_errors.append(_cleanup_error(name, exc))
+
     try:
         await rag.finalize_storages()
-    except Exception:
+    except Exception as exc:
+        cleanup_errors.append(_cleanup_error("storages", exc))
+
+    if cleanup_errors:
+        raise ExceptionGroup("LightRAG finalization failed", cleanup_errors)
+
+
+def _queue_managed_functions(rag: LightRAG) -> list[tuple[str, object]]:
+    candidates: list[tuple[str, object | None]] = [
+        *((f"{role} LLM queue", func) for role, func in rag.role_llm_funcs.items()),
+        ("embedding queue", rag.embedding_func.func if rag.embedding_func else None),
+        ("rerank queue", rag.rerank_model_func),
+    ]
+    unique: list[tuple[str, object]] = []
+    seen: set[int] = set()
+    for name, queue_func in candidates:
+        if queue_func is None or id(queue_func) in seen:
+            continue
+        seen.add(id(queue_func))
+        unique.append((name, queue_func))
+    return unique
+
+
+def _cleanup_error(resource: str, cause: Exception) -> RuntimeError:
+    error = RuntimeError(f"{resource} shutdown failed")
+    error.__cause__ = cause
+    return error
+
+
+async def _finalize_after_failure(
+    rag: LightRAG,
+    operation: str,
+    original_error: BaseException,
+) -> None:
+    try:
+        await _finalize_lightrag(rag)
+    except Exception as cleanup_error:
         logger.exception("LightRAG cleanup failed after %s failure", operation)
+        original_error.add_note(f"LightRAG cleanup also failed: {cleanup_error}")
 
 
 def _configure_postgres_environment(cfg: LightRAGConfig) -> None:
@@ -304,11 +353,15 @@ def _configure_postgres_environment(cfg: LightRAGConfig) -> None:
         "POSTGRES_DATABASE": db.database,
         "POSTGRES_WORKSPACE": LIGHTRAG_WORKSPACE,
         "POSTGRES_MAX_CONNECTIONS": str(db.pool_size),
-        "POSTGRES_VECTOR_INDEX_TYPE": (
-            "HNSW_HALFVEC"
-            if cfg.embedding_dim > _PGVECTOR_HNSW_MAX_DIMENSIONS
-            else "HNSW"
-        ),
+        "POSTGRES_VECTOR_INDEX_TYPE": _postgres_vector_index_type(cfg.embedding_dim),
         "INPUT_DIR": str(LIGHTRAG_INPUT_DIR),
     }
     os.environ.update(values)
+
+
+def _postgres_vector_index_type(embedding_dim: int) -> str:
+    if embedding_dim <= _PGVECTOR_HNSW_MAX_DIMENSIONS:
+        return "HNSW"
+    if embedding_dim <= _PGVECTOR_HNSW_HALFVEC_MAX_DIMENSIONS:
+        return "HNSW_HALFVEC"
+    return ""

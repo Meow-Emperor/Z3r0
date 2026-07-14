@@ -10,13 +10,18 @@ from typing import Any
 from agents import Runner
 
 from config import get_config
-from core.agent.registry import AgentRegistry, AgentToolSnapshot, SessionAgentGraph
+from core.agent.registry import AgentRegistry, SessionAgentGraph
+from core.agent.tool_snapshot import AgentToolSnapshot
 from core.conversation.context_budget import build_context_run_config
 from core.conversation.retrieval import build_conversation_retrieval_query
 from core.conversation.store import Z3r0Session
-from core.delegation.subagents import cancel_sandbox_subagent_runs, cancel_session_subagent_runs
 from core.lightrag.runtime import activate_lightrag_context
 from core.runtime.context import AgentRuntimeContext, main_agent_instance_id
+from core.runtime.coordination import (
+    cancel_sandbox_subagents,
+    cancel_session_subagents,
+    set_agent_event_publisher,
+)
 from core.runtime.input_items import build_turn_input_item, display_text_from_content, retrieval_text_from_content
 from core.runtime.live_projection import LiveEventProjection
 from core.runtime.notification_dispatch import signal_target_notifications
@@ -38,6 +43,13 @@ from schema.agent.events import (
 )
 from schema.agent.notifications import AgentNotificationSnapshot
 from service.agent import notifications as agent_notifications
+from service.agent.event_log import load_timeline_head
+from service.agent.session_state import (
+    force_mark_session_stopped as _force_mark_session_stopped,
+    mark_session_running as _mark_session_running,
+    mark_session_stopped as _mark_session_stopped,
+    mark_sessions_stopped as _mark_sessions_stopped,
+)
 
 
 logger = get_logger(__name__)
@@ -49,6 +61,10 @@ _SUBSCRIBER_REBASE_THRESHOLD = 512
 _MAX_DRIVER_RELAUNCH = 5
 _DRIVER_RELAUNCH_BACKOFF_SECONDS = 0.5
 _SubscriberQueue = asyncio.Queue[AgentEventSchema | None]
+
+
+class AgentSessionAgentSwitchError(RuntimeError):
+    pass
 
 
 class AgentSession:
@@ -66,6 +82,8 @@ class AgentSession:
         self._timeline_loaded = False
         self._log_writer = TimelineLogWriter(session_id)
         self._main_agent_code: str = ""
+        self._active_agent_code: str = ""
+        self._active_agent_instance_id: str = ""
         self._tool_snapshot: AgentToolSnapshot | None = None
         self._agent_graph: SessionAgentGraph | None = None
 
@@ -102,10 +120,15 @@ class AgentSession:
     ) -> list[AgentEventSchema]:
         async with self._start_lock:
             if self.is_running():
+                if self._active_agent_code and agent_code != self._active_agent_code:
+                    raise AgentSessionAgentSwitchError(
+                        "stop running tasks before switching agent"
+                    )
                 return await self._enqueue_user_message(content, agent_code, context)
             await _mark_session_running(
                 self.session_id,
                 agent_code=agent_code,
+                user_id=context.user.id,
                 sandbox_container_id=context.sandbox_container_id,
                 sandbox_container_generation=context.sandbox_container_generation,
             )
@@ -121,6 +144,8 @@ class AgentSession:
                 self._drive(content, agent_code, context, initial_user_event_published=True),
                 name=f"agent-turn-{self.session_id}",
             )
+            self._active_agent_code = agent_code
+            self._active_agent_instance_id = context.agent_instance_id
             self._current_task = task
             return events
 
@@ -132,7 +157,7 @@ class AgentSession:
     ) -> list[AgentEventSchema]:
         # Queue a high-priority notification (instead of interrupting) so the
         # running loop preempts at its next safe point without losing state.
-        target_instance = context.agent_instance_id or main_agent_instance_id(
+        target_instance = self._active_agent_instance_id or context.agent_instance_id or main_agent_instance_id(
             context.session_id, context.user.id, agent_code,
         )
         display_text = display_text_from_content(content)
@@ -171,6 +196,7 @@ class AgentSession:
             await _mark_session_running(
                 self.session_id,
                 agent_code=context.agent_code,
+                user_id=context.user.id,
                 sandbox_container_id=context.sandbox_container_id,
                 sandbox_container_generation=context.sandbox_container_generation,
             )
@@ -180,6 +206,8 @@ class AgentSession:
                 self._drive(None, context.agent_code or "", context, recovered=recovered),
                 name=f"agent-recovery-{self.session_id}",
             )
+            self._active_agent_code = context.agent_code
+            self._active_agent_instance_id = context.agent_instance_id
             self._current_task = task
             return True
 
@@ -218,7 +246,7 @@ class AgentSession:
                 pass
             await _mark_session_stopped(self.session_id)
             events.append(await self._publish(DoneEvent(created_at=datetime.now())))
-        await cancel_session_subagent_runs(self.session_id)
+        await cancel_session_subagents(self.session_id)
         await cancel_session_async_sandbox_commands(self.session_id)
         await agent_notifications.cancel_session_notifications(
             self.session_id,
@@ -512,6 +540,8 @@ class AgentSession:
                     relaunched = await self._reconcile_driver(agent_code, context, attempt)
                 if self._current_task is task and not relaunched:
                     self._current_task = None
+                    self._active_agent_code = ""
+                    self._active_agent_instance_id = ""
                 if not canceled and not relaunched:
                     await _mark_session_stopped(self.session_id)
                     await self._publish_idle_if_inactive()
@@ -594,8 +624,6 @@ class AgentSession:
         """
         if self._timeline_loaded:
             return
-        from service.agent.event_log import load_timeline_head
-
         max_seq, item_seq = await load_timeline_head(self.session_id)
         if self._timeline_loaded:
             return
@@ -795,34 +823,7 @@ class AgentSessionPool:
         entry.last_used_at = time.monotonic()
         return entry.session.publish_external(event)
 
-    async def resume_session(self, session_id: str) -> None:
-        # Main-agent arm of resume_target_instance: rebuild the runtime context
-        # from persisted meta and start a non-blocking driver. With no pending
-        # main work (e.g. a canceled task) settle idle instead of starting a turn;
-        # no-op while a driver already runs.
-        from middleware.auth import AuthUser
-        from service.agent import sessions as agent_sessions
-        from service.agent.runtime import build_runtime_context
-        from service.system_user.users import query_system_user_by_id
-
-        if not await agent_notifications.has_pending_main_agent_notification(session_id=session_id):
-            await self._settle_session_idle(session_id)
-            return
-        meta = await agent_sessions.get_session_meta(session_id)
-        if meta is None:
-            return
-        user = await query_system_user_by_id(meta.owner_id)
-        if user is None:
-            return
-        auth_user = AuthUser(id=user.id, role=user.role, email=user.email, username=user.username)
-        agent_code = meta.runtime_agent_code or meta.agent_code
-        context = await build_runtime_context(
-            session_id, auth_user, meta.runtime_sandbox_container_id, agent_code,
-        )
-        session = await self.get_or_create(session_id)
-        await session.start_notification_recovery(context, recovered=False)
-
-    async def _settle_session_idle(self, session_id: str) -> None:
+    async def settle_session_idle(self, session_id: str) -> None:
         # Wind down a session with no pending main turn (e.g. a canceled task):
         # mark the DB run stopped (no-op while other work is active) and publish
         # run_state=false for a pooled, non-running session.
@@ -837,7 +838,7 @@ class AgentSessionPool:
         async with self._lock:
             entry = self._pool.get(session_id)
         if entry is None:
-            await cancel_session_subagent_runs(session_id)
+            await cancel_session_subagents(session_id)
             await cancel_session_async_sandbox_commands(session_id)
             await agent_notifications.cancel_session_notifications(
                 session_id,
@@ -856,7 +857,7 @@ class AgentSessionPool:
         tasks = [entry.session.invalidate_tool_binding() for entry in entries]
         if container_id is not None:
             tasks.extend([
-                cancel_sandbox_subagent_runs(container_id),
+                cancel_sandbox_subagents(container_id),
                 cancel_sandbox_async_commands(container_id),
             ])
         if not tasks:
@@ -1028,36 +1029,8 @@ def _next_turn_scope(context: AgentRuntimeContext) -> str:
     return next_segment_scope(owner)
 
 
-async def _mark_session_running(
-    session_id: str,
-    *,
-    agent_code: str,
-    sandbox_container_id: int | None,
-    sandbox_container_generation: int,
-) -> None:
-    from service.agent import sessions as agent_sessions
-
-    await agent_sessions.mark_session_running(
-        session_id,
-        agent_code=agent_code,
-        sandbox_container_id=sandbox_container_id,
-        sandbox_container_generation=sandbox_container_generation,
-    )
+def _publish_to_current_pool(session_id: str, event: AgentEventSchema) -> bool:
+    return get_agent_pool().publish(session_id, event)
 
 
-async def _mark_session_stopped(session_id: str, *, error: str = "") -> None:
-    from service.agent import sessions as agent_sessions
-
-    await agent_sessions.mark_session_stopped(session_id, error=error)
-
-
-async def _force_mark_session_stopped(session_id: str, *, error: str = "") -> None:
-    from service.agent import sessions as agent_sessions
-
-    await agent_sessions.force_mark_session_stopped(session_id, error=error)
-
-
-async def _mark_sessions_stopped(session_ids: list[str], *, error: str = "") -> None:
-    from service.agent import sessions as agent_sessions
-
-    await agent_sessions.mark_sessions_stopped(session_ids, error=error)
+set_agent_event_publisher(_publish_to_current_pool)

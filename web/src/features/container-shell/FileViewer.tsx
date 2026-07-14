@@ -1,8 +1,9 @@
 import { Button, Toast } from "@douyinfe/semi-ui";
 import { Download, Edit3, Save, X } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadContainerFiles, readContainerFile, writeContainerFile } from "../../shared/api/sandboxContainers";
 import { showApiError } from "../../shared/api/feedback";
+import { CONTAINER_FILE_TYPE } from "../../shared/api/generated/constants";
 import type { ContainerFileInfo } from "../../shared/api/types";
 import { saveBlob } from "../../shared/lib/download";
 
@@ -21,13 +22,14 @@ const TEXT_EXTENSIONS = new Set([
   "conf", "log", "csv", "tsv", "env", "gitignore", "dockerignore", "editorconfig",
   "ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "pyx", "go", "rs", "java", "c",
   "cpp", "cc", "cxx", "h", "hpp", "hh", "hxx", "sh", "bash", "zsh", "fish",
-  "ps1", "bat", "cmd", "Makefile", "Dockerfile", "sql", "html", "htm", "css",
+  "ps1", "bat", "cmd", "sql", "html", "htm", "css",
   "scss", "less", "vue", "svelte", "graphql", "gql", "proto", "tf", "tfvars",
   "rb", "php", "swift", "kt", "scala", "lua", "r", "pl", "pm", "patch", "diff",
   "lock", "nix", "ex", "exs", "erl", "hs", "elm", "nim", "zig", "v", "wren",
-  "rst", "tex", "bib", "cfg", "cnf", "service", "socket", "timer", "desktop",
+  "rst", "tex", "bib", "cnf", "service", "socket", "timer", "desktop",
   "svg",
 ]);
+const TEXT_FILE_NAMES = new Set(["Dockerfile", "Makefile"]);
 
 const IMAGE_EXTENSIONS = new Set([
   "png", "jpg", "jpeg", "gif", "webp", "ico", "bmp", "tiff", "tif", "avif",
@@ -46,7 +48,8 @@ function ext(name: string): string {
 }
 
 function determineViewerType(file: ContainerFileInfo): ViewerType {
-  if (file.type === "directory") return "binary";
+  if (file.type === CONTAINER_FILE_TYPE.DIRECTORY) return "binary";
+  if (TEXT_FILE_NAMES.has(file.name)) return "text";
   const e = ext(file.name);
   if (IMAGE_EXTENSIONS.has(e)) return "image";
   if (TEXT_EXTENSIONS.has(e)) return "text";
@@ -60,27 +63,52 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const loadRequestIdRef = useRef(0);
+  const saveRequestIdRef = useRef(0);
+  const savingRef = useRef(false);
+  const downloadingRef = useRef(false);
+  const downloadRequestIdRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = loadRequestIdRef.current + 1;
+    loadRequestIdRef.current = requestId;
     setLoading(true);
     setError(null);
+    setSaving(false);
+    setContent("");
+    setEditContent("");
+    setEditing(false);
     try {
       const params: { path: string; base64?: boolean } = { path: file.path };
       if (viewerType === "image") params.base64 = true;
       const response = await readContainerFile(containerId, params);
-      setContent(response.data?.content ?? "");
+      if (loadRequestIdRef.current === requestId) {
+        setContent(response.data?.content ?? "");
+      }
     } catch (err) {
-      setError("Failed to read file");
-      showApiError(err);
+      if (loadRequestIdRef.current === requestId) {
+        setError("Failed to read file");
+        showApiError(err);
+      }
     } finally {
-      setLoading(false);
+      if (loadRequestIdRef.current === requestId) setLoading(false);
     }
   }, [containerId, file.path, viewerType]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    return () => {
+      loadRequestIdRef.current += 1;
+      saveRequestIdRef.current += 1;
+      downloadRequestIdRef.current += 1;
+      savingRef.current = false;
+      downloadingRef.current = false;
+    };
+  }, [load]);
 
   const imageSrc = useMemo(() => {
     if (viewerType !== "image" || !content) return "";
@@ -100,16 +128,24 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   }, [content]);
 
   const handleSave = useCallback(async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    const requestId = saveRequestIdRef.current + 1;
+    saveRequestIdRef.current = requestId;
     setSaving(true);
     try {
       await writeContainerFile(containerId, { path: file.path, content: editContent });
+      if (saveRequestIdRef.current !== requestId) return;
       Toast.success("File saved");
       setContent(editContent);
       setEditing(false);
     } catch (err) {
-      showApiError(err);
+      if (saveRequestIdRef.current === requestId) showApiError(err);
     } finally {
-      setSaving(false);
+      if (saveRequestIdRef.current === requestId) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   }, [containerId, file.path, editContent]);
 
@@ -119,11 +155,22 @@ export function FileViewer({ containerId, file, onClose }: Props) {
   }, []);
 
   const handleDownload = useCallback(async () => {
+    if (downloadingRef.current) return;
+    downloadingRef.current = true;
+    const requestId = downloadRequestIdRef.current + 1;
+    downloadRequestIdRef.current = requestId;
+    setDownloading(true);
     try {
       const { blob, filename } = await downloadContainerFiles(containerId, { path: [file.path] });
+      if (downloadRequestIdRef.current !== requestId) return;
       saveBlob(blob, filename);
     } catch (err) {
-      showApiError(err);
+      if (downloadRequestIdRef.current === requestId) showApiError(err);
+    } finally {
+      if (downloadRequestIdRef.current === requestId) {
+        downloadingRef.current = false;
+        setDownloading(false);
+      }
     }
   }, [containerId, file.path]);
 
@@ -141,7 +188,7 @@ export function FileViewer({ containerId, file, onClose }: Props) {
           <Button icon={<Edit3 size={14} />} theme="borderless" type="tertiary" size="small" onClick={handleEdit}>Edit</Button>
         )}
         {!editing && (
-          <Button icon={<Download size={14} />} theme="borderless" type="tertiary" size="small" onClick={() => void handleDownload()}>Download</Button>
+          <Button icon={<Download size={14} />} theme="borderless" type="tertiary" size="small" loading={downloading} onClick={() => void handleDownload()}>Download</Button>
         )}
         <Button icon={<X size={14} />} theme="borderless" size="small" type="tertiary" onClick={onClose}>Close</Button>
       </div>

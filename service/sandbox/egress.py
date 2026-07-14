@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from model.egress_proxy.proxies import EgressProxy
 from model.sandbox.containers import SandboxContainer
 from schema.sandbox.containers import SandboxContainerEgressMode
-from service.egress_proxy.proxies import egress_proxy_upstream
+from service.egress_proxy.upstream import egress_proxy_upstream
 
 
 NO_PROXY_VALUE = "localhost,127.0.0.1,::1"

@@ -19,18 +19,20 @@ hero:
       link: /en/guide/overview
 
 features:
-  - title: Multi-Agent collaboration
-    details: Distribute intelligence gathering, vulnerability validation, code analysis, and attack-path mapping across specialist Agents to improve the efficiency and coverage of authorized testing.
-  - title: Project-oriented architecture
-    details: Use WorkProject to manage test scope, tasks, sessions, assets, vulnerability findings, and attack paths, keeping red team operations organized, traceable, and reviewable.
-  - title: Asynchronous task runtime
-    details: Run long commands and subagent tasks in the background, then resume context automatically when they finish to reduce waiting and preserve task state.
-  - title: Distributed sandbox resource pool
-    details: Support multiple hosts, Docker containers, project-bound environments, and a preloaded security toolchain so test infrastructure can be isolated, scaled, and switched by project.
-  - title: Controlled egress and identity isolation
-    details: Reduce exposure of the operator environment through proxy egress, sandbox boundaries, and independent execution environments, making the platform better suited to authorized penetration-testing scenarios.
-  - title: Structured evidence retention
-    details: Continuously record assets, vulnerability findings, graph relationships, and attack paths to make validation quality, review efficiency, and deliverables more stable.
-  - title: Knowledge administration and retrieval
-    details: Ingest Markdown/PDF collections with LightRAG Core, inspect document, vector, and graph data, and supply relevant context for task-oriented inputs.
+  - title: Multi-Agent orchestration
+    details: A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis.
+  - title: Project evidence plane
+    details: WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries.
+  - title: Retrieval context plane
+    details: Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs.
+  - title: Replayable event timeline
+    details: The UI consumes normalized timeline events that can be streamed live or loaded later as history.
+  - title: Distributed sandbox resources
+    details: Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects.
+  - title: Preloaded sandbox toolchain
+    details: The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills.
+  - title: Unified egress layer
+    details: Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface.
+  - title: Operator workbench
+    details: The frontend combines chat, project records, graph review, sandbox selector, terminal, files, and noVNC into one workflow.
 ---

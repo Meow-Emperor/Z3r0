@@ -54,6 +54,7 @@ export type UpdateManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["p
 export type DeleteManagedHostResponse = JsonResponse<paths["/api/hosts/{id}"]["delete"]>;
 
 export type DeleteManagedHostImageRequest = JsonRequestBody<paths["/api/hosts/{id}/images/remove"]["post"]>;
+export type DeleteManagedHostImageResponse = JsonResponse<paths["/api/hosts/{id}/images/remove"]["post"]>;
 
 export type QueryEgressProxiesParams = QueryParameters<paths["/api/egress-proxies"]["get"]>;
 export type QueryEgressProxiesResponse = JsonResponse<paths["/api/egress-proxies"]["get"]>;
@@ -88,6 +89,7 @@ export type QueryKnowledgeDocumentsResponse = JsonResponse<paths["/api/knowledge
 export type QueryKnowledgeDocumentsData = NonNullable<QueryKnowledgeDocumentsResponse["data"]>;
 export type KnowledgeDocument = QueryKnowledgeDocumentsData["items"][number];
 export type KnowledgeDocumentStatus = KnowledgeDocument["status"];
+export type KnowledgeDocumentStatusCounts = QueryKnowledgeDocumentsData["status_counts"];
 export type UploadKnowledgeDocumentsResponse = JsonResponse<paths["/api/knowledges/documents"]["post"]>;
 export type KnowledgeDocumentPathParams = PathParameters<paths["/api/knowledges/documents/{document_id}"]["get"]>;
 export type GetKnowledgeDocumentResponse = JsonResponse<paths["/api/knowledges/documents/{document_id}"]["get"]>;
@@ -133,7 +135,10 @@ export type SandboxContainerStatus = components["schemas"]["SandboxContainerStat
 export type SandboxContainerEgressMode = components["schemas"]["SandboxContainerEgressMode"];
 export type SandboxContainerPortMapping = components["schemas"]["SandboxContainerPortMapping"];
 export type SandboxContainerHostOption = components["schemas"]["SandboxContainerHostOptionSchema"];
-export type SandboxContainerCreateOptionsResponse = JsonResponse<paths["/api/sandbox-containers/create-options"]["get"]>;
+export type QuerySandboxContainerHostOptionsParams = QueryParameters<paths["/api/sandbox-containers/create-options/hosts"]["get"]>;
+export type QuerySandboxContainerHostOptionsResponse = JsonResponse<paths["/api/sandbox-containers/create-options/hosts"]["get"]>;
+export type QuerySandboxContainerImageOptionsParams = QueryParameters<paths["/api/sandbox-containers/create-options/images"]["get"]>;
+export type QuerySandboxContainerImageOptionsResponse = JsonResponse<paths["/api/sandbox-containers/create-options/images"]["get"]>;
 
 export type CreateSandboxContainerRequest = JsonRequestBody<paths["/api/sandbox-containers"]["post"]>;
 export type CreateSandboxContainerResponse = JsonResponse<paths["/api/sandbox-containers"]["post"]>;
@@ -177,7 +182,9 @@ export type ContainerFileMkdirResponse = JsonResponse<paths["/api/sandbox-contai
 export type QueryWorkProjectsParams = QueryParameters<paths["/api/work-projects"]["get"]>;
 export type QueryWorkProjectsResponse = JsonResponse<paths["/api/work-projects"]["get"]>;
 export type QueryWorkProjectsData = NonNullable<QueryWorkProjectsResponse["data"]>;
-export type WorkProject = QueryWorkProjectsData["items"][number];
+export type WorkProjectSummary = QueryWorkProjectsData["items"][number];
+export type GetWorkProjectResponse = JsonResponse<paths["/api/work-projects/{id}"]["get"]>;
+export type WorkProject = NonNullable<GetWorkProjectResponse["data"]>;
 export type WorkProjectStatus = components["schemas"]["WorkProjectStatus"];
 export type WorkProjectType = components["schemas"]["WorkProjectType"];
 export type WorkProjectTaskStatus = components["schemas"]["WorkProjectTaskStatus"];
@@ -192,17 +199,17 @@ export type WorkProjectFindingSeverity = components["schemas"]["WorkProjectFindi
 export type WorkProjectFindingStatus = components["schemas"]["WorkProjectFindingStatus"];
 export type WorkProjectGraphEdge = components["schemas"]["WorkProjectGraphEdgeSchema"];
 export type WorkProjectGraphEdgeType = components["schemas"]["WorkProjectGraphEdgeType"];
-export type WorkProjectGraphSnapshot = components["schemas"]["WorkProjectGraphSnapshotSchema"];
 export type WorkProjectAttackPath = components["schemas"]["WorkProjectAttackPathSchema"];
 export type WorkProjectAttackPathStatus = components["schemas"]["WorkProjectAttackPathStatus"];
 export type WorkProjectAttackPathStep = components["schemas"]["WorkProjectAttackPathStepSchema"];
-export type WorkProjectRecords = components["schemas"]["WorkProjectRecordsSchema"];
-export type WorkProjectRecordSnapshot = components["schemas"]["WorkProjectRecordSnapshotSchema"];
+export type WorkProjectFindingRecord = components["schemas"]["WorkProjectFindingRecordSchema"];
+export type WorkProjectAttackPathRecord = components["schemas"]["WorkProjectAttackPathRecordSchema"];
+export type WorkProjectGraphView = components["schemas"]["WorkProjectGraphViewSchema"];
 
 export type CreateWorkProjectRequest = JsonRequestBody<paths["/api/work-projects"]["post"]>;
 export type CreateWorkProjectResponse = JsonResponse<paths["/api/work-projects"]["post"]>;
 
-export type WorkProjectPathParams = PathParameters<paths["/api/work-projects/{id}/record-snapshot"]["get"]>;
+export type WorkProjectPathParams = PathParameters<paths["/api/work-projects/{id}"]["get"]>;
 export type UpdateWorkProjectMetadataRequest = JsonRequestBody<paths["/api/work-projects/{id}/metadata"]["patch"]>;
 export type UpdateWorkProjectMetadataResponse = JsonResponse<paths["/api/work-projects/{id}/metadata"]["patch"]>;
 export type DeleteWorkProjectResponse = JsonResponse<paths["/api/work-projects/{id}"]["delete"]>;
@@ -211,9 +218,16 @@ export type CancelWorkProjectResponse = JsonResponse<paths["/api/work-projects/{
 export type RetryWorkProjectPathParams = PathParameters<paths["/api/work-projects/{id}/retry"]["post"]>;
 export type RetryWorkProjectResponse = JsonResponse<paths["/api/work-projects/{id}/retry"]["post"]>;
 export type ListWorkProjectSessionsResponse = JsonResponse<paths["/api/work-projects/{id}/sessions"]["get"]>;
+export type ListWorkProjectSessionsParams = QueryParameters<paths["/api/work-projects/{id}/sessions"]["get"]>;
 export type CreateWorkProjectSessionResponse = JsonResponse<paths["/api/work-projects/{id}/sessions"]["post"]>;
 export type DeleteWorkProjectSessionResponse = JsonResponse<paths["/api/work-projects/{id}/sessions/{session_id}"]["delete"]>;
-export type GetWorkProjectRecordSnapshotResponse = JsonResponse<paths["/api/work-projects/{id}/record-snapshot"]["get"]>;
+export type QueryWorkProjectAssetsParams = QueryParameters<paths["/api/work-projects/{id}/assets"]["get"]>;
+export type QueryWorkProjectAssetsResponse = JsonResponse<paths["/api/work-projects/{id}/assets"]["get"]>;
+export type QueryWorkProjectFindingsParams = QueryParameters<paths["/api/work-projects/{id}/findings"]["get"]>;
+export type QueryWorkProjectFindingsResponse = JsonResponse<paths["/api/work-projects/{id}/findings"]["get"]>;
+export type QueryWorkProjectAttackPathsParams = QueryParameters<paths["/api/work-projects/{id}/attack-paths"]["get"]>;
+export type QueryWorkProjectAttackPathsResponse = JsonResponse<paths["/api/work-projects/{id}/attack-paths"]["get"]>;
+export type GetWorkProjectGraphResponse = JsonResponse<paths["/api/work-projects/{id}/graph"]["get"]>;
 
 export type AgentSessionSummary = components["schemas"]["AgentSessionSummarySchema"];
 export type SessionType = components["schemas"]["SessionType"];
@@ -224,6 +238,7 @@ export type ListAgentsData = NonNullable<ListAgentsResponse["data"]>;
 
 export type ListAgentSessionsResponse = JsonResponse<paths["/api/agent-sessions"]["get"]>;
 export type ListAgentSessionsData = NonNullable<ListAgentSessionsResponse["data"]>;
+export type ListAgentSessionsParams = QueryParameters<paths["/api/agent-sessions"]["get"]>;
 
 export type AgentTurnRequest = JsonRequestBody<paths["/api/agent-sessions/turns"]["post"]>;
 export type AgentTurnData = components["schemas"]["AgentTurnResponse"];
@@ -234,6 +249,7 @@ export type CancelAllAgentSessionTasksResponse = JsonResponse<paths["/api/agent-
 
 export type ListAgentEventsResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/events"]["get"]>;
 export type ListAgentEventsData = NonNullable<ListAgentEventsResponse["data"]>;
+export type ListAgentEventsParams = QueryParameters<paths["/api/agent-sessions/{session_id}/events"]["get"]>;
 export type DownloadAgentReportPathParams = PathParameters<paths["/api/agent-sessions/reports/{report_id}/download"]["get"]>;
 export type UpdateAgentSessionTitleRequest = JsonRequestBody<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;
 export type UpdateAgentSessionTitleResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;

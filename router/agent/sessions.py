@@ -26,6 +26,7 @@ from schema.agent.sessions import (
     UpdateAgentSessionTitleRequest,
 )
 from schema.common.responses import CommonResponse
+from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 
 
 # the websocket route does its own token check because browsers cannot attach
@@ -35,10 +36,11 @@ router = APIRouter(prefix="/agent-sessions", tags=["agent-sessions"])
 
 
 async def list_agent_sessions_route(
-    limit: int = Query(default=100, ge=1, le=100),
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
     user: AuthUser = Depends(require_user),
 ) -> CommonResponse[ListAgentSessionsResponse]:
-    return await list_agent_sessions_handler(limit=limit, user=user)
+    return await list_agent_sessions_handler(page=page, size=size, user=user)
 
 
 async def create_agent_session_turn_route(

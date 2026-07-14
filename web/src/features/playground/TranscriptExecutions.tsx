@@ -3,7 +3,13 @@ import { ChevronDown, ChevronRight, GitBranch, PanelRightOpen, Wrench } from "lu
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { NestedTranscript, SubagentExecutionItem, ToolExecutionItem } from "./chatState";
 import { cx } from "../../shared/lib/className";
-import { subagentStatusColor, subordinateStatusLabel, type SubagentSelection } from "./subagentView";
+import {
+  isSubagentFailed,
+  isSubagentRunning,
+  subagentStatusColor,
+  subordinateStatusLabel,
+  type SubagentSelection,
+} from "./subagentView";
 import { emptyAgentTranscript, transcriptHasRunningExecution, transcriptItemCount, type ToolBlock } from "./transcriptView";
 
 export function ToolGroup({
@@ -109,7 +115,7 @@ function ToolExecutionBlock({
             <NestedTranscriptPanel
               nested={item.nested ?? emptyAgentTranscript()}
               task={item.subagentTask}
-              live={live && (nestedActive || item.subagentTask?.status === "running")}
+              live={live && (nestedActive || isSubagentRunning(item.subagentTask?.status))}
               selected={selectedSubagent === item.subagentTask?.agentCode}
               onOpenSubagent={onOpenSubagent}
             />
@@ -245,10 +251,11 @@ function ToolOutputSection({ output, tone }: { output: string; tone?: "error" })
 
 function toolExecutionStatus(item: ToolExecutionItem): { label: string; color: "red" | "green" | "amber"; tone: "error" | "ok" | "running" } {
   if (item.resolved && item.isError) return { label: "Failed", color: "red", tone: "error" };
-  if (item.subagentTask?.status === "failed" || item.subagentTask?.status === "canceled") {
-    return { label: subordinateStatusLabel(item.subagentTask.status), color: "red", tone: "error" };
+  const subagentStatus = item.subagentTask?.status;
+  if (subagentStatus && isSubagentFailed(subagentStatus)) {
+    return { label: subordinateStatusLabel(subagentStatus), color: "red", tone: "error" };
   }
-  if (!item.resolved || item.subagentTask?.status === "running") return { label: "Running", color: "amber", tone: "running" };
+  if (!item.resolved || isSubagentRunning(subagentStatus)) return { label: "Running", color: "amber", tone: "running" };
   return { label: "Done", color: "green", tone: "ok" };
 }
 

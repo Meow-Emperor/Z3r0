@@ -1,10 +1,11 @@
-import { Button, Empty, Spin } from "@douyinfe/semi-ui";
+import { Button, Empty } from "@douyinfe/semi-ui";
 import { ArrowLeft, FileText } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MetricStrip } from "../../shared/components/ResourcePageShell";
+import { AsyncContent } from "../../shared/components/AsyncContent";
 import { WorkProjectRecordTabs } from "./ProjectRecordViews";
-import { useWorkProjectRecordSnapshot } from "./workProjectRecords";
+import { useWorkProjectDetails } from "./useWorkProjectDetails";
 import { workProjectOwnerNames, WorkProjectStatusTag, WorkProjectTypeTag } from "./workProjectView";
 
 export function WorkProjectWorkspacePage() {
@@ -12,14 +13,14 @@ export function WorkProjectWorkspacePage() {
   const navigate = useNavigate();
   const projectId = Number(params.projectId);
   const validProjectId = Number.isFinite(projectId) && projectId > 0 ? projectId : null;
-  const { project, records, loading } = useWorkProjectRecordSnapshot(validProjectId);
+  const { project, loading } = useWorkProjectDetails(validProjectId);
 
   const metrics = useMemo(() => [
-    { label: "Assets", value: records.assets.length },
-    { label: "Findings", value: records.findings.length },
-    { label: "Relationships", value: records.graph.edges.length },
+    { label: "Assets", value: project?.asset_count ?? 0 },
+    { label: "Tasks", value: project?.task_count ?? 0 },
+    { label: "Agent Summaries", value: project?.agent_summary_count ?? 0 },
     { label: "Sessions", value: project?.session_count ?? 0 },
-  ], [project, records]);
+  ], [project]);
 
   if (!validProjectId) {
     return <Empty className="empty-state" image={<FileText size={42} />} title="Invalid project" description="" />;
@@ -50,9 +51,14 @@ export function WorkProjectWorkspacePage() {
 
       <MetricStrip metrics={metrics} />
 
-      <Spin spinning={loading}>
-        <WorkProjectRecordTabs records={records} className="workspace-tabs" />
-      </Spin>
+      <AsyncContent
+        loading={loading}
+        empty={project === null}
+        emptyIcon={<FileText size={42} />}
+        emptyTitle="Project is unavailable"
+      >
+        {project ? <WorkProjectRecordTabs projectId={project.id} className="workspace-tabs" /> : null}
+      </AsyncContent>
     </section>
   );
 }

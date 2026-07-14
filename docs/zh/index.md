@@ -19,18 +19,20 @@ hero:
       link: /zh/guide/overview
 
 features:
-  - title: 多 Agent 协同
-    details: 将情报侦察、漏洞验证、代码分析和攻击路径梳理等任务分派给专家 Agent 并行推进，提升授权测试的执行效率和覆盖范围。
-  - title: 项目化架构
-    details: 以 WorkProject 统一管理测试范围、任务、会话、资产、漏洞发现和攻击路径，让红队工作过程可组织、可追踪、可复盘。
-  - title: 异步任务运行时
-    details: 长命令和 subagent 任务可在后台执行，完成后自动恢复对应会话，减少等待并保持任务状态连续。
-  - title: 分布式 sandbox 资源池
-    details: 支持多主机、多 Docker 容器、项目级环境绑定和预装安全工具链，测试环境按项目隔离、扩展和切换。
-  - title: 受控出站与身份隔离
-    details: 通过 egress proxy、sandbox 边界和独立执行环境降低操作者环境暴露风险，适用于授权渗透测试场景。
-  - title: 结构化证据沉淀
-    details: 持续记录资产、漏洞发现、关系图和攻击路径，使验证质量、复盘效率和交付材料更稳定。
-  - title: 知识管理与检索
-    details: 通过 LightRAG Core 接入 Markdown/PDF 知识文档，查看文档、向量与图谱数据，并为任务型输入提供相关上下文。
+  - title: 多 Agent 编排
+    details: 主控 Agent 协调情报搜集、漏洞验证、代码审计、逆向分析和密码分析专家。
+  - title: 项目证据平面
+    details: WorkProject 将临时分析输出转化为持久记录、关系图、攻击路径、任务和摘要。
+  - title: 检索上下文平面
+    details: 通过 LightRAG Core 构建知识图谱，为任务型输入提供匹配的原始文档分块与图谱上下文。
+  - title: 可回放事件时间线
+    details: 前端消费标准化时间线事件，同一模型支持实时流和历史回放。
+  - title: 分布式 sandbox 资源
+    details: 托管 Docker 主机、镜像和容器使执行环境可以隔离、扩展并绑定到项目。
+  - title: 预装 sandbox 工具链
+    details: 默认 sandbox 镜像围绕 sandbox 内 skills 提供侦察、DNS、Web 发现、凭据测试、Android、固件、逆向、浏览器、Python 和字典能力。
+  - title: 统一出口层
+    details: 容器流量可通过直连、HTTP、HTTPS 或 SOCKS5 模式路由，并由平台统一管理策略。
+  - title: 操作者工作台
+    details: 前端将对话、项目记录、图谱复核、sandbox 选择、终端、文件和 noVNC 组织为统一流程。
 ---

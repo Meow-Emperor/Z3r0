@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { isSystemUserRole } from "../api/contract";
 import type { SystemUserRole } from "../api/types";
 import { clearStoredAccessToken, getStoredAccessToken, storeAccessToken } from "./session";
@@ -20,8 +20,9 @@ type AuthUser = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => getStoredAccessToken());
+  const user = useMemo(() => decodeUser(token), [token]);
 
   const signIn = useCallback((nextToken: string) => {
     storeAccessToken(nextToken);
@@ -39,15 +40,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("z3r0:auth-expired", handleAuthExpired);
   }, [signOut]);
 
+  useEffect(() => {
+    if (token && !user) signOut();
+  }, [signOut, token, user]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       token,
-      user: decodeUser(token),
-      isAuthenticated: Boolean(token),
+      user,
+      isAuthenticated: user !== null,
       signIn,
       signOut,
     }),
-    [signIn, signOut, token],
+    [signIn, signOut, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -74,6 +79,8 @@ function decodeUser(token: string | null): AuthUser | null {
       && isSystemUserRole(parsed.role)
       && typeof parsed.email === "string"
       && typeof parsed.username === "string"
+      && typeof parsed.exp === "number"
+      && parsed.exp * 1000 > Date.now()
     ) {
       return {
         id: parsed.id,

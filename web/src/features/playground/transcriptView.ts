@@ -7,6 +7,7 @@ import type {
   ThinkingItem,
   ToolExecutionItem,
 } from "./chatState";
+import { isSubagentRunning } from "./subagentView";
 
 type TranscriptItem = AgentTranscript["blocks"][number];
 export type ToolBlock = ToolExecutionItem | SubagentExecutionItem;
@@ -72,7 +73,7 @@ function isToolBlock(block: TranscriptItem): block is ToolBlock {
 
 function isExecutionRunning(item: ExecutionItem) {
   if (item.kind === "tool") {
-    return !item.resolved || item.subagentTask?.status === "running" || Boolean(item.nested && transcriptHasRunningExecution(item.nested));
+    return !item.resolved || isSubagentRunning(item.subagentTask?.status) || Boolean(item.nested && transcriptHasRunningExecution(item.nested));
   }
-  return item.status === "running";
+  return isSubagentRunning(item.status);
 }

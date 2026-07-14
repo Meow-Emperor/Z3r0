@@ -3,7 +3,6 @@ import { Plug, Plus, Trash2 } from "lucide-react";
 import type { SandboxContainerPortMapping } from "../../shared/api/types";
 import { createClientId } from "../../shared/lib/id";
 
-
 export type PortMappingFormValue = SandboxContainerPortMapping & {
   id: string;
 };
@@ -18,7 +17,7 @@ type PortMappingEditorProps = {
 const PROTOCOL_OPTIONS = [
   { label: "TCP", value: "tcp" },
   { label: "UDP", value: "udp" },
-];
+] satisfies Array<{ label: string; value: SandboxContainerPortMapping["protocol"] }>;
 
 export function createEmptyPortMapping(): PortMappingFormValue {
   return {

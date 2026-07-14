@@ -23,6 +23,7 @@ from schema.sandbox.containers import (
     SandboxContainerStatus,
 )
 from service.host.docker import inspect_image_on_host_sync
+from core.sandbox.command_jobs import cancel_sandbox_async_commands
 from service.sandbox.control_proxy import apply_container_egress
 from service.sandbox.docker_ops import (
     create_container_sync,
@@ -33,14 +34,16 @@ from service.sandbox.docker_ops import (
     stop_container_sync,
 )
 from service.sandbox.egress import SandboxEgressSelection, sandbox_egress_container_environment
+from service.sandbox.locking import serialized_sandbox_container_mutation
 from service.sandbox.records import load_sandbox_container_record
 from service.sandbox.status import (
     ContainerStatusSnapshot,
     invalidate_agent_tool_bindings,
     save_sandbox_container_status,
-    sync_container_status,
+    sync_container_status_unlocked,
 )
 from service.sandbox.types import SandboxContainerMutationResult
+from service.system_user.locking import system_user_lifecycle_lock
 
 
 logger = get_logger(__name__)
@@ -67,79 +70,139 @@ async def create_sandbox_container(
     owner_id: int,
     port_mappings: list[SandboxContainerPortMapping],
 ) -> SandboxContainerMutationResult:
-    async with get_async_session() as session:
-        host = await session.get(ManagedHost, host_id)
-        if host is None:
-            return SandboxContainerMutationResult(
-                record=None,
-                succeeded=False,
-                message="managed host not found",
-                not_found=True,
-            )
-        sandbox_image = await session.get(SandboxImage, image_id)
-        if sandbox_image is None:
-            return SandboxContainerMutationResult(
-                record=None,
-                succeeded=False,
-                message="sandbox image not found",
-                not_found=True,
-            )
-        owner = await session.get(SystemUser, owner_id)
-        if owner is None:
-            return SandboxContainerMutationResult(
-                record=None,
-                succeeded=False,
-                message="system user not found",
-                not_found=True,
-            )
-        egress_proxy, message = await _resolve_egress_selection(session, sandbox_image, egress_mode, egress_proxy_id)
-        if message:
-            return SandboxContainerMutationResult(record=None, succeeded=False, message=message)
-        resolved_egress_proxy_id = egress_proxy.id if egress_proxy is not None else None
+    async with system_user_lifecycle_lock(owner_id):
+        return await _create_sandbox_container(
+            host_id=host_id,
+            image_id=image_id,
+            egress_mode=egress_mode,
+            egress_proxy_id=egress_proxy_id,
+            owner_id=owner_id,
+            port_mappings=port_mappings,
+        )
 
-        container_name_prefix = _container_name_prefix(sandbox_image.image_name)
 
+async def _create_sandbox_container(
+    host_id: int,
+    image_id: int,
+    egress_mode: SandboxContainerEgressMode,
+    egress_proxy_id: int | None,
+    owner_id: int,
+    port_mappings: list[SandboxContainerPortMapping],
+) -> SandboxContainerMutationResult:
+    docker_host: ManagedHost | None = None
+    container_hash = ""
+    container_id: int | None = None
     try:
-        await asyncio.to_thread(_assert_host_image_exists, host, sandbox_image.image_name)
-        for mapping in port_mappings:
-            if mapping.container_port == sandbox_image.control_proxy_port and mapping.protocol == "tcp":
+        async with get_async_session() as session, session.begin():
+            host = (await session.exec(
+                select(ManagedHost).where(ManagedHost.id == host_id).with_for_update()
+            )).one_or_none()
+            if host is None:
                 return SandboxContainerMutationResult(
                     record=None,
                     succeeded=False,
-                    message="control proxy port is reserved for the sandbox control proxy",
+                    message="managed host not found",
+                    not_found=True,
                 )
-        reserved_tcp_host_ports = {mapping.host_port for mapping in port_mappings if mapping.protocol == "tcp"}
-        control_proxy_host_port = await asyncio.to_thread(
-            _allocate_control_proxy_host_port,
-            host.ip_address,
-            reserved_tcp_host_ports,
-        )
-        control_proxy_token = secrets.token_urlsafe(32)
-        user_port_mappings = _serialize_port_mappings(port_mappings)
-        docker_port_mappings = [*user_port_mappings, {
-            "container_port": sandbox_image.control_proxy_port,
-            "host_port": control_proxy_host_port,
-            "protocol": "tcp",
-        }]
-        docker_port_mappings = [SandboxContainerPortMapping.model_validate(mapping) for mapping in docker_port_mappings]
-        container_hash, container_name = await asyncio.to_thread(
-            create_container_sync,
-            host,
-            sandbox_image.image_name,
-            container_name_prefix,
-            docker_port_mappings,
-            {
-                "SANDBOX_CONTROL_PROXY_TOKEN": control_proxy_token,
-                **sandbox_egress_container_environment(SandboxEgressSelection(egress_mode, egress_proxy)),
-            },
-        )
+            docker_host = host.model_copy(deep=True)
+            sandbox_image = (await session.exec(
+                select(SandboxImage).where(SandboxImage.id == image_id).with_for_update()
+            )).one_or_none()
+            if sandbox_image is None:
+                return SandboxContainerMutationResult(
+                    record=None,
+                    succeeded=False,
+                    message="sandbox image not found",
+                    not_found=True,
+                )
+            owner = await session.get(SystemUser, owner_id)
+            if owner is None:
+                return SandboxContainerMutationResult(
+                    record=None,
+                    succeeded=False,
+                    message="system user not found",
+                    not_found=True,
+                )
+            egress_proxy, message = await _resolve_egress_selection(
+                session,
+                sandbox_image,
+                egress_mode,
+                egress_proxy_id,
+                lock=True,
+            )
+            if message:
+                return SandboxContainerMutationResult(record=None, succeeded=False, message=message)
+
+            for mapping in port_mappings:
+                if mapping.container_port == sandbox_image.control_proxy_port and mapping.protocol == "tcp":
+                    return SandboxContainerMutationResult(
+                        record=None,
+                        succeeded=False,
+                        message="control proxy port is reserved for the sandbox control proxy",
+                    )
+
+            await asyncio.to_thread(_assert_host_image_exists, docker_host, sandbox_image.image_name)
+            reserved_tcp_host_ports = {mapping.host_port for mapping in port_mappings if mapping.protocol == "tcp"}
+            control_proxy_host_port = await asyncio.to_thread(
+                _allocate_control_proxy_host_port,
+                docker_host.ip_address,
+                reserved_tcp_host_ports,
+            )
+            control_proxy_token = secrets.token_urlsafe(32)
+            user_port_mappings = _serialize_port_mappings(port_mappings)
+            docker_port_mappings = [*user_port_mappings, {
+                "container_port": sandbox_image.control_proxy_port,
+                "host_port": control_proxy_host_port,
+                "protocol": "tcp",
+            }]
+            docker_port_mappings = [
+                SandboxContainerPortMapping.model_validate(mapping)
+                for mapping in docker_port_mappings
+            ]
+            container_hash, container_name = await asyncio.to_thread(
+                create_container_sync,
+                docker_host,
+                sandbox_image.image_name,
+                _container_name_prefix(sandbox_image.image_name),
+                docker_port_mappings,
+                {
+                    "SANDBOX_CONTROL_PROXY_TOKEN": control_proxy_token,
+                    **sandbox_egress_container_environment(SandboxEgressSelection(egress_mode, egress_proxy)),
+                },
+            )
+
+            now = datetime.now()
+            sandbox_container = SandboxContainer(
+                host_id=host_id,
+                container_name=container_name,
+                container_hash=container_hash,
+                owner_id=owner_id,
+                image_id=image_id,
+                egress_mode=egress_mode,
+                egress_proxy_id=egress_proxy.id if egress_proxy is not None else None,
+                control_proxy_host_port=control_proxy_host_port,
+                control_proxy_token=control_proxy_token,
+                port_mappings=user_port_mappings,
+                status=SandboxContainerStatus.CREATED,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(sandbox_container)
+            await session.flush()
+            container_id = sandbox_container.id
+            if container_id is None:
+                raise RuntimeError("sandbox container id was not generated")
     except docker.errors.ImageNotFound:
         return SandboxContainerMutationResult(
             record=None,
             succeeded=False,
             message="image does not exist on selected host",
         )
-    except Exception:
+    except BaseException as exc:
+        if docker_host is not None and container_hash:
+            await _rollback_created_container(docker_host, container_hash, exc)
+        if isinstance(exc, asyncio.CancelledError):
+            raise
         logger.exception("sandbox container create failed for host=%s image=%s", host_id, image_id)
         return SandboxContainerMutationResult(
             record=None,
@@ -147,44 +210,18 @@ async def create_sandbox_container(
             message="failed to create sandbox container",
         )
 
-    now = datetime.now()
-    sandbox_container = SandboxContainer(
-        host_id=host_id,
-        container_name=container_name,
-        container_hash=container_hash,
-        owner_id=owner_id,
-        image_id=image_id,
-        egress_mode=egress_mode,
-        egress_proxy_id=resolved_egress_proxy_id,
-        control_proxy_host_port=control_proxy_host_port,
-        control_proxy_token=control_proxy_token,
-        port_mappings=user_port_mappings,
-        status=SandboxContainerStatus.CREATED,
-        created_at=now,
-        updated_at=now,
-    )
+    if container_id is None:
+        raise RuntimeError("sandbox container transaction completed without an id")
 
-    try:
-        async with get_async_session() as session:
-            session.add(sandbox_container)
-            await session.commit()
-            await session.refresh(sandbox_container)
-    except Exception:
-        await asyncio.to_thread(remove_container_sync, host, container_hash)
-        raise
-
-    if sandbox_container.id is None:
-        await asyncio.to_thread(remove_container_sync, host, container_hash)
-        raise RuntimeError("sandbox container id was not generated")
-
-    logger.info("sandbox container created: %s", sandbox_container.id)
+    logger.info("sandbox container created: %s", container_id)
     return SandboxContainerMutationResult(
-        record=await load_sandbox_container_record(sandbox_container.id),
+        record=await load_sandbox_container_record(container_id),
         succeeded=True,
         message="sandbox container created",
     )
 
 
+@serialized_sandbox_container_mutation
 async def start_sandbox_container(id: int) -> SandboxContainerMutationResult:
     record = await load_sandbox_container_record(id)
     if record is None:
@@ -207,7 +244,7 @@ async def start_sandbox_container(id: int) -> SandboxContainerMutationResult:
             return SandboxContainerMutationResult(record=record, succeeded=False, message="managed host not found")
         await asyncio.to_thread(start_container_sync, host, record.container.container_hash)
         await asyncio.sleep(1)
-        await sync_container_status(ContainerStatusSnapshot(
+        await sync_container_status_unlocked(ContainerStatusSnapshot(
             id=record.container.id or id,
             host_id=record.container.host_id,
             container_hash=record.container.container_hash,
@@ -255,6 +292,7 @@ async def start_sandbox_container(id: int) -> SandboxContainerMutationResult:
     )
 
 
+@serialized_sandbox_container_mutation
 async def update_sandbox_container_egress(
     id: int,
     egress_mode: SandboxContainerEgressMode,
@@ -270,7 +308,9 @@ async def update_sandbox_container_egress(
         )
 
     async with get_async_session() as session:
-        container = await session.get(SandboxContainer, id)
+        container = (await session.exec(
+            select(SandboxContainer).where(SandboxContainer.id == id).with_for_update()
+        )).one_or_none()
         if container is None:
             return SandboxContainerMutationResult(
                 record=None,
@@ -281,7 +321,13 @@ async def update_sandbox_container_egress(
         sandbox_image = await session.get(SandboxImage, container.image_id)
         if sandbox_image is None:
             return SandboxContainerMutationResult(record=record, succeeded=False, message="sandbox image not found")
-        egress_proxy, message = await _resolve_egress_selection(session, sandbox_image, egress_mode, egress_proxy_id)
+        egress_proxy, message = await _resolve_egress_selection(
+            session,
+            sandbox_image,
+            egress_mode,
+            egress_proxy_id,
+            lock=True,
+        )
         if message:
             return SandboxContainerMutationResult(record=record, succeeded=False, message=message)
         resolved_egress_proxy_id = egress_proxy.id if egress_proxy is not None else None
@@ -299,16 +345,6 @@ async def update_sandbox_container_egress(
             )
         previous_egress_mode = container.egress_mode
         previous_egress_proxy_id = container.egress_proxy_id
-
-    async with get_async_session() as session:
-        container = await session.get(SandboxContainer, id)
-        if container is None:
-            return SandboxContainerMutationResult(
-                record=None,
-                succeeded=False,
-                message="sandbox container not found",
-                not_found=True,
-            )
         container.egress_mode = egress_mode
         container.egress_proxy_id = resolved_egress_proxy_id
         container.updated_at = datetime.now()
@@ -334,6 +370,7 @@ async def update_sandbox_container_egress(
     )
 
 
+@serialized_sandbox_container_mutation
 async def stop_sandbox_container(id: int) -> SandboxContainerMutationResult:
     record = await load_sandbox_container_record(id)
     if record is None:
@@ -378,6 +415,7 @@ async def stop_sandbox_container(id: int) -> SandboxContainerMutationResult:
     )
 
 
+@serialized_sandbox_container_mutation
 async def pause_sandbox_container(id: int) -> SandboxContainerMutationResult:
     record = await load_sandbox_container_record(id)
     if record is None:
@@ -422,6 +460,7 @@ async def pause_sandbox_container(id: int) -> SandboxContainerMutationResult:
     )
 
 
+@serialized_sandbox_container_mutation
 async def resume_sandbox_container(id: int) -> SandboxContainerMutationResult:
     record = await load_sandbox_container_record(id)
     if record is None:
@@ -443,7 +482,7 @@ async def resume_sandbox_container(id: int) -> SandboxContainerMutationResult:
         if host is None:
             return SandboxContainerMutationResult(record=record, succeeded=False, message="managed host not found")
         await asyncio.to_thread(resume_container_sync, host, record.container.container_hash)
-        await sync_container_status(ContainerStatusSnapshot(
+        await sync_container_status_unlocked(ContainerStatusSnapshot(
             id=record.container.id or id,
             host_id=record.container.host_id,
             container_hash=record.container.container_hash,
@@ -489,6 +528,7 @@ async def resume_sandbox_container(id: int) -> SandboxContainerMutationResult:
     )
 
 
+@serialized_sandbox_container_mutation
 async def delete_sandbox_container(id: int) -> bool:
     async with get_async_session() as session:
         sandbox_container = await session.get(SandboxContainer, id)
@@ -497,6 +537,7 @@ async def delete_sandbox_container(id: int) -> bool:
         host = await session.get(ManagedHost, sandbox_container.host_id)
         container_hash = sandbox_container.container_hash
 
+    await cancel_sandbox_async_commands(id)
     await invalidate_agent_tool_bindings(id)
     if host is not None:
         await asyncio.to_thread(remove_container_sync, host, container_hash)
@@ -511,6 +552,18 @@ async def delete_sandbox_container(id: int) -> bool:
 
     logger.info("sandbox container deleted: %s", id)
     return True
+
+
+async def _rollback_created_container(
+    host: ManagedHost,
+    container_hash: str,
+    original_error: BaseException,
+) -> None:
+    try:
+        await asyncio.shield(asyncio.to_thread(remove_container_sync, host, container_hash))
+    except Exception as cleanup_error:
+        logger.exception("failed to remove Docker container after database create failure: %s", container_hash)
+        original_error.add_note(f"Docker container cleanup also failed: {cleanup_error}")
 
 
 async def _clear_sandbox_container_references(session, id: int) -> None:
@@ -547,10 +600,11 @@ def _allocate_control_proxy_host_port(host_ip: str, reserved_tcp_ports: set[int]
         ) + _CONTROL_PROXY_HOST_PORT_MIN
         if port in reserved_tcp_ports:
             continue
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(0.5)
-            if sock.connect_ex((host_ip, port)) != 0:
-                return port
+        try:
+            with socket.create_connection((host_ip, port), timeout=0.5):
+                continue
+        except OSError:
+            return port
     raise RuntimeError("failed to allocate control proxy host port")
 
 
@@ -564,6 +618,8 @@ async def _resolve_egress_selection(
     sandbox_image: SandboxImage,
     egress_mode: SandboxContainerEgressMode,
     egress_proxy_id: int | None,
+    *,
+    lock: bool = False,
 ) -> tuple[EgressProxy | None, str]:
     if egress_mode == SandboxContainerEgressMode.DIRECT:
         if egress_proxy_id is not None:
@@ -577,7 +633,10 @@ async def _resolve_egress_selection(
         return None, ""
     if egress_proxy_id is None:
         return None, "egress proxy is required for proxy egress mode"
-    egress_proxy = await session.get(EgressProxy, egress_proxy_id)
+    statement = select(EgressProxy).where(EgressProxy.id == egress_proxy_id)
+    if lock:
+        statement = statement.with_for_update()
+    egress_proxy = (await session.exec(statement)).one_or_none()
     if egress_proxy is None:
         return None, "egress proxy not found"
     return egress_proxy, ""

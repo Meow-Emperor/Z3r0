@@ -140,7 +140,6 @@ sequenceDiagram
   API-->>UI: Live view and replayable history
 ```
 
-The runtime supports assessments that extend beyond a single browser interaction. Before Agent execution, LightRAG Core searches PostgreSQL-backed document vectors and graph relationships using the current request and bounded recent user topics, then supplies relevant context for that turn. The frontend streams live events, reloads persisted timeline pages, switches sessions, presents subagent work, and opens project records. Long-running commands and specialist tasks are represented as application state, allowing completed results to return to the appropriate session for integration.
 
 ## Evidence Model
 
@@ -215,7 +214,7 @@ Outbound traffic is normalized through a container-level egress profile. The san
 | --- | --- |
 | Multi-Agent orchestration | A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis. |
 | Project evidence plane | WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries. |
-| Retrieval context plane | LightRAG Core parses and indexes Markdown/PDF documents with pgvector and Apache AGE, then supplies matching document and graph context for task-oriented inputs. |
+| Retrieval context plane | Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs. |
 | Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
 | Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
 | Preloaded sandbox toolchain | The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills. |
@@ -246,7 +245,7 @@ web/         React workbench and landing page
 sandbox/     Docker sandbox image and control proxy
 docs/        VitePress documentation
 .z3r0/       Runtime configuration, Agent prompts, logs
-.lightrag/   LightRAG parser inputs and local working files
+.lightrag/   Temporary LightRAG parser inputs and local working files
 ```
 
 ## Documentation

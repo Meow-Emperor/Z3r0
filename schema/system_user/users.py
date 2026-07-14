@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from schema.common.responses import PaginatedResponse
 
@@ -28,8 +28,18 @@ class SystemUserSchema(BaseModel):
 class CreateSystemUserRequest(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     password: str = Field(min_length=1, max_length=128)
-    email: str = Field(default="", max_length=255)
+    email: str = Field(min_length=3, max_length=255)
     role: SystemUserRole = SystemUserRole.USER
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().casefold() if isinstance(value, str) else value
 
 
 # delete system user response schema (presence implies success; status code carries the failure case)
@@ -41,8 +51,18 @@ class DeleteSystemUserResponse(BaseModel):
 class UpdateSystemUserRequest(BaseModel):
     username: str | None = Field(default=None, min_length=1, max_length=64)
     password: str | None = Field(default=None, min_length=1, max_length=128)
-    email: str | None = Field(default=None, max_length=255)
+    email: str | None = Field(default=None, min_length=3, max_length=255)
     role: SystemUserRole | None = None
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().casefold() if isinstance(value, str) else value
 
     @model_validator(mode="after")
     def validate_has_updates(self):
@@ -60,6 +80,11 @@ class QuerySystemUsersResponse(PaginatedResponse[SystemUserSchema]):
 class SystemUserLoginRequest(BaseModel):
     email: str = Field(min_length=1, max_length=255)
     password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().casefold() if isinstance(value, str) else value
 
 
 # system user login response schema

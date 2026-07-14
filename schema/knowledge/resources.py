@@ -1,16 +1,43 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import Any
 
-from lightrag.base import DocStatus
 from pydantic import BaseModel, Field
 
 from schema.common.responses import PaginatedResponse
 
 
+class KnowledgeDocumentStatus(StrEnum):
+    PENDING = "pending"
+    PARSING = "parsing"
+    ANALYZING = "analyzing"
+    PROCESSING = "processing"
+    PROCESSED = "processed"
+    FAILED = "failed"
+
+
+KNOWLEDGE_DOCUMENT_INFLIGHT_STATUSES = (
+    KnowledgeDocumentStatus.PENDING,
+    KnowledgeDocumentStatus.PARSING,
+    KnowledgeDocumentStatus.ANALYZING,
+    KnowledgeDocumentStatus.PROCESSING,
+)
+
+
+class KnowledgeDocumentStatusCounts(BaseModel):
+    total: int = Field(ge=0)
+    pending: int = Field(ge=0)
+    parsing: int = Field(ge=0)
+    analyzing: int = Field(ge=0)
+    processing: int = Field(ge=0)
+    processed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+
+
 class KnowledgeDocumentSchema(BaseModel):
     id: str
     file_name: str
-    status: DocStatus
+    status: KnowledgeDocumentStatus
     content_summary: str
     content_length: int = Field(ge=0)
     chunks_count: int = Field(ge=0)
@@ -21,7 +48,7 @@ class KnowledgeDocumentSchema(BaseModel):
 
 
 class QueryKnowledgeDocumentsResponse(PaginatedResponse[KnowledgeDocumentSchema]):
-    status_counts: dict[str, int]
+    status_counts: KnowledgeDocumentStatusCounts
 
 
 class KnowledgeDocumentDetailSchema(KnowledgeDocumentSchema):
@@ -69,3 +96,23 @@ class QueryKnowledgeVectorsResponse(PaginatedResponse[KnowledgeVectorSchema]):
 class KnowledgeVectorDetailSchema(KnowledgeVectorSchema):
     heading: dict[str, Any]
     source_metadata: dict[str, Any]
+
+
+class KnowledgeGraphNodeSchema(BaseModel):
+    id: str
+    labels: list[str]
+    properties: dict[str, Any]
+
+
+class KnowledgeGraphEdgeSchema(BaseModel):
+    id: str
+    type: str
+    source: str
+    target: str
+    properties: dict[str, Any]
+
+
+class KnowledgeGraphSchema(BaseModel):
+    nodes: list[KnowledgeGraphNodeSchema]
+    edges: list[KnowledgeGraphEdgeSchema]
+    is_truncated: bool

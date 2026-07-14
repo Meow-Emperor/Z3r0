@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace as _replace
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from schema.agent.events import AgentInputPart
-    from schema.agent.notifications import AgentNotificationSnapshot
+from schema.agent.events import AgentInputPart
+from schema.agent.notifications import AgentNotificationSnapshot
 
 
 @dataclass(frozen=True, slots=True)

@@ -14,7 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import AgentConfig, get_config
 from core.agent.models import build_openai_model
-from core.conversation.formats import CONTEXT_SUMMARY_ITEM_ID, format_context_summary
+from core.conversation.formats import (
+    CONTEXT_SUMMARY_ITEM_ID,
+    CONTEXT_SUMMARY_SECTIONS,
+    format_context_summary,
+)
 from core.conversation.projection import ContextProjection, ProjectedItem, ProjectionCompaction
 from logger import get_logger
 from model.agent.context_compactions import AgentContextCompaction
@@ -22,7 +26,8 @@ from model.agent.context_compactions import AgentContextCompaction
 
 logger = get_logger(__name__)
 
-_SUMMARY_AGENT_INSTRUCTIONS = """# Runtime Guidance
+_SUMMARY_SECTIONS = "\n".join(f"## {section}" for section in CONTEXT_SUMMARY_SECTIONS)
+_SUMMARY_AGENT_INSTRUCTIONS = f"""# Runtime Guidance
 
 ## Context Compression
 
@@ -30,13 +35,7 @@ Compress earlier agent conversation items for future continuation.
 
 Write a concise but information-dense Markdown summary using exactly these sections:
 
-## User Goals
-## Active Constraints
-## Decisions
-## Relevant Files And Code
-## Tool Results
-## Open Tasks
-## Current State
+{_SUMMARY_SECTIONS}
 
 Write "None" for empty sections. Preserve durable facts, user requests, constraints, decisions,
 code/file references, tool results, errors, pending tasks, and current state. Discard greetings,
@@ -116,7 +115,7 @@ async def compact_if_needed(
 ) -> CompactionDecision:
     cfg = get_config().agent_runtime
     context_window = resolve_context_window(agent_config)
-    if not cfg.context_compression_enabled or context_window <= 0:
+    if context_window <= 0:
         return CompactionDecision(False, 0, context_window, 0, 0)
 
     projection = estimate_projection_tokens(projection, agent_config.model)

@@ -8,9 +8,10 @@ from typing import Any
 from unicodedata import category
 
 from fastapi import UploadFile
-from lightrag.base import DeletionResult, DocStatus, QueryParam
+from lightrag import QueryParam
+from lightrag.base import DeletionResult, DocStatus
 from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE, PARSED_DIR_NAME
-from lightrag.types import KnowledgeGraph, KnowledgeGraphEdge, KnowledgeGraphNode
+from lightrag.types import KnowledgeGraph
 
 from config import get_config
 from core.lightrag.runtime import LIGHTRAG_INPUT_DIR, LIGHTRAG_WORKSPACE, lightrag_client
@@ -18,6 +19,11 @@ from logger import get_logger
 from schema.knowledge.resources import (
     KnowledgeDocumentDetailSchema,
     KnowledgeDocumentSchema,
+    KnowledgeDocumentStatus,
+    KnowledgeDocumentStatusCounts,
+    KnowledgeGraphEdgeSchema,
+    KnowledgeGraphNodeSchema,
+    KnowledgeGraphSchema,
     KnowledgeVectorDetailSchema,
     KnowledgeVectorSchema,
     QueryKnowledgeDocumentsResponse,
@@ -25,14 +31,17 @@ from schema.knowledge.resources import (
     RejectedKnowledgeDocumentUpload,
     UploadKnowledgeDocumentsResponse,
 )
+from service.knowledge.constants import (
+    MAX_KNOWLEDGE_DOCUMENT_BATCH_SIZE,
+    MAX_KNOWLEDGE_DOCUMENT_BYTES,
+    MAX_KNOWLEDGE_FILENAME_BYTES,
+    SUPPORTED_KNOWLEDGE_DOCUMENT_SUFFIXES,
+)
 
 
-MAX_KNOWLEDGE_DOCUMENT_BYTES = 25 * 1024 * 1024
-MAX_KNOWLEDGE_DOCUMENT_BATCH_SIZE = 50
-MAX_KNOWLEDGE_FILENAME_BYTES = 255
-SUPPORTED_DOCUMENT_SUFFIXES = frozenset({".md", ".pdf"})
 _SOURCE_CLEANUP_ATTEMPTS = 3
 _SOURCE_CLEANUP_RETRY_SECONDS = 0.25
+_VECTOR_DOCUMENT_SCAN_PAGE_SIZE = 200
 
 logger = get_logger(__name__)
 
@@ -45,11 +54,11 @@ async def query_knowledge_documents(
     *,
     page: int,
     size: int,
-    status: DocStatus | None,
+    status: KnowledgeDocumentStatus | None,
 ) -> QueryKnowledgeDocumentsResponse:
     async with lightrag_client() as rag:
         page_task = rag.doc_status.get_docs_paginated(
-            status_filter=status,
+            status_filter=DocStatus(status.value) if status is not None else None,
             page=page,
             page_size=size,
         )
@@ -61,10 +70,7 @@ async def query_knowledge_documents(
         size=size,
         total=total,
         items=items,
-        status_counts={
-            key.value if isinstance(key, DocStatus) else str(key): int(value)
-            for key, value in counts.items()
-        },
+        status_counts=_knowledge_document_status_counts(counts),
     )
 
 
@@ -128,7 +134,7 @@ async def upload_knowledge_documents(
                     try:
                         await asyncio.to_thread(_write_new_document, source_path, content)
                     except FileExistsError:
-                        raise KnowledgeDocumentError("a document with this file name already exists")
+                        raise KnowledgeDocumentError("a document with this file name already exists") from None
                 except KnowledgeDocumentError as exc:
                     rejected_files.append(
                         RejectedKnowledgeDocumentUpload(
@@ -222,11 +228,11 @@ async def upload_knowledge_documents(
 
 
 def _display_upload_file_name(upload: UploadFile) -> str:
-    return Path((upload.filename or "").replace("\\", "/")).name or "unnamed document"
+    return Path((upload.filename or "").replace("\\", "/")).name.strip() or "unnamed document"
 
 
 def _validate_upload_file_name(upload: UploadFile) -> str:
-    file_name = Path((upload.filename or "").replace("\\", "/")).name
+    file_name = Path((upload.filename or "").replace("\\", "/")).name.strip()
     suffix = Path(file_name).suffix.lower()
     if (
         not file_name
@@ -234,7 +240,7 @@ def _validate_upload_file_name(upload: UploadFile) -> str:
         or len(file_name.encode("utf-8")) > MAX_KNOWLEDGE_FILENAME_BYTES
     ):
         raise KnowledgeDocumentError("document file name is invalid")
-    if suffix not in SUPPORTED_DOCUMENT_SUFFIXES:
+    if suffix not in SUPPORTED_KNOWLEDGE_DOCUMENT_SUFFIXES:
         raise KnowledgeDocumentError("only Markdown and PDF documents are supported")
     return file_name
 
@@ -269,27 +275,68 @@ async def query_knowledge_vectors(
     size: int,
 ) -> QueryKnowledgeVectorsResponse:
     async with lightrag_client() as rag:
-        documents = await rag.get_docs_by_status(DocStatus.PROCESSED)
-        chunk_ids = [
-            chunk_id
-            for document in sorted(
-                documents.values(),
-                key=lambda item: item.updated_at,
-                reverse=True,
-            )
-            for chunk_id in document.chunks_list or []
-        ]
-        total = len(chunk_ids)
-        page_ids = chunk_ids[(page - 1) * size:page * size]
+        page_ids, total = await _knowledge_vector_page_ids(rag, page=page, size=size)
         rows = await rag.text_chunks.get_by_ids(page_ids)
 
     dimension = get_config().lightrag.embedding_dim
-    items = [
-        _knowledge_vector_schema(row, dimension)
+    rows_by_id = {
+        str(row["id"]): row
         for row in rows
-        if row is not None
+        if row is not None and row.get("id") is not None
+    }
+    items = [
+        _knowledge_vector_schema(rows_by_id[chunk_id], dimension)
+        for chunk_id in page_ids
+        if chunk_id in rows_by_id
     ]
     return QueryKnowledgeVectorsResponse(page=page, size=size, total=total, items=items)
+
+
+async def _knowledge_vector_page_ids(rag, *, page: int, size: int) -> tuple[list[str], int]:
+    target_start = (page - 1) * size
+    target_end = target_start + size
+    document_page = 1
+    document_total = 1
+    scanned_documents = 0
+    scanned_chunks = 0
+    selected_documents: list[tuple[str, int]] = []
+
+    while scanned_documents < document_total:
+        documents, document_total = await rag.doc_status.get_docs_paginated(
+            status_filter=DocStatus.PROCESSED,
+            page=document_page,
+            page_size=_VECTOR_DOCUMENT_SCAN_PAGE_SIZE,
+        )
+        if not documents:
+            break
+        for document_id, document in documents:
+            chunks_count = max(int(_document_field(document, "chunks_count", 0) or 0), 0)
+            chunk_end = scanned_chunks + chunks_count
+            if chunk_end > target_start and scanned_chunks < target_end:
+                selected_documents.append((document_id, scanned_chunks))
+            scanned_chunks = chunk_end
+        scanned_documents += len(documents)
+        document_page += 1
+
+    if not selected_documents:
+        return [], scanned_chunks
+
+    statuses = await rag.doc_status.get_by_ids([
+        document_id
+        for document_id, _ in selected_documents
+    ])
+    page_ids: list[str] = []
+    for (_, chunk_start), status in zip(selected_documents, statuses, strict=True):
+        chunk_ids = [
+            str(chunk_id)
+            for chunk_id in _document_field(status, "chunks_list", []) or []
+            if chunk_id
+        ]
+        local_start = max(target_start - chunk_start, 0)
+        local_end = max(min(target_end - chunk_start, len(chunk_ids)), 0)
+        page_ids.extend(chunk_ids[local_start:local_end])
+
+    return page_ids, scanned_chunks
 
 
 async def get_knowledge_vector(vector_id: str) -> KnowledgeVectorDetailSchema | None:
@@ -309,10 +356,12 @@ async def get_knowledge_vector(vector_id: str) -> KnowledgeVectorDetailSchema | 
 
 
 def _knowledge_document_schema(document_id: str, document: Any) -> KnowledgeDocumentSchema:
+    raw_status = _document_field(document, "status")
+    status_value = raw_status.value if isinstance(raw_status, DocStatus) else str(raw_status)
     return KnowledgeDocumentSchema(
         id=document_id,
-        file_name=str(_document_field(document, "file_path", "unknown")),
-        status=_document_field(document, "status"),
+        file_name=Path(str(_document_field(document, "file_path", "unknown"))).name,
+        status=KnowledgeDocumentStatus(status_value),
         content_summary=str(_document_field(document, "content_summary", "")),
         content_length=max(int(_document_field(document, "content_length", 0) or 0), 0),
         chunks_count=max(int(_document_field(document, "chunks_count", 0) or 0), 0),
@@ -320,6 +369,23 @@ def _knowledge_document_schema(document_id: str, document: Any) -> KnowledgeDocu
         error=_optional_text(_document_field(document, "error_msg")),
         created_at=_document_field(document, "created_at"),
         updated_at=_document_field(document, "updated_at"),
+    )
+
+
+def _knowledge_document_status_counts(counts: dict[Any, Any]) -> KnowledgeDocumentStatusCounts:
+    normalized = {
+        key.value if isinstance(key, DocStatus) else str(key): max(int(value or 0), 0)
+        for key, value in counts.items()
+    }
+    return KnowledgeDocumentStatusCounts(
+        total=normalized.get("all", sum(
+            normalized.get(status.value, 0)
+            for status in KnowledgeDocumentStatus
+        )),
+        **{
+            status.value: normalized.get(status.value, 0)
+            for status in KnowledgeDocumentStatus
+        },
     )
 
 
@@ -397,6 +463,30 @@ async def remove_knowledge_source_documents(file_names: Iterable[str]) -> None:
         ))
 
 
+async def remove_stale_knowledge_source_documents(retained_file_names: Iterable[str]) -> None:
+    retained_names = {
+        Path(file_name).name
+        for file_name in retained_file_names
+        if Path(file_name).name
+    }
+    source_names = await asyncio.to_thread(_knowledge_source_document_names)
+    await remove_knowledge_source_documents(source_names - retained_names)
+
+
+def _knowledge_source_document_names() -> set[str]:
+    workspace_dir = LIGHTRAG_INPUT_DIR / LIGHTRAG_WORKSPACE
+    source_names: set[str] = set()
+    for directory in (workspace_dir, workspace_dir / PARSED_DIR_NAME):
+        if not directory.is_dir():
+            continue
+        source_names.update(
+            path.name
+            for path in directory.iterdir()
+            if path.is_file()
+        )
+    return source_names
+
+
 async def _remove_source_document_copies(file_name: str) -> None:
     canonical_name = Path(file_name).name
     if not canonical_name:
@@ -428,7 +518,7 @@ async def get_knowledge_graph(
     query: str,
     max_depth: int,
     max_nodes: int,
-) -> KnowledgeGraph:
+) -> KnowledgeGraphSchema:
     try:
         async with lightrag_client() as rag:
             graph = await rag.get_knowledge_graph(
@@ -442,7 +532,7 @@ async def get_knowledge_graph(
     return _normalize_knowledge_graph(graph)
 
 
-async def search_knowledge_graph(*, query: str, max_nodes: int) -> KnowledgeGraph:
+async def search_knowledge_graph(*, query: str, max_nodes: int) -> KnowledgeGraphSchema:
     normalized_query = query.strip()
     if not normalized_query:
         raise KnowledgeDocumentError("a graph search query is required")
@@ -461,12 +551,89 @@ async def search_knowledge_graph(*, query: str, max_nodes: int) -> KnowledgeGrap
     except Exception:
         logger.exception("LightRAG knowledge graph search failed")
         raise
-    return _knowledge_graph_from_search_result(result, max_nodes=max_nodes)
+    return _knowledge_graph_from_retrieval(result, max_nodes=max_nodes)
 
 
-def _normalize_knowledge_graph(graph: KnowledgeGraph) -> KnowledgeGraph:
+def _knowledge_graph_from_retrieval(
+    result: dict[str, Any],
+    *,
+    max_nodes: int,
+) -> KnowledgeGraphSchema:
+    data = result.get("data") if result.get("status") == "success" else None
+    if not isinstance(data, dict):
+        return KnowledgeGraphSchema(nodes=[], edges=[], is_truncated=False)
+
+    raw_entities = data.get("entities")
+    raw_relationships = data.get("relationships")
+    entities = raw_entities if isinstance(raw_entities, list) else []
+    relationships = raw_relationships if isinstance(raw_relationships, list) else []
+    nodes: dict[str, KnowledgeGraphNodeSchema] = {}
+    truncated = False
+
+    def add_node(node_id: str, properties: dict[str, Any]) -> bool:
+        nonlocal truncated
+        if not node_id:
+            return False
+        if node_id in nodes:
+            nodes[node_id] = nodes[node_id].model_copy(update={
+                "properties": {**nodes[node_id].properties, **properties},
+            })
+            return True
+        if len(nodes) >= max_nodes:
+            truncated = True
+            return False
+        nodes[node_id] = KnowledgeGraphNodeSchema(
+            id=node_id,
+            labels=[node_id],
+            properties=properties,
+        )
+        return True
+
+    for entity in entities:
+        if not isinstance(entity, dict):
+            continue
+        entity_name = str(entity.get("entity_name") or "").strip()
+        add_node(entity_name, entity)
+
+    edges: list[KnowledgeGraphEdgeSchema] = []
+    seen_edges: set[str] = set()
+    for relationship in relationships:
+        if not isinstance(relationship, dict):
+            continue
+        source = str(relationship.get("src_id") or "").strip()
+        target = str(relationship.get("tgt_id") or "").strip()
+        if not source or not target:
+            continue
+        if not add_node(source, {}) or not add_node(target, {}):
+            continue
+        edge_id = _knowledge_relationship_id(
+            source,
+            target,
+            str(relationship.get("reference_id") or ""),
+            str(relationship.get("keywords") or ""),
+            str(relationship.get("description") or ""),
+        )
+        if edge_id in seen_edges:
+            continue
+        seen_edges.add(edge_id)
+        edges.append(KnowledgeGraphEdgeSchema(
+            id=edge_id,
+            type=str(relationship.get("keywords") or "related"),
+            source=source,
+            target=target,
+            properties=relationship,
+        ))
+
+    return KnowledgeGraphSchema(
+        nodes=list(nodes.values()),
+        edges=edges,
+        is_truncated=truncated,
+    )
+
+
+def _normalize_knowledge_graph(graph: KnowledgeGraph) -> KnowledgeGraphSchema:
     node_ids: dict[str, str] = {}
-    nodes: list[KnowledgeGraphNode] = []
+    nodes: list[KnowledgeGraphNodeSchema] = []
     seen_labels: set[str] = set()
     for node in graph.nodes:
         label = next((item.strip() for item in node.labels if item.strip()), node.id)
@@ -475,129 +642,40 @@ def _normalize_knowledge_graph(graph: KnowledgeGraph) -> KnowledgeGraph:
             continue
         seen_labels.add(label)
         nodes.append(
-            KnowledgeGraphNode(
+            KnowledgeGraphNodeSchema(
                 id=label,
                 labels=[label],
                 properties=node.properties,
             )
         )
 
-    edges: list[KnowledgeGraphEdge] = []
+    edges: list[KnowledgeGraphEdgeSchema] = []
     seen_edges: set[str] = set()
     for edge in graph.edges:
         source = node_ids.get(edge.source)
         target = node_ids.get(edge.target)
         if source is None or target is None:
             continue
-        edge_id = _knowledge_relationship_id(source, target)
+        edge_id = _knowledge_relationship_id(source, target, edge.id)
         if edge_id in seen_edges:
             continue
         seen_edges.add(edge_id)
         edges.append(
-            KnowledgeGraphEdge(
+            KnowledgeGraphEdgeSchema(
                 id=edge_id,
-                type=edge.type,
+                type=edge.type or "related",
                 source=source,
                 target=target,
                 properties=edge.properties,
             )
         )
-    return KnowledgeGraph(
+    return KnowledgeGraphSchema(
         nodes=nodes,
         edges=edges,
         is_truncated=graph.is_truncated,
     )
 
 
-def _knowledge_graph_from_search_result(
-    result: dict[str, Any],
-    *,
-    max_nodes: int,
-) -> KnowledgeGraph:
-    data = result.get("data")
-    if not isinstance(data, dict):
-        return KnowledgeGraph()
-
-    raw_entities = data.get("entities")
-    raw_relationships = data.get("relationships")
-    entities = raw_entities if isinstance(raw_entities, list) else []
-    relationships = raw_relationships if isinstance(raw_relationships, list) else []
-    nodes: dict[str, KnowledgeGraphNode] = {}
-    edges: dict[str, KnowledgeGraphEdge] = {}
-    is_truncated = False
-
-    def add_node(entity_name: object, properties: dict[str, Any] | None = None) -> bool:
-        nonlocal is_truncated
-        label = str(entity_name or "").strip()
-        if not label:
-            return False
-        if label in nodes:
-            return True
-        if len(nodes) >= max_nodes:
-            is_truncated = True
-            return False
-        nodes[label] = KnowledgeGraphNode(
-            id=label,
-            labels=[label],
-            properties=properties or {},
-        )
-        return True
-
-    for entity in entities:
-        if not isinstance(entity, dict):
-            continue
-        entity_name = entity.get("entity_name")
-        properties = {
-            key: value
-            for key, value in entity.items()
-            if key != "entity_name"
-        }
-        add_node(entity_name, properties)
-
-    for relationship in relationships:
-        if not isinstance(relationship, dict):
-            continue
-        source = str(relationship.get("src_id") or "").strip()
-        target = str(relationship.get("tgt_id") or "").strip()
-        if not source or not target:
-            continue
-        if not add_node(source) or not add_node(target):
-            continue
-        edge_id = _knowledge_relationship_id(source, target)
-        properties = {
-            key: value
-            for key, value in relationship.items()
-            if key not in {"src_id", "tgt_id"}
-        }
-        edges.setdefault(
-            edge_id,
-            KnowledgeGraphEdge(
-                id=edge_id,
-                type=str(relationship.get("keywords") or "related"),
-                source=source,
-                target=target,
-                properties=properties,
-            ),
-        )
-
-    metadata = result.get("metadata")
-    processing_info = metadata.get("processing_info") if isinstance(metadata, dict) else None
-    if isinstance(processing_info, dict):
-        total_entities = processing_info.get("total_entities_found")
-        total_relationships = processing_info.get("total_relations_found")
-        if isinstance(total_entities, int) and total_entities > len(nodes):
-            is_truncated = True
-        if isinstance(total_relationships, int) and total_relationships > len(edges):
-            is_truncated = True
-
-    return KnowledgeGraph(
-        nodes=list(nodes.values()),
-        edges=list(edges.values()),
-        is_truncated=is_truncated,
-    )
-
-
-def _knowledge_relationship_id(source: str, target: str) -> str:
-    left, right = sorted((source, target))
-    digest = hashlib.sha256(f"{left}\0{right}".encode("utf-8")).hexdigest()
+def _knowledge_relationship_id(source: str, target: str, *identity: str) -> str:
+    digest = hashlib.sha256("\0".join((source, target, *identity)).encode("utf-8")).hexdigest()
     return f"knowledge-relation:{digest}"

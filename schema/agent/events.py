@@ -40,9 +40,17 @@ class AgentImageMediaTypeSchema(StrEnum):
     WEBP = "image/webp"
 
 
-_MAX_IMAGE_BASE64_LENGTH = 5 * 1024 * 1024
-_MAX_MESSAGE_BASE64_LENGTH = 8 * 1024 * 1024
+MAX_AGENT_IMAGES = 4
+MAX_AGENT_IMAGE_BYTES = 15 * 1024 * 1024 // 4
+MAX_AGENT_TOTAL_IMAGE_BYTES = 6 * 1024 * 1024
 MAX_AGENT_TEXT_INPUT_CHARS = 20000
+
+
+def _base64_length(byte_count: int) -> int:
+    return ((byte_count + 2) // 3) * 4
+
+
+_MAX_IMAGE_BASE64_LENGTH = _base64_length(MAX_AGENT_IMAGE_BYTES)
 
 
 class AgentTextInputPart(BaseModel):
@@ -216,8 +224,17 @@ AgentEventSchema = Annotated[
 
 def validate_agent_input_content(content: list[AgentInputPart]) -> None:
     image_count = sum(1 for part in content if isinstance(part, AgentImageInputPart))
-    if image_count > 4:
-        raise ValueError("at most 4 images are allowed in one message")
-    image_bytes = sum(len(part.data) for part in content if isinstance(part, AgentImageInputPart))
-    if image_bytes > _MAX_MESSAGE_BASE64_LENGTH:
+    if image_count > MAX_AGENT_IMAGES:
+        raise ValueError(f"at most {MAX_AGENT_IMAGES} images are allowed in one message")
+    image_bytes = sum(
+        _decoded_base64_length(part.data)
+        for part in content
+        if isinstance(part, AgentImageInputPart)
+    )
+    if image_bytes > MAX_AGENT_TOTAL_IMAGE_BYTES:
         raise ValueError("image payload is too large")
+
+
+def _decoded_base64_length(value: str) -> int:
+    padding = len(value) - len(value.rstrip("="))
+    return len(value) * 3 // 4 - padding

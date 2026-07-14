@@ -84,7 +84,7 @@ async def _apply_instance_config_from_file(file_cfg: GlobalConfig) -> InstanceCo
     agent_runtime_changed, lightrag_runtime_changed = _apply_instance_config(file_cfg)
     if lightrag_runtime_changed:
         try:
-            await restart_lightrag(file_cfg.lightrag, fallback_config=previous.lightrag)
+            await restart_lightrag(file_cfg.lightrag, rollback_config=previous.lightrag)
         except BaseException:
             _restore_instance_config(previous)
             raise
@@ -100,6 +100,11 @@ async def _apply_instance_config_from_file(file_cfg: GlobalConfig) -> InstanceCo
                 except Exception as rollback_error:
                     logger.exception("failed to roll back LightRAG after agent rebuild failure")
                     exc.add_note(f"LightRAG rollback also failed: {rollback_error}")
+            try:
+                await rebuild_agent_instances()
+            except BaseException as rollback_error:
+                logger.exception("failed to restore agent runtime after rebuild failure")
+                exc.add_note(f"agent runtime rollback also failed: {rollback_error}")
             raise
         logger.info("instance config applied and agent instances rebuilt")
     return InstanceConfigApplyResult(
@@ -184,33 +189,26 @@ def _restore_instance_config(snapshot: InstanceConfigSchema) -> None:
 
 async def rebuild_agent_instances() -> None:
     old_pool = get_agent_pool()
-    new_pool = replace_agent_pool(AgentSessionPool())
+    replacement_pool = replace_agent_pool(AgentSessionPool())
     try:
         try:
             await stop_subagent_runtime()
         finally:
             await old_pool.stop()
         await start_subagent_runtime()
-        await new_pool.start()
+        await replacement_pool.start()
     except BaseException as exc:
         logger.exception("agent instance rebuild failed")
-        try:
-            await new_pool.stop()
-        except Exception as cleanup_error:
-            logger.exception("failed to stop replacement agent pool")
-            exc.add_note(f"replacement agent pool cleanup also failed: {cleanup_error}")
-
-        fallback_pool = replace_agent_pool(AgentSessionPool())
-        try:
-            await fallback_pool.start()
-        except Exception as recovery_error:
-            logger.exception("failed to start fallback agent pool")
-            exc.add_note(f"fallback agent pool start also failed: {recovery_error}")
-        try:
-            await start_subagent_runtime()
-        except Exception as recovery_error:
-            logger.exception("failed to recover subagent runtime")
-            exc.add_note(f"subagent runtime recovery also failed: {recovery_error}")
+        for name, cleanup in (
+            ("subagent runtime", stop_subagent_runtime),
+            ("replacement agent pool", replacement_pool.stop),
+            ("previous agent pool", old_pool.stop),
+        ):
+            try:
+                await cleanup()
+            except BaseException as cleanup_error:
+                logger.exception("failed to clean up %s", name)
+                exc.add_note(f"{name} cleanup also failed: {cleanup_error}")
         raise
 
 

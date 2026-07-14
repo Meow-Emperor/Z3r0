@@ -470,15 +470,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sandbox-containers/create-options": {
+    "/api/sandbox-containers/create-options/hosts": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Sandbox Container Create Options Route */
-        get: operations["sandbox_container_create_options_route_api_sandbox_containers_create_options_get"];
+        /** Query Sandbox Container Host Options Route */
+        get: operations["query_sandbox_container_host_options_route_api_sandbox_containers_create_options_hosts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox-containers/create-options/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Sandbox Container Image Options Route */
+        get: operations["query_sandbox_container_image_options_route_api_sandbox_containers_create_options_images_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -873,11 +890,46 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Work Project Route */
+        get: operations["get_work_project_route_api_work_projects__id__get"];
         put?: never;
         post?: never;
         /** Delete Work Project Route */
         delete: operations["delete_work_project_route_api_work_projects__id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-projects/{id}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Work Project Assets Route */
+        get: operations["query_work_project_assets_route_api_work_projects__id__assets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-projects/{id}/attack-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Work Project Attack Paths Route */
+        get: operations["query_work_project_attack_paths_route_api_work_projects__id__attack_paths_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -900,6 +952,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-projects/{id}/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Work Project Findings Route */
+        get: operations["query_work_project_findings_route_api_work_projects__id__findings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-projects/{id}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Work Project Graph Route */
+        get: operations["get_work_project_graph_route_api_work_projects__id__graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-projects/{id}/metadata": {
         parameters: {
             query?: never;
@@ -915,23 +1001,6 @@ export interface paths {
         head?: never;
         /** Update Work Project Metadata Route */
         patch: operations["update_work_project_metadata_route_api_work_projects__id__metadata_patch"];
-        trace?: never;
-    };
-    "/api/work-projects/{id}/record-snapshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Work Project Record Snapshot Route */
-        get: operations["get_work_project_record_snapshot_route_api_work_projects__id__record_snapshot_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/work-projects/{id}/retry": {
@@ -997,15 +1066,9 @@ export interface components {
              * @default
              */
             api_key: string;
-            /**
-             * Base Url
-             * @default
-             */
+            /** Base Url */
             base_url: string;
-            /**
-             * Code
-             * @default
-             */
+            /** Code */
             code: string;
             /**
              * Context Window
@@ -1017,15 +1080,9 @@ export interface components {
              * @default
              */
             description: string;
-            /**
-             * Model
-             * @default
-             */
+            /** Model */
             model: string;
-            /**
-             * Name
-             * @default
-             */
+            /** Name */
             name: string;
             /**
              * Use Responses
@@ -1034,6 +1091,11 @@ export interface components {
             use_responses: boolean;
         };
         AgentEventSchema: components["schemas"]["UserMessageEvent"] | components["schemas"]["TurnBoundaryEvent"] | components["schemas"]["RunStateEvent"] | components["schemas"]["TextDeltaEvent"] | components["schemas"]["TextCompleteEvent"] | components["schemas"]["ThinkingDeltaEvent"] | components["schemas"]["ThinkingCompleteEvent"] | components["schemas"]["ToolCallEvent"] | components["schemas"]["ToolResultEvent"] | components["schemas"]["SubagentTaskEvent"] | components["schemas"]["DoneEvent"] | components["schemas"]["ErrorEvent"];
+        /**
+         * AgentEventTypeSchema
+         * @enum {string}
+         */
+        AgentEventTypeSchema: "user_message" | "turn_boundary" | "run_state" | "thinking_delta" | "thinking_complete" | "text_delta" | "text_complete" | "tool_call" | "tool_result" | "subagent_task" | "done" | "error";
         /**
          * AgentImageDetailSchema
          * @enum {string}
@@ -1069,6 +1131,11 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * AgentInputPartTypeSchema
+         * @enum {string}
+         */
+        AgentInputPartTypeSchema: "text" | "image";
         /** AgentPoolConfig */
         AgentPoolConfig: {
             /**
@@ -1094,11 +1161,6 @@ export interface components {
              * @default 0.8
              */
             context_budget_model_call_ratio: number;
-            /**
-             * Context Compression Enabled
-             * @default true
-             */
-            context_compression_enabled: boolean;
             /**
              * Context Compression Hard Stop Ratio
              * @default 0.98
@@ -1574,14 +1636,14 @@ export interface components {
              */
             message: string;
         };
-        /** CommonResponse[KnowledgeGraph] */
-        CommonResponse_KnowledgeGraph_: {
+        /** CommonResponse[KnowledgeGraphSchema] */
+        CommonResponse_KnowledgeGraphSchema_: {
             /**
              * Code
              * @default 200
              */
             code: number;
-            data?: components["schemas"]["KnowledgeGraph"] | null;
+            data?: components["schemas"]["KnowledgeGraphSchema"] | null;
             /**
              * Message
              * @default success
@@ -1770,6 +1832,34 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QuerySandboxContainerHostOptionsResponse] */
+        CommonResponse_QuerySandboxContainerHostOptionsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QuerySandboxContainerHostOptionsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QuerySandboxContainerImageOptionsResponse] */
+        CommonResponse_QuerySandboxContainerImageOptionsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QuerySandboxContainerImageOptionsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QuerySandboxContainersResponse] */
         CommonResponse_QuerySandboxContainersResponse_: {
             /**
@@ -1812,6 +1902,48 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QueryWorkProjectAssetsResponse] */
+        CommonResponse_QueryWorkProjectAssetsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryWorkProjectAssetsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryWorkProjectAttackPathsResponse] */
+        CommonResponse_QueryWorkProjectAttackPathsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryWorkProjectAttackPathsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryWorkProjectFindingsResponse] */
+        CommonResponse_QueryWorkProjectFindingsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryWorkProjectFindingsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QueryWorkProjectsResponse] */
         CommonResponse_QueryWorkProjectsResponse_: {
             /**
@@ -1820,20 +1952,6 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["QueryWorkProjectsResponse"] | null;
-            /**
-             * Message
-             * @default success
-             */
-            message: string;
-        };
-        /** CommonResponse[SandboxContainerCreateOptionsResponse] */
-        CommonResponse_SandboxContainerCreateOptionsResponse_: {
-            /**
-             * Code
-             * @default 200
-             */
-            code: number;
-            data?: components["schemas"]["SandboxContainerCreateOptionsResponse"] | null;
             /**
              * Message
              * @default success
@@ -1938,14 +2056,14 @@ export interface components {
              */
             message: string;
         };
-        /** CommonResponse[WorkProjectRecordSnapshotSchema] */
-        CommonResponse_WorkProjectRecordSnapshotSchema_: {
+        /** CommonResponse[WorkProjectGraphViewSchema] */
+        CommonResponse_WorkProjectGraphViewSchema_: {
             /**
              * Code
              * @default 200
              */
             code: number;
-            data?: components["schemas"]["WorkProjectRecordSnapshotSchema"] | null;
+            data?: components["schemas"]["WorkProjectGraphViewSchema"] | null;
             /**
              * Message
              * @default success
@@ -2138,10 +2256,7 @@ export interface components {
         };
         /** CreateSystemUserRequest */
         CreateSystemUserRequest: {
-            /**
-             * Email
-             * @default
-             */
+            /** Email */
             email: string;
             /** Password */
             password: string;
@@ -2218,14 +2333,6 @@ export interface components {
             /** Id */
             id: number;
         };
-        /**
-         * DocStatus
-         * @description Document processing status.
-         *     Pipeline order: PENDING -> PARSING -> ANALYZING (optional) -> PROCESSING -> PROCESSED | FAILED.
-         *     PREPROCESSED is deprecated, kept for backward compatibility.
-         * @enum {string}
-         */
-        DocStatus: "pending" | "parsing" | "analyzing" | "processing" | "preprocessed" | "processed" | "failed";
         /** DoneEvent */
         DoneEvent: {
             /**
@@ -2377,7 +2484,7 @@ export interface components {
             parse_format?: string | null;
             /** Process Options */
             process_options?: string | null;
-            status: components["schemas"]["DocStatus"];
+            status: components["schemas"]["KnowledgeDocumentStatus"];
             /** Track Id */
             track_id?: string | null;
             /**
@@ -2405,7 +2512,7 @@ export interface components {
             file_name: string;
             /** Id */
             id: string;
-            status: components["schemas"]["DocStatus"];
+            status: components["schemas"]["KnowledgeDocumentStatus"];
             /** Track Id */
             track_id?: string | null;
             /**
@@ -2414,26 +2521,30 @@ export interface components {
              */
             updated_at: string;
         };
-        /** KnowledgeGraph */
-        KnowledgeGraph: {
-            /**
-             * Edges
-             * @default []
-             */
-            edges: components["schemas"]["KnowledgeGraphEdge"][];
-            /**
-             * Is Truncated
-             * @default false
-             */
-            is_truncated: boolean;
-            /**
-             * Nodes
-             * @default []
-             */
-            nodes: components["schemas"]["KnowledgeGraphNode"][];
+        /**
+         * KnowledgeDocumentStatus
+         * @enum {string}
+         */
+        KnowledgeDocumentStatus: "pending" | "parsing" | "analyzing" | "processing" | "processed" | "failed";
+        /** KnowledgeDocumentStatusCounts */
+        KnowledgeDocumentStatusCounts: {
+            /** Analyzing */
+            analyzing: number;
+            /** Failed */
+            failed: number;
+            /** Parsing */
+            parsing: number;
+            /** Pending */
+            pending: number;
+            /** Processed */
+            processed: number;
+            /** Processing */
+            processing: number;
+            /** Total */
+            total: number;
         };
-        /** KnowledgeGraphEdge */
-        KnowledgeGraphEdge: {
+        /** KnowledgeGraphEdgeSchema */
+        KnowledgeGraphEdgeSchema: {
             /** Id */
             id: string;
             /** Properties */
@@ -2445,10 +2556,10 @@ export interface components {
             /** Target */
             target: string;
             /** Type */
-            type: string | null;
+            type: string;
         };
-        /** KnowledgeGraphNode */
-        KnowledgeGraphNode: {
+        /** KnowledgeGraphNodeSchema */
+        KnowledgeGraphNodeSchema: {
             /** Id */
             id: string;
             /** Labels */
@@ -2457,6 +2568,15 @@ export interface components {
             properties: {
                 [key: string]: unknown;
             };
+        };
+        /** KnowledgeGraphSchema */
+        KnowledgeGraphSchema: {
+            /** Edges */
+            edges: components["schemas"]["KnowledgeGraphEdgeSchema"][];
+            /** Is Truncated */
+            is_truncated: boolean;
+            /** Nodes */
+            nodes: components["schemas"]["KnowledgeGraphNodeSchema"][];
         };
         /** KnowledgeVectorDetailSchema */
         KnowledgeVectorDetailSchema: {
@@ -2586,6 +2706,12 @@ export interface components {
         ListAgentSessionsResponse: {
             /** Items */
             items: components["schemas"]["AgentSessionSummarySchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
         };
         /** ListAgentsResponse */
         ListAgentsResponse: {
@@ -2610,6 +2736,12 @@ export interface components {
         ListWorkProjectSessionsResponse: {
             /** Items */
             items: components["schemas"]["AgentSessionSummarySchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
         };
         /** ManagedHostImageSchema */
         ManagedHostImageSchema: {
@@ -2708,10 +2840,7 @@ export interface components {
             page: number;
             /** Size */
             size: number;
-            /** Status Counts */
-            status_counts: {
-                [key: string]: number;
-            };
+            status_counts: components["schemas"]["KnowledgeDocumentStatusCounts"];
             /** Total */
             total: number;
         };
@@ -2730,6 +2859,28 @@ export interface components {
         QueryManagedHostsResponse: {
             /** Items */
             items: components["schemas"]["ManagedHostSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** QuerySandboxContainerHostOptionsResponse */
+        QuerySandboxContainerHostOptionsResponse: {
+            /** Items */
+            items: components["schemas"]["SandboxContainerHostOptionSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** QuerySandboxContainerImageOptionsResponse */
+        QuerySandboxContainerImageOptionsResponse: {
+            /** Items */
+            items: components["schemas"]["SandboxImageSchema"][];
             /** Page */
             page: number;
             /** Size */
@@ -2770,10 +2921,43 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** QueryWorkProjectAssetsResponse */
+        QueryWorkProjectAssetsResponse: {
+            /** Items */
+            items: components["schemas"]["WorkProjectAssetSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** QueryWorkProjectAttackPathsResponse */
+        QueryWorkProjectAttackPathsResponse: {
+            /** Items */
+            items: components["schemas"]["WorkProjectAttackPathRecordSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** QueryWorkProjectFindingsResponse */
+        QueryWorkProjectFindingsResponse: {
+            /** Items */
+            items: components["schemas"]["WorkProjectFindingRecordSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
         /** QueryWorkProjectsResponse */
         QueryWorkProjectsResponse: {
             /** Items */
-            items: components["schemas"]["WorkProjectSchema"][];
+            items: components["schemas"]["WorkProjectSummarySchema"][];
             /** Page */
             page: number;
             /** Size */
@@ -2871,13 +3055,6 @@ export interface components {
              */
             run_id: string | null;
             status: components["schemas"]["SandboxAsyncJobStatus"];
-        };
-        /** SandboxContainerCreateOptionsResponse */
-        SandboxContainerCreateOptionsResponse: {
-            /** Hosts */
-            hosts: components["schemas"]["SandboxContainerHostOptionSchema"][];
-            /** Images */
-            images: components["schemas"]["SandboxImageSchema"][];
         };
         /**
          * SandboxContainerEgressMode
@@ -3696,6 +3873,16 @@ export interface components {
          * @enum {string}
          */
         WorkProjectAssetType: "service" | "domain" | "network" | "binary";
+        /** WorkProjectAttackPathRecordSchema */
+        WorkProjectAttackPathRecordSchema: {
+            /** Assets */
+            assets: components["schemas"]["WorkProjectAssetSchema"][];
+            /** Edges */
+            edges: components["schemas"]["WorkProjectGraphEdgeSchema"][];
+            path: components["schemas"]["WorkProjectAttackPathSchema"];
+            /** Steps */
+            steps: components["schemas"]["WorkProjectAttackPathStepSchema"][];
+        };
         /** WorkProjectAttackPathSchema */
         WorkProjectAttackPathSchema: {
             /**
@@ -3768,6 +3955,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** WorkProjectFindingRecordSchema */
+        WorkProjectFindingRecordSchema: {
+            asset?: components["schemas"]["WorkProjectAssetSchema"] | null;
+            finding: components["schemas"]["WorkProjectFindingSchema"];
         };
         /** WorkProjectFindingSchema */
         WorkProjectFindingSchema: {
@@ -3868,14 +4060,17 @@ export interface components {
          * @enum {string}
          */
         WorkProjectGraphEdgeType: "related" | "resolves_to" | "hosts" | "connects_to" | "trusts" | "exploits" | "pivots_to" | "leads_to";
-        /** WorkProjectGraphSnapshotSchema */
-        WorkProjectGraphSnapshotSchema: {
-            /** Attack Path Steps */
-            attack_path_steps: components["schemas"]["WorkProjectAttackPathStepSchema"][];
-            /** Attack Paths */
-            attack_paths: components["schemas"]["WorkProjectAttackPathSchema"][];
+        /** WorkProjectGraphViewSchema */
+        WorkProjectGraphViewSchema: {
+            /** Assets */
+            assets: components["schemas"]["WorkProjectAssetSchema"][];
             /** Edges */
             edges: components["schemas"]["WorkProjectGraphEdgeSchema"][];
+            /**
+             * Is Truncated
+             * @default false
+             */
+            is_truncated: boolean;
         };
         /** WorkProjectOwnerSchema */
         WorkProjectOwnerSchema: {
@@ -3885,23 +4080,20 @@ export interface components {
             /** Username */
             username: string;
         };
-        /** WorkProjectRecordSnapshotSchema */
-        WorkProjectRecordSnapshotSchema: {
-            project: components["schemas"]["WorkProjectSchema"];
-            records: components["schemas"]["WorkProjectRecordsSchema"];
-        };
-        /** WorkProjectRecordsSchema */
-        WorkProjectRecordsSchema: {
-            /** Assets */
-            assets: components["schemas"]["WorkProjectAssetSchema"][];
-            /** Findings */
-            findings: components["schemas"]["WorkProjectFindingSchema"][];
-            graph: components["schemas"]["WorkProjectGraphSnapshotSchema"];
-        };
         /** WorkProjectSchema */
         WorkProjectSchema: {
             /** Agent Summaries */
             agent_summaries: components["schemas"]["WorkProjectAgentSummarySchema"][];
+            /**
+             * Agent Summary Count
+             * @default 0
+             */
+            agent_summary_count: number;
+            /**
+             * Asset Count
+             * @default 0
+             */
+            asset_count: number;
             /** Assets */
             assets: components["schemas"]["WorkProjectAssetSchema"][];
             /**
@@ -3948,6 +4140,11 @@ export interface components {
              */
             session_count: number;
             status: components["schemas"]["WorkProjectStatus"];
+            /**
+             * Task Count
+             * @default 0
+             */
+            task_count: number;
             /** Tasks */
             tasks: components["schemas"]["WorkProjectTaskSchema"][];
             type: components["schemas"]["WorkProjectType"];
@@ -3962,6 +4159,74 @@ export interface components {
          * @enum {string}
          */
         WorkProjectStatus: "working" | "completed" | "canceled";
+        /** WorkProjectSummarySchema */
+        WorkProjectSummarySchema: {
+            /**
+             * Agent Summary Count
+             * @default 0
+             */
+            agent_summary_count: number;
+            /**
+             * Asset Count
+             * @default 0
+             */
+            asset_count: number;
+            /**
+             * Can Cancel
+             * @default false
+             */
+            can_cancel: boolean;
+            /**
+             * Can Create Session
+             * @default false
+             */
+            can_create_session: boolean;
+            /**
+             * Can Retry
+             * @default false
+             */
+            can_retry: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Owner User Ids */
+            owner_user_ids: number[];
+            /** Owners */
+            owners: components["schemas"]["WorkProjectOwnerSchema"][];
+            /**
+             * Progress
+             * @default 0
+             */
+            progress: number;
+            sandbox_container?: components["schemas"]["SandboxContainerSchema"] | null;
+            /** Sandbox Container Id */
+            sandbox_container_id?: number | null;
+            /**
+             * Session Count
+             * @default 0
+             */
+            session_count: number;
+            status: components["schemas"]["WorkProjectStatus"];
+            /**
+             * Task Count
+             * @default 0
+             */
+            task_count: number;
+            type: components["schemas"]["WorkProjectType"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** WorkProjectTaskSchema */
         WorkProjectTaskSchema: {
             /**
@@ -4020,7 +4285,8 @@ export interface operations {
     list_agent_sessions_route_api_agent_sessions_get: {
         parameters: {
             query?: {
-                limit?: number;
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -5287,7 +5553,7 @@ export interface operations {
             query?: {
                 page?: number;
                 size?: number;
-                status?: components["schemas"]["DocStatus"] | null;
+                status?: components["schemas"]["KnowledgeDocumentStatus"] | null;
             };
             header?: never;
             path?: never;
@@ -5528,7 +5794,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommonResponse_KnowledgeGraph_"];
+                    "application/json": components["schemas"]["CommonResponse_KnowledgeGraphSchema_"];
                 };
             };
             /** @description Unauthorized */
@@ -5578,7 +5844,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommonResponse_KnowledgeGraph_"];
+                    "application/json": components["schemas"]["CommonResponse_KnowledgeGraphSchema_"];
                 };
             };
             /** @description Bad Request */
@@ -5882,9 +6148,13 @@ export interface operations {
             };
         };
     };
-    sandbox_container_create_options_route_api_sandbox_containers_create_options_get: {
+    query_sandbox_container_host_options_route_api_sandbox_containers_create_options_hosts_get: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5897,7 +6167,49 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommonResponse_SandboxContainerCreateOptionsResponse_"];
+                    "application/json": components["schemas"]["CommonResponse_QuerySandboxContainerHostOptionsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_sandbox_container_image_options_route_api_sandbox_containers_create_options_images_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QuerySandboxContainerImageOptionsResponse_"];
                 };
             };
             /** @description Unauthorized */
@@ -7409,6 +7721,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -7580,6 +7901,15 @@ export interface operations {
                     "application/json": components["schemas"]["CommonResponse_Any_"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -7693,6 +8023,55 @@ export interface operations {
             };
         };
     };
+    get_work_project_route_api_work_projects__id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_WorkProjectSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     delete_work_project_route_api_work_projects__id__delete: {
         parameters: {
             query?: never;
@@ -7724,6 +8103,111 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_work_project_assets_route_api_work_projects__id__assets_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryWorkProjectAssetsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_work_project_attack_paths_route_api_work_projects__id__attack_paths_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryWorkProjectAttackPathsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7791,6 +8275,107 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_work_project_findings_route_api_work_projects__id__findings_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryWorkProjectFindingsResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_work_project_graph_route_api_work_projects__id__graph_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_WorkProjectGraphViewSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7889,55 +8474,6 @@ export interface operations {
             };
         };
     };
-    get_work_project_record_snapshot_route_api_work_projects__id__record_snapshot_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_WorkProjectRecordSnapshotSchema_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Work project not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommonResponse_Any_"];
-                };
-            };
-        };
-    };
     retry_work_project_route_api_work_projects__id__retry_post: {
         parameters: {
             query?: never;
@@ -8007,7 +8543,10 @@ export interface operations {
     };
     list_work_project_sessions_route_api_work_projects__id__sessions_get: {
         parameters: {
-            query?: never;
+            query?: {
+                page?: number;
+                size?: number;
+            };
             header?: never;
             path: {
                 id: number;

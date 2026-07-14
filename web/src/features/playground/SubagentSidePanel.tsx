@@ -6,6 +6,8 @@ import { cx } from "../../shared/lib/className";
 import type { ChatNode, SubagentExecutionItem } from "./chatState";
 import {
   findSubagentTarget,
+  isSubagentFailed,
+  isSubagentRunning,
   type SubagentSelection,
   type SubagentTab,
   type SubagentTarget,
@@ -123,9 +125,10 @@ function SubagentRunView({ run }: { run: SubagentTarget["runs"][number] }) {
 }
 
 function SubagentFallbackResult({ task }: { task: SubagentExecutionItem }) {
-  const failed = task.status === "failed" || task.status === "canceled";
-  const label = task.status === "running" ? "Progress" : failed ? "Error Preview" : "Result Preview";
-  const body = task.status === "running"
+  const failed = isSubagentFailed(task.status);
+  const running = isSubagentRunning(task.status);
+  const label = running ? "Progress" : failed ? "Error Preview" : "Result Preview";
+  const body = running
     ? task.progress || "Running"
     : previewBody(task);
 
@@ -142,7 +145,7 @@ function SubagentTaskMeta({ item }: { item: SubagentExecutionItem }) {
     <div className="subagent-task-meta">
       <SubagentStatusTag status={item.status} />
       <span>{item.runId}</span>
-      {item.status === "running" && item.progress ? <span>{item.progress}</span> : null}
+      {isSubagentRunning(item.status) && item.progress ? <span>{item.progress}</span> : null}
     </div>
   );
 }

@@ -261,7 +261,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         restoreRect: getWindowRect(current),
       };
     });
-  }, [fitTerminal]);
+  }, []);
 
   const minimizeShell = useCallback(() => {
     if (!shell) return;
@@ -497,9 +497,32 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     let socket: WebSocket | null = null;
     let disposable: { dispose: () => void } | null = null;
 
+    const updateShellStatus = (status: ShellStatus) => {
+      setShell((current) => (
+        current?.connectionKey === activeConnectionKey && current.shellUrl === activeShellUrl
+          ? { ...current, status }
+          : current
+      ));
+    };
+    const onSocketTerminated = () => updateShellStatus("closed");
+    const onSocketOpen = () => {
+      updateShellStatus("open");
+      terminal?.focus();
+      fitTerminal({ snapHeight: false });
+    };
+    const onSocketMessage = (event: MessageEvent) => {
+      if (!terminal) return;
+      if (typeof event.data === "string") {
+        terminal.write(event.data);
+        return;
+      }
+      terminal.write(SHELL_OUTPUT_DECODER.decode(event.data as ArrayBuffer));
+    };
     const cleanup = () => {
       disposable?.dispose();
       if (socket) {
+        socket.removeEventListener("open", onSocketOpen);
+        socket.removeEventListener("message", onSocketMessage);
         socket.removeEventListener("close", onSocketTerminated);
         socket.removeEventListener("error", onSocketTerminated);
         socket.close();
@@ -512,10 +535,6 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       socket = null;
       terminal = null;
       fit = null;
-    };
-
-    const onSocketTerminated = () => {
-      setShell((current) => current ? { ...current, status: "closed" } : current);
     };
 
     void loadXterm()
@@ -546,7 +565,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           cleanup();
           showApiError(error);
-          setShell((current) => current ? { ...current, status: "closed" } : current);
+          updateShellStatus("closed");
           return;
         }
 
@@ -559,26 +578,15 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           }
         });
 
-        socket.addEventListener("open", () => {
-          setShell((current) => current ? { ...current, status: "open" } : current);
-          terminal?.focus();
-          fitTerminal({ snapHeight: false });
-        });
-        socket.addEventListener("message", (event) => {
-          if (!terminal) return;
-          if (typeof event.data === "string") {
-            terminal.write(event.data);
-            return;
-          }
-          terminal.write(SHELL_OUTPUT_DECODER.decode(event.data as ArrayBuffer));
-        });
+        socket.addEventListener("open", onSocketOpen);
+        socket.addEventListener("message", onSocketMessage);
         socket.addEventListener("close", onSocketTerminated);
         socket.addEventListener("error", onSocketTerminated);
       })
       .catch((error) => {
         if (canceled) return;
         showApiError(error);
-        setShell((current) => current ? { ...current, status: "closed" } : current);
+        updateShellStatus("closed");
       });
 
     return () => {
@@ -833,7 +841,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
           state={fileManager}
         >
           <Suspense fallback={<div className="file-manager-loading">Loading files...</div>}>
-            <ContainerFileManager containerId={fileManager.containerId} />
+            <ContainerFileManager key={fileManager.containerId} containerId={fileManager.containerId} />
           </Suspense>
         </FloatingWindowLayer>
       ) : null}

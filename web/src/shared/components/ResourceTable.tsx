@@ -28,8 +28,14 @@ export function ResourceTable<T>({ ariaLabel, className, columns, rows, rowKey }
           <div key={col.key} role="columnheader" className={`resource-cell-${col.key}`}>{col.header}</div>
         ))}
       </div>
-      {rows.map((row) => (
-        <div key={rowKey(row)} className="resource-table-row" role="row" style={gridTemplate}>
+      {rows.map((row, index) => (
+        <div
+          key={rowKey(row)}
+          className="resource-table-row"
+          role="row"
+          style={gridTemplate}
+          data-row-index={String(index + 1).padStart(2, "0")}
+        >
           {columns.map((col) => (
             <div key={col.key} role="cell" className={`resource-cell-${col.key}`}>
               {col.render(row)}

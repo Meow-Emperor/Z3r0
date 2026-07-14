@@ -3,8 +3,8 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import type { CSSProperties } from "react";
 import {
   WORK_PROJECT_ASSET_TYPE,
-  WORK_PROJECT_ASSET_TYPES,
-  WORK_PROJECT_GRAPH_EDGE_CATEGORIES,
+  WORK_PROJECT_ASSET_TYPE_VALUES,
+  WORK_PROJECT_GRAPH_EDGE_CATEGORY_VALUES,
   workProjectEdgeCategory,
   type WorkProjectGraphEdgeCategory,
 } from "../../shared/api/contract";
@@ -16,7 +16,7 @@ import {
   WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL,
   WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL,
 } from "../../shared/lib/labels";
-import { filledDetailItems, type DetailItem, type FilledDetailItem } from "./workProjectDetails";
+import { filledDetailItems, type DetailItem, type FilledDetailItem } from "./recordDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
 
 const ASSET_TYPE_COLOR: Record<WorkProjectAssetType, string> = {
@@ -323,7 +323,7 @@ function GraphLegend() {
     <div className="project-graph-legend">
       <div className="project-graph-legend-group">
         <span className="project-graph-legend-title">Nodes</span>
-        {WORK_PROJECT_ASSET_TYPES.map((type) => (
+        {WORK_PROJECT_ASSET_TYPE_VALUES.map((type) => (
           <span key={type} className="project-graph-legend-item">
             <i className="project-graph-legend-dot" style={graphColorStyle(ASSET_TYPE_COLOR[type])} />
             {WORK_PROJECT_ASSET_TYPE_LABEL[type]}
@@ -332,7 +332,7 @@ function GraphLegend() {
       </div>
       <div className="project-graph-legend-group">
         <span className="project-graph-legend-title">Edges</span>
-        {WORK_PROJECT_GRAPH_EDGE_CATEGORIES.map((category) => (
+        {WORK_PROJECT_GRAPH_EDGE_CATEGORY_VALUES.map((category) => (
           <span key={category} className="project-graph-legend-item">
             <i
               className={`project-graph-legend-line${category === "offensive" ? " project-graph-legend-line-offensive" : ""}`}

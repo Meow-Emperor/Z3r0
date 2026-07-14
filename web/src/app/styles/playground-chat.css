@@ -83,27 +83,28 @@
 }
 
 .user-bubble {
-  padding: 12px 16px;
-  color: var(--z-text-strong);
-  background: linear-gradient(135deg, var(--z-brand) 0%, var(--z-brand-dark) 100%);
-  border-radius: 16px 16px 4px 16px;
+  padding: 10px 13px;
+  color: var(--z-text);
+  background: var(--z-surface-strong);
+  border: 1px solid var(--z-line);
+  border-radius: 14px 14px 4px 14px;
   font-size: 14px;
   line-height: 1.55;
   overflow-wrap: anywhere;
   word-break: break-word;
-  box-shadow: 0 16px 32px rgba(217, 45, 58, 0.22);
-  transition:
-    box-shadow var(--motion-fast) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard);
+  transition: border-color var(--motion-fast) var(--ease-standard);
 }
 
 .chat-row-user:hover .user-bubble {
-  box-shadow: 0 18px 38px rgba(217, 45, 58, 0.26);
-  transform: translateY(-1px);
+  border-color: var(--z-line-strong);
+}
+
+.user-bubble-copy {
+  min-width: 0;
 }
 
 .user-bubble-text {
-  display: block;
+  display: inline;
   white-space: pre-wrap;
 }
 
@@ -112,6 +113,10 @@
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
   width: min(420px, 72vw);
+  margin-top: 0;
+}
+
+.user-bubble-copy + .user-bubble-images {
   margin-top: 10px;
 }
 
@@ -147,14 +152,11 @@
   align-items: center;
   gap: 3px;
   margin-right: 6px;
-  padding: 1px 7px 1px 5px;
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  color: var(--z-text-strong);
+  color: var(--z-accent);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
-  vertical-align: 1px;
+  vertical-align: middle;
 }
 
 .image-preview-overlay {

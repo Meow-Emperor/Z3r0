@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, File, Path, Query, UploadFile
-from lightrag.base import DocStatus
-from lightrag.types import KnowledgeGraph
 
 from handler.knowledge.resources import (
     delete_knowledge_document_handler,
@@ -22,12 +20,15 @@ from schema.common.responses import CommonResponse
 from schema.knowledge.resources import (
     DeleteKnowledgeDocumentResponse,
     KnowledgeDocumentDetailSchema,
+    KnowledgeDocumentStatus,
+    KnowledgeGraphSchema,
     KnowledgeVectorDetailSchema,
     QueryKnowledgeDocumentsResponse,
     QueryKnowledgeVectorsResponse,
     UploadKnowledgeDocumentsResponse,
 )
 from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
+from service.knowledge.constants import KNOWLEDGE_GRAPH_MAX_NODES
 
 
 router = APIRouter(
@@ -37,14 +38,12 @@ router = APIRouter(
 )
 
 NOT_FOUND_RESPONSE = not_found_response("Knowledge document")
-KNOWLEDGE_GRAPH_EXPANSION_NODES = 100
-KNOWLEDGE_GRAPH_MAX_NODES = 1000
 
 
 async def query_knowledge_documents_route(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
-    status: DocStatus | None = Query(default=None),
+    status: KnowledgeDocumentStatus | None = Query(default=None),
 ) -> CommonResponse[QueryKnowledgeDocumentsResponse]:
     return await query_knowledge_documents_handler(page, size, status)
 
@@ -88,7 +87,7 @@ async def get_knowledge_graph_route(
         ge=1,
         le=KNOWLEDGE_GRAPH_MAX_NODES,
     ),
-) -> CommonResponse[KnowledgeGraph]:
+) -> CommonResponse[KnowledgeGraphSchema]:
     return await get_knowledge_graph_handler(query, max_depth, max_nodes)
 
 
@@ -99,7 +98,7 @@ async def search_knowledge_graph_route(
         ge=1,
         le=KNOWLEDGE_GRAPH_MAX_NODES,
     ),
-) -> CommonResponse[KnowledgeGraph]:
+) -> CommonResponse[KnowledgeGraphSchema]:
     return await search_knowledge_graph_handler(query, max_nodes)
 
 
@@ -149,13 +148,13 @@ router.add_api_route(
     "/graph",
     get_knowledge_graph_route,
     methods=["GET"],
-    response_model=CommonResponse[KnowledgeGraph],
+    response_model=CommonResponse[KnowledgeGraphSchema],
     responses=COMMON_ERROR_RESPONSES,
 )
 router.add_api_route(
     "/graph/search",
     search_knowledge_graph_route,
     methods=["GET"],
-    response_model=CommonResponse[KnowledgeGraph],
+    response_model=CommonResponse[KnowledgeGraphSchema],
     responses={**COMMON_ERROR_RESPONSES, **BAD_REQUEST_RESPONSE},
 )

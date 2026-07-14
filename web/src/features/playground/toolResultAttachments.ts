@@ -1,4 +1,4 @@
-import { TOOL_RESULT_TYPE, TOOL_RESULT_TYPES } from "../../shared/api/generated/constants";
+import { TOOL_RESULT_STATUS, TOOL_RESULT_TYPE, TOOL_RESULT_TYPE_VALUES } from "../../shared/api/generated/constants";
 import type {
   ReportToolResultOutput,
   ToolResultEvent,
@@ -16,7 +16,7 @@ const TOOL_RESULT_ATTACHMENT_EXTRACTORS: Partial<Record<ToolResultType, ToolResu
   [TOOL_RESULT_TYPE.REPORT]: reportAttachmentFromToolResult,
 };
 
-const TOOL_RESULT_TYPE_SET = new Set<string>(TOOL_RESULT_TYPES);
+const TOOL_RESULT_TYPE_SET = new Set<string>(TOOL_RESULT_TYPE_VALUES);
 const TOOL_RESULT_ATTACHMENT_TYPE_PATTERN = new RegExp(
   `"type"\\s*:\\s*"(?:${Object.keys(TOOL_RESULT_ATTACHMENT_EXTRACTORS).map(escapeRegExp).join("|")})"`,
 );
@@ -32,7 +32,7 @@ const TRANSCRIPT_ATTACHMENT_IDENTITIES: {
 export function attachmentFromToolResult(event: ToolResultEvent): TranscriptAttachmentItem | null {
   if (!maybeAttachmentToolResult(event.output)) return null;
   const result = parseToolResult(event.output);
-  if (!result || result.status !== "success") return null;
+  if (!result || result.status !== TOOL_RESULT_STATUS.SUCCESS) return null;
   return TOOL_RESULT_ATTACHMENT_EXTRACTORS[result.type]?.({ event, result }) ?? null;
 }
 
@@ -81,7 +81,7 @@ function parseJsonObject(value: string): unknown {
 function isToolResult(value: unknown): value is ToolResultSchema {
   if (!isRecord(value)) return false;
   return (
-    (value.status === "success" || value.status === "error")
+    (value.status === TOOL_RESULT_STATUS.SUCCESS || value.status === TOOL_RESULT_STATUS.ERROR)
     && isToolResultType(value.type)
     && typeof value.output === "string"
   );

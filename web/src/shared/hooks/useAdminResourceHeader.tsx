@@ -1,15 +1,14 @@
 import { Button } from "@douyinfe/semi-ui";
 import { Plus, RefreshCw } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
-
 
 type AdminResourceHeaderOptions = {
   createLabel?: string;
   refreshLabel: string;
   loading: boolean;
   onCreate?: () => void;
-  onRefresh: () => void | Promise<void>;
+  onRefresh: () => unknown | Promise<unknown>;
   createIcon?: ReactNode;
   extraActions?: ReactNode;
   appendExtraActions?: boolean;

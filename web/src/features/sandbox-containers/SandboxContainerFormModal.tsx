@@ -1,9 +1,16 @@
-import { Select } from "@douyinfe/semi-ui";
+import { Select, Spin } from "@douyinfe/semi-ui";
 import { Boxes, Network, Route, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SANDBOX_CONTAINER_EGRESS_MODE } from "../../shared/api/generated/constants";
 import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourceModal } from "../../shared/components/ResourceModal";
+import type { OptionListResult } from "../../shared/hooks/useOptionList";
+import {
+  egressProxyOption,
+  sandboxEgressModeOptions,
+  sandboxHostOption,
+  sandboxImageOption,
+} from "../../shared/lib/sandboxOptions";
 import {
   createEmptyPortMapping,
   PortMappingEditor,
@@ -13,14 +20,10 @@ import {
 type SandboxContainerFormModalProps = {
   open: boolean;
   saving: boolean;
-  images: SandboxImage[];
-  imagesLoading: boolean;
-  hosts: ManagedHost[];
-  hostsLoading: boolean;
-  users: SystemUser[];
-  usersLoading: boolean;
-  egressProxies: EgressProxy[];
-  egressProxiesLoading: boolean;
+  imageOptions: OptionListResult<SandboxImage>;
+  hostOptions: OptionListResult<ManagedHost>;
+  userOptions: OptionListResult<SystemUser>;
+  egressProxyOptions: OptionListResult<EgressProxy>;
   currentUserId: number;
   onCancel: () => void;
   onSubmit: (payload: CreateSandboxContainerRequest) => Promise<void>;
@@ -29,25 +32,28 @@ type SandboxContainerFormModalProps = {
 export function SandboxContainerFormModal({
   open,
   saving,
-  images,
-  imagesLoading,
-  hosts,
-  hostsLoading,
-  users,
-  usersLoading,
-  egressProxies,
-  egressProxiesLoading,
+  imageOptions,
+  hostOptions,
+  userOptions,
+  egressProxyOptions,
   currentUserId,
   onCancel,
   onSubmit,
 }: SandboxContainerFormModalProps) {
+  const images = imageOptions.items;
+  const hosts = hostOptions.items;
+  const users = userOptions.items;
+  const egressProxies = egressProxyOptions.items;
   const [hostId, setHostId] = useState<number | undefined>();
   const [imageId, setImageId] = useState<number | undefined>();
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [egressProxyId, setEgressProxyId] = useState<number | undefined>();
   const [ownerId, setOwnerId] = useState<number | undefined>();
   const [portMappings, setPortMappings] = useState<PortMappingFormValue[]>([]);
-  const selectedImage = useMemo(() => images.find((image) => image.id === imageId), [imageId, images]);
+  const selectedImage = useMemo(
+    () => imageOptions.knownItems.find((image) => image.id === imageId),
+    [imageId, imageOptions.knownItems],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -88,7 +94,7 @@ export function SandboxContainerFormModal({
 
   const selectImage = (value: unknown) => {
     if (typeof value !== "number") return;
-    const nextImage = images.find((image) => image.id === value);
+    const nextImage = imageOptions.knownItems.find((image) => image.id === value);
     setImageId(value);
     if (!nextImage?.supports_tor && egressMode === SANDBOX_CONTAINER_EGRESS_MODE.TOR) {
       setEgressMode(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
@@ -106,10 +112,11 @@ export function SandboxContainerFormModal({
     <ResourceModal
       open={open}
       title="Create Sandbox Container"
+      titleIcon={<Boxes size={17} />}
       saving={saving}
       submitLabel="Create"
       submitDisabled={submitDisabled}
-      width={640}
+      size="standard"
       onCancel={onCancel}
       onSubmit={submit}
     >
@@ -118,11 +125,14 @@ export function SandboxContainerFormModal({
         <Select
           prefix={<Server size={16} />}
           value={hostId}
-          loading={hostsLoading}
+          loading={hostOptions.busy}
           disabled={hosts.length === 0}
           placeholder="Select managed host"
+          remote
+          onSearch={hostOptions.search}
+          onListScroll={hostOptions.onListScroll}
           onChange={(value) => typeof value === "number" && setHostId(value)}
-          optionList={hosts.map((host) => ({ label: `${host.ip_address}:${host.docker_management_port}`, value: host.id }))}
+          optionList={hosts.map(sandboxHostOption)}
         />
       </label>
 
@@ -131,14 +141,14 @@ export function SandboxContainerFormModal({
         <Select
           prefix={<Boxes size={16} />}
           value={imageId}
-          loading={imagesLoading}
+          loading={imageOptions.busy}
           disabled={images.length === 0}
           placeholder="Select a sandbox image"
+          remote
+          onSearch={imageOptions.search}
+          onListScroll={imageOptions.onListScroll}
           onChange={selectImage}
-          optionList={images.map((image) => ({
-            label: `${image.image_name} · control ${image.control_proxy_port}`,
-            value: image.id,
-          }))}
+          optionList={images.map(sandboxImageOption)}
         />
       </label>
 
@@ -147,8 +157,11 @@ export function SandboxContainerFormModal({
         <Select
           prefix={<User size={16} />}
           value={ownerId}
-          loading={usersLoading}
+          loading={userOptions.busy}
           placeholder="Select container owner"
+          remote
+          onSearch={userOptions.search}
+          onListScroll={userOptions.onListScroll}
           onChange={(value) => typeof value === "number" && setOwnerId(value)}
           optionList={users.map((u) => ({ label: u.username, value: u.id }))}
         />
@@ -159,11 +172,7 @@ export function SandboxContainerFormModal({
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
-          optionList={[
-            { label: "Direct", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
-            { label: "Managed Proxy", value: SANDBOX_CONTAINER_EGRESS_MODE.PROXY },
-            { label: "Tor", value: SANDBOX_CONTAINER_EGRESS_MODE.TOR, disabled: !selectedImage?.supports_tor },
-          ]}
+          optionList={sandboxEgressModeOptions({ includeProxy: true, supportsTor: Boolean(selectedImage?.supports_tor) })}
           onChange={(value) => {
             if (typeof value !== "string") return;
             const next = value as SandboxContainerEgressMode;
@@ -179,11 +188,14 @@ export function SandboxContainerFormModal({
           <Select
             prefix={<Network size={16} />}
             value={egressProxyId}
-            loading={egressProxiesLoading}
+            loading={egressProxyOptions.busy}
             placeholder="Select an egress proxy"
-            emptyContent="No egress proxies"
+            emptyContent={egressProxyOptions.busy ? <Spin size="small" /> : "No egress proxies"}
+            remote
+            onSearch={egressProxyOptions.search}
+            onListScroll={egressProxyOptions.onListScroll}
             onChange={(value) => setEgressProxyId(typeof value === "number" ? value : undefined)}
-            optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
+            optionList={egressProxies.map(egressProxyOption)}
           />
         </label>
       ) : null}
@@ -196,8 +208,4 @@ export function SandboxContainerFormModal({
       />
     </ResourceModal>
   );
-}
-
-function egressProxyOptionLabel(proxy: EgressProxy) {
-  return `${proxy.proxy_type}://${proxy.proxy_host}:${proxy.proxy_port}`;
 }

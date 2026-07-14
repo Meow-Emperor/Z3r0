@@ -114,7 +114,7 @@ def read_command(output_file: str, start_line: int, line_count: int) -> tuple[st
 
 
 def output_chunk(*, output_file: str, start_line: int, line_count: int, content: str) -> SandboxCommandOutputChunk:
-    start, count, end = normalize_read_range(start_line, line_count)
+    start, _, end = normalize_read_range(start_line, line_count)
     return SandboxCommandOutputChunk(
         output_file=validate_output_path(output_file),
         start_line=start,

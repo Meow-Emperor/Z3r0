@@ -2,6 +2,7 @@ import type {
   AgentContentEvent,
   AgentInputPart,
 } from "../../shared/api/types";
+import { AGENT_EVENT_TYPE } from "../../shared/api/generated/constants";
 import {
   contentSignature,
   findToolBlockIndex,
@@ -117,10 +118,10 @@ export function buildChatNodesFromEvents(events: readonly AgentContentEvent[]): 
 }
 
 function applyContentEvent(state: ChatState, event: AgentContentEvent): ChatState {
-  if (event.type === "user_message") {
+  if (event.type === AGENT_EVENT_TYPE.USER_MESSAGE) {
     return appendUserMessage(state, event.content, event.display_text, event.target_agent_code, event.created_at, event.seq);
   }
-  if (event.type === "turn_boundary") {
+  if (event.type === AGENT_EVENT_TYPE.TURN_BOUNDARY) {
     return event.nested_call_id ? state : finishChatTurn(state);
   }
   const nestedCallId = "nested_call_id" in event ? event.nested_call_id : "";
@@ -153,10 +154,10 @@ function routeToTopLevel(state: ChatState, event: AgentContentEvent): ChatState 
   const nextState = finished
     ? finishChatTurn({ ...state, nodes, liveFrom })
     : { ...state, nodes, streaming: true, liveFrom };
-  if (event.type === "tool_call" || event.type === "tool_result") {
+  if (event.type === AGENT_EVENT_TYPE.TOOL_CALL || event.type === AGENT_EVENT_TYPE.TOOL_RESULT) {
     return drainPendingNested(nextState, event.call_id);
   }
-  if (event.type === "error") return clearPendingNested(nextState);
+  if (event.type === AGENT_EVENT_TYPE.ERROR) return clearPendingNested(nextState);
   return nextState;
 }
 
@@ -182,7 +183,7 @@ function routeToNested(state: ChatState, event: AgentContentEvent, nestedCallId:
 }
 
 function routeToNestedNow(state: ChatState, event: AgentContentEvent, nestedCallId: string): ChatState | null {
-  if (event.type === "subagent_task") {
+  if (event.type === AGENT_EVENT_TYPE.SUBAGENT_TASK) {
     return updateNestedTool(state, nestedCallId, (tool) => {
       tool.subagentTask = subagentExecutionItemFromEvent(event);
     });

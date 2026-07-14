@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from ipaddress import IPv6Address, ip_address
 
 import httpx
 from sqlmodel import select
@@ -18,6 +19,7 @@ from service.sandbox.egress import (
 _http_client: httpx.AsyncClient | None = None
 _EGRESS_APPLY_ATTEMPTS = 3
 _EGRESS_APPLY_RETRY_SECONDS = 0.5
+_EGRESS_APPLY_BATCH_SIZE = 16
 
 
 @dataclass(frozen=True)
@@ -49,11 +51,12 @@ async def resolve_sandbox_control_proxy_target(
     if require_running and container.status != SandboxContainerStatus.RUNNING:
         return None
 
-    base = f"http://{host.ip_address}:{container.control_proxy_host_port}"
+    url_host = _url_host(host.ip_address)
+    base = f"http://{url_host}:{container.control_proxy_host_port}"
     return SandboxControlProxyTarget(
         container_id=container.id or container_id,
         base_url=base,
-        ws_base_url=f"ws://{host.ip_address}:{container.control_proxy_host_port}",
+        ws_base_url=f"ws://{url_host}:{container.control_proxy_host_port}",
         token=container.control_proxy_token,
         status=container.status,
     )
@@ -110,15 +113,36 @@ async def apply_managed_proxy_egress_to_running_containers(egress_proxy_id: int)
             .where(SandboxContainer.status == SandboxContainerStatus.RUNNING)
         )).all())
 
+    normalized_ids = [container_id for container_id in container_ids if container_id is not None]
     failed: list[int] = []
-    for container_id in container_ids:
-        if container_id is None:
-            continue
-        try:
-            await apply_container_egress(container_id)
-        except Exception:
-            failed.append(container_id)
+    for offset in range(0, len(normalized_ids), _EGRESS_APPLY_BATCH_SIZE):
+        results = await asyncio.gather(*(
+            _apply_container_egress_safely(container_id)
+            for container_id in normalized_ids[offset:offset + _EGRESS_APPLY_BATCH_SIZE]
+        ))
+        failed.extend(
+            container_id
+            for container_id, succeeded in zip(
+                normalized_ids[offset:offset + _EGRESS_APPLY_BATCH_SIZE],
+                results,
+                strict=True,
+            )
+            if not succeeded
+        )
     return failed
+
+
+async def _apply_container_egress_safely(container_id: int) -> bool:
+    try:
+        await apply_container_egress(container_id)
+    except Exception:
+        return False
+    return True
+
+
+def _url_host(value: str) -> str:
+    address = ip_address(value)
+    return f"[{address}]" if isinstance(address, IPv6Address) else str(address)
 
 
 async def apply_egress_environment(target: SandboxControlProxyTarget, environment: dict[str, str]) -> None:

@@ -10,8 +10,8 @@ class SystemUser(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     role: SystemUserRole = Field(default=SystemUserRole.USER)
-    email: str = Field(default="")
-    username: str = Field(default="")
+    email: str = Field(index=True, unique=True)
+    username: str = Field(index=True, unique=True)
     password: str = Field(default="")
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)

@@ -37,11 +37,13 @@ The following sections configure execution resources, create a project, and run 
 
 ### Manage Knowledge Documents
 
-Knowledges accepts Markdown and PDF documents through LightRAG Core, with multi-file ingestion, parallel parsing and indexing, processing-status review, vector-chunk inspection, semantic entity and relationship search, and incremental graph exploration. Document details include the content summary, extracted document text, parsing metadata, and chunk identifiers. Vector details include the complete chunk content, heading hierarchy, and source metadata.
+Knowledges turns assessment playbooks, research notes, reports, and other reference material into a searchable knowledge collection. Upload one or more Markdown or PDF documents, then follow their processing status while the collection is parsed and indexed.
 
-After indexing, the managed document record, vector chunks, and graph contributions form the retained knowledge representation; the uploaded source file is no longer required. Deleting a document removes its vectors and graph contributions consistently.
+The Documents view presents each source, its processing state, content summary, extracted text, and parsing details. The Vectors view exposes the original text segments and source metadata used by retrieval. The Knowledge Graph view supports semantic search across entities and relationships, with related areas available for progressive exploration. Together, these views provide a traceable review path from source material to retrieval content and graph relationships.
 
-Before each Agent turn, retrieval combines the current request with a bounded set of recent user topics. Follow-up questions and notification-driven continuations therefore retain the active subject without replaying the full conversation. Retrieved document and graph context applies only to that turn; the next turn performs a fresh retrieval from its own request and recent topic context.
+After indexing, the managed document content, vectors, and graph relationships form the retained knowledge representation, so the uploaded source file does not need to remain available. Deleting a document removes its indexed text and graph contributions from the collection.
+
+Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs. Retrieval follows the active request and conversation focus, allowing follow-up work to remain grounded in relevant source material as the task develops.
 
 ### Connect a Host
 

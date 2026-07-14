@@ -5,7 +5,7 @@ import base64
 import socket
 import ssl
 from time import perf_counter
-from urllib.parse import quote, urlsplit
+from urllib.parse import urlsplit
 
 from sqlalchemy import String, cast, or_
 from sqlmodel import select
@@ -15,7 +15,9 @@ from model.egress_proxy.proxies import EgressProxy
 from model.sandbox.containers import SandboxContainer
 from schema.egress_proxy.proxies import EgressProxyType
 from schema.sandbox.containers import SandboxContainerEgressMode
-from service.common.pagination import Page, paginate_statement
+from service.common.pagination import Page, RESOURCE_PAGE_SIZE, paginate_statement
+from service.egress_proxy.locking import egress_proxy_mutation_lock
+from service.sandbox.control_proxy import apply_managed_proxy_egress_to_running_containers
 
 
 EGRESS_PROXY_TEST_URL = "https://www.gstatic.com/generate_204"
@@ -34,6 +36,7 @@ class UpdateEgressProxyResult:
     proxy: EgressProxy | None
     not_found: bool = False
     message: str = ""
+    failed_container_ids: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -79,8 +82,29 @@ async def update_egress_proxy(
     proxy_account: str | None = None,
     proxy_password: str | None = None,
 ) -> UpdateEgressProxyResult:
+    async with egress_proxy_mutation_lock(id):
+        return await _update_egress_proxy(
+            id=id,
+            proxy_type=proxy_type,
+            proxy_host=proxy_host,
+            proxy_port=proxy_port,
+            proxy_account=proxy_account,
+            proxy_password=proxy_password,
+        )
+
+
+async def _update_egress_proxy(
+    id: int,
+    proxy_type: EgressProxyType | None,
+    proxy_host: str | None,
+    proxy_port: int | None,
+    proxy_account: str | None,
+    proxy_password: str | None,
+) -> UpdateEgressProxyResult:
     async with get_async_session() as session:
-        proxy = await session.get(EgressProxy, id)
+        proxy = (await session.exec(
+            select(EgressProxy).where(EgressProxy.id == id).with_for_update()
+        )).one_or_none()
         if proxy is None:
             return UpdateEgressProxyResult(proxy=None, not_found=True, message="egress proxy not found")
 
@@ -99,12 +123,24 @@ async def update_egress_proxy(
         session.add(proxy)
         await session.commit()
         await session.refresh(proxy)
-        return UpdateEgressProxyResult(proxy=proxy)
+
+    failed_container_ids = await apply_managed_proxy_egress_to_running_containers(id)
+    return UpdateEgressProxyResult(
+        proxy=proxy,
+        failed_container_ids=tuple(failed_container_ids),
+    )
 
 
 async def delete_egress_proxy(id: int) -> DeleteEgressProxyResult:
+    async with egress_proxy_mutation_lock(id):
+        return await _delete_egress_proxy(id)
+
+
+async def _delete_egress_proxy(id: int) -> DeleteEgressProxyResult:
     async with get_async_session() as session:
-        proxy = await session.get(EgressProxy, id)
+        proxy = (await session.exec(
+            select(EgressProxy).where(EgressProxy.id == id).with_for_update()
+        )).one_or_none()
         if proxy is None:
             return DeleteEgressProxyResult(deleted=False, not_found=True, message="egress proxy not found")
         if await _egress_proxy_has_sandbox_containers(session, id):
@@ -118,7 +154,11 @@ async def delete_egress_proxy(id: int) -> DeleteEgressProxyResult:
         return DeleteEgressProxyResult(deleted=True)
 
 
-async def query_egress_proxies(page: int = 1, size: int = 100, keyword: str = "") -> Page[EgressProxy]:
+async def query_egress_proxies(
+    page: int = 1,
+    size: int = RESOURCE_PAGE_SIZE,
+    keyword: str = "",
+) -> Page[EgressProxy]:
     statement = select(EgressProxy).order_by(EgressProxy.id)
 
     keyword = keyword.strip()
@@ -174,15 +214,6 @@ async def test_egress_proxy(id: int) -> TestEgressProxyResult:
         elapsed_ms=elapsed_ms,
         message="proxy test succeeded" if success else f"proxy test returned HTTP {status_code}",
     )
-
-
-def egress_proxy_upstream(proxy: EgressProxy) -> str:
-    auth = ""
-    if proxy.proxy_account:
-        account = quote(proxy.proxy_account, safe="")
-        password = quote(proxy.proxy_password, safe="")
-        auth = f"{account}:{password}@"
-    return f"{auth}{proxy.proxy_host}:{proxy.proxy_port}"
 
 
 async def _egress_proxy_has_sandbox_containers(session, proxy_id: int) -> bool:

@@ -129,9 +129,3 @@ class WorkProjectAttackPathStepRequest(BaseModel):
 
     sequence: int = Field(gt=0)
     edge_id: int = Field(gt=0)
-
-
-class WorkProjectGraphSnapshotSchema(BaseModel):
-    edges: list[WorkProjectGraphEdgeSchema]
-    attack_paths: list[WorkProjectAttackPathSchema]
-    attack_path_steps: list[WorkProjectAttackPathStepSchema]

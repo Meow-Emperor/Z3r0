@@ -1,16 +1,17 @@
-import { Empty, Modal, Spin, Tag } from "@douyinfe/semi-ui";
+import { Empty, Spin, Tag } from "@douyinfe/semi-ui";
 import { Braces, FileText } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { getKnowledgeDocument, getKnowledgeVector } from "../../shared/api/knowledges";
 import { showApiError } from "../../shared/api/feedback";
 import type { KnowledgeDocumentDetail, KnowledgeVectorDetail } from "../../shared/api/types";
+import { AppModal } from "../../shared/components/AppModal";
+import { AsyncContent } from "../../shared/components/AsyncContent";
 import { formatDateTime } from "../../shared/lib/date";
 import { KNOWLEDGE_STATUS_COLORS } from "./knowledgeUi";
 
 const CodeEditor = lazy(() => import("../container-shell/CodeEditor").then((module) => ({
   default: module.CodeEditor,
 })));
-const DETAIL_MODAL_HEIGHT = "min(640px, calc(100dvh - 120px))";
 
 export type KnowledgeDetailTarget =
   | { kind: "document"; id: string; label: string }
@@ -61,39 +62,25 @@ export function KnowledgeDetailModal({
   }, [target]);
 
   return (
-    <Modal
-      visible={target !== null}
-      centered
-      title={(
-        <div className="knowledge-detail-title">
-          <strong>{target?.kind === "vector" ? "Vector Details" : "Document Details"}</strong>
-          <span>{target?.label}</span>
-        </div>
-      )}
+    <AppModal
+      open={target !== null}
+      title={target?.kind === "vector" ? "Vector Details" : "Document Details"}
+      titleIcon={target?.kind === "vector" ? <Braces size={17} /> : <FileText size={17} />}
+      titleDescription={target?.label}
       width="min(1120px, calc(100vw - 24px))"
-      height={DETAIL_MODAL_HEIGHT}
-      bodyStyle={{
-        minHeight: 0,
-        overflowY: "auto",
-        overscrollBehavior: "contain",
-        scrollbarGutter: "stable",
-      }}
-      footer={null}
       onCancel={onClose}
     >
-      <Spin spinning={loading} wrapperClassName="knowledge-detail-spin">
+      <AsyncContent
+        loading={loading}
+        empty={detail === null}
+        emptyIcon={target?.kind === "vector" ? <Braces size={42} /> : <FileText size={42} />}
+        emptyTitle="Details are unavailable"
+        wrapperClassName="knowledge-detail-spin"
+      >
         {detail?.kind === "document" ? <DocumentDetail detail={detail.data} /> : null}
         {detail?.kind === "vector" ? <VectorDetail detail={detail.data} /> : null}
-        {!loading && !detail ? (
-          <Empty
-            className="empty-state"
-            image={target?.kind === "vector" ? <Braces size={42} /> : <FileText size={42} />}
-            title="Details are unavailable"
-            description=""
-          />
-        ) : null}
-      </Spin>
-    </Modal>
+      </AsyncContent>
+    </AppModal>
   );
 }
 

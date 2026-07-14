@@ -5,35 +5,7 @@
   min-height: 0;
   overflow: hidden;
   color: var(--z-text);
-  background: var(--z-page-bg);
-}
-
-.playground-shell::before,
-.playground-shell::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  pointer-events: none;
-}
-
-.playground-shell::before {
-  opacity: 0.18;
-  background-image:
-    linear-gradient(var(--z-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--z-grid-line) 1px, transparent 1px);
-  background-size: 48px 48px;
-  animation: gridDrift 18s linear infinite;
-}
-
-.playground-shell::after {
-  opacity: 0.06;
-  background: linear-gradient(180deg, transparent, var(--z-scanline), transparent);
-  animation: scanline 9s ease-in-out infinite;
-}
-
-.playground-shell > * {
-  position: relative;
-  z-index: 1;
+  background: transparent;
 }
 
 .session-list {
@@ -186,6 +158,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.session-list-more,
+.session-project-more {
+  flex: 0 0 auto;
+  align-self: stretch;
+  min-height: 30px;
+  color: var(--z-text-subtle);
+  font-size: 12px;
+}
+
+.session-project-more {
+  margin-left: 18px;
 }
 
 .session-row-body {

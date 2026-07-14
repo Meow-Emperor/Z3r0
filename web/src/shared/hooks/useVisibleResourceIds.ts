@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function useVisibleResourceIds(items: Array<{ id: number }>) {
   const [visibleIds, setVisibleIds] = useState<Set<number>>(() => new Set());
@@ -11,14 +11,15 @@ export function useVisibleResourceIds(items: Array<{ id: number }>) {
     });
   }, [items]);
 
-  const toggle = (id: number) => {
+  const toggle = useCallback((id: number) => {
     setVisibleIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
-  return { isVisible: (id: number) => visibleIds.has(id), toggle };
+  const isVisible = useCallback((id: number) => visibleIds.has(id), [visibleIds]);
+  return { isVisible, toggle };
 }

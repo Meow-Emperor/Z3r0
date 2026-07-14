@@ -22,10 +22,8 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: var(--z-surface-strong);
+  background: transparent;
   border-left: 1px solid var(--z-line);
-  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.18);
-  backdrop-filter: blur(14px);
 }
 
 .subagent-side-header {

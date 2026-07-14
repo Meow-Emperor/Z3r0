@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from database import get_async_session
@@ -84,6 +84,10 @@ async def persist_subagent_event_unpooled(session_id: str, event: Any) -> None:
     item_key = f"sa:{run_id}"
     table = AgentEventLog.__table__
     async with get_async_session() as session:
+        await session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:session_id, 0))"),
+            {"session_id": session_id},
+        )
         existing = (await session.execute(
             select(table.c.seq).where(
                 table.c.session_id == session_id,

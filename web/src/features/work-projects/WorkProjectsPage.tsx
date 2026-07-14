@@ -9,7 +9,7 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRefreshWorkProjects } from "../../app/layouts/AdminLayout";
 import { WORK_PROJECT_STATUS } from "../../shared/api/contract";
@@ -17,6 +17,7 @@ import {
   cancelWorkProject,
   createWorkProject,
   deleteWorkProject,
+  getWorkProject,
   queryWorkProjects,
   retryWorkProject,
   updateWorkProjectMetadata,
@@ -25,7 +26,9 @@ import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import type {
   CreateWorkProjectRequest,
   WorkProject,
+  WorkProjectSummary,
 } from "../../shared/api/types";
+import { AsyncContent } from "../../shared/components/AsyncContent";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
@@ -51,13 +54,26 @@ export function WorkProjectsPage() {
   const {
     items: projects, page, keyword, loading, loadItems: loadProjects, total, rangeStart, rangeEnd,
     setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<WorkProject>({ query: queryWorkProjects });
+  } = usePagedResourceList<WorkProjectSummary>({ query: queryWorkProjects });
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<WorkProject | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedProject, setExpandedProject] = useState<WorkProject | null>(null);
+  const [detailLoadingId, setDetailLoadingId] = useState<number | null>(null);
+  const detailRequestRef = useRef(0);
   const refreshProjectSidebar = useRefreshWorkProjects();
   const navigate = useNavigate();
   const [adminAction, setAdminAction] = useState<{ id: number; type: AdminAction } | null>(null);
+  const adminActionRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      detailRequestRef.current += 1;
+    };
+  }, []);
 
   const refreshAll = useCallback(async () => {
     await loadProjects();
@@ -66,7 +82,7 @@ export function WorkProjectsPage() {
   useAdminResourceHeader({
     createLabel: "Create Project",
     refreshLabel: "Refresh work projects",
-    loading,
+    loading: loading || adminAction !== null || detailLoadingId !== null,
     onCreate: () => {
       setEditingProject(null);
       setModalOpen(true);
@@ -88,7 +104,7 @@ export function WorkProjectsPage() {
       (acc, project) => ({
         working: acc.working + (project.status === WORK_PROJECT_STATUS.WORKING ? 1 : 0),
         sessions: acc.sessions + project.session_count,
-        assets: acc.assets + project.assets.length,
+        assets: acc.assets + project.asset_count,
       }),
       { working: 0, sessions: 0, assets: 0 },
     ),
@@ -101,14 +117,47 @@ export function WorkProjectsPage() {
       : createWorkProject(payload)
   ));
 
-  const toggleProject = (project: WorkProject) => setExpandedId((current) => (
-    current === project.id ? null : project.id
-  ));
+  const loadProjectDetail = useCallback(async (projectId: number): Promise<WorkProject | null> => {
+    const requestId = ++detailRequestRef.current;
+    setDetailLoadingId(projectId);
+    try {
+      const response = await getWorkProject(projectId);
+      return mountedRef.current && requestId === detailRequestRef.current ? response.data ?? null : null;
+    } catch (error) {
+      if (mountedRef.current && requestId === detailRequestRef.current) showApiError(error);
+      return null;
+    } finally {
+      if (mountedRef.current && requestId === detailRequestRef.current) setDetailLoadingId(null);
+    }
+  }, []);
+
+  const toggleProject = async (project: WorkProjectSummary) => {
+    if (expandedId === project.id) {
+      detailRequestRef.current += 1;
+      setExpandedId(null);
+      setExpandedProject(null);
+      setDetailLoadingId(null);
+      return;
+    }
+    setExpandedId(project.id);
+    setExpandedProject(null);
+    const detail = await loadProjectDetail(project.id);
+    if (detail) setExpandedProject(detail);
+  };
+
+  const openProjectEditor = async (project: WorkProjectSummary) => {
+    const detail = await loadProjectDetail(project.id);
+    if (!detail) return;
+    setEditingProject(detail);
+    setModalOpen(true);
+  };
 
   const handleAdminProjectAction = async (
-    project: WorkProject,
+    project: WorkProjectSummary,
     type: AdminAction,
   ) => {
+    if (adminActionRef.current) return;
+    adminActionRef.current = true;
     setAdminAction({ id: project.id, type });
     try {
       const response = type === "cancel"
@@ -116,20 +165,27 @@ export function WorkProjectsPage() {
         : type === "retry"
           ? await retryWorkProject(project.id)
           : await deleteWorkProject(project.id);
+      if (!mountedRef.current) return;
       showApiSuccess(response);
       if (type === "delete") {
         setExpandedId((current) => (current === project.id ? null : current));
       }
       await loadProjects();
+      if (!mountedRef.current) return;
+      if (expandedId === project.id && type !== "delete") {
+        const detail = await loadProjectDetail(project.id);
+        setExpandedProject(detail);
+      }
       refreshProjectSidebar();
     } catch (error) {
-      showApiError(error);
+      if (mountedRef.current) showApiError(error);
     } finally {
-      setAdminAction(null);
+      adminActionRef.current = false;
+      if (mountedRef.current) setAdminAction(null);
     }
   };
 
-  const columns: ResourceColumn<WorkProject>[] = [
+  const columns: ResourceColumn<WorkProjectSummary>[] = [
     {
       key: "project", header: "Project", width: "minmax(210px, 0.9fr)",
       render: (project) => (
@@ -140,7 +196,9 @@ export function WorkProjectsPage() {
               theme="borderless"
               type="tertiary"
               size="small"
-              onClick={() => toggleProject(project)}
+              disabled={adminAction !== null}
+              loading={detailLoadingId === project.id && expandedId === project.id}
+              onClick={() => void toggleProject(project)}
               aria-label={`${expandedId === project.id ? "Collapse" : "Expand"} ${project.name}`}
             />
           )}
@@ -154,7 +212,7 @@ export function WorkProjectsPage() {
     { key: "status", header: "Status", width: "104px", render: (project) => <WorkProjectStatusTag project={project} /> },
     {
       key: "records", header: "Records", width: "minmax(170px, 0.5fr)",
-      render: (project) => <ResourceText>{project.assets.length} assets · {project.tasks.length} tasks</ResourceText>,
+      render: (project) => <ResourceText>{project.asset_count} assets · {project.task_count} tasks</ResourceText>,
     },
     { key: "updated", header: "Updated", width: "minmax(150px, 0.4fr)", render: (p) => formatDateTime(p.updated_at) },
     {
@@ -166,6 +224,7 @@ export function WorkProjectsPage() {
             theme="borderless"
             type="tertiary"
             aria-label={`Open workspace for ${project.name}`}
+            disabled={adminAction !== null}
             onClick={() => navigate(`/work-projects/${project.id}`)}
           />
           <Button
@@ -173,13 +232,15 @@ export function WorkProjectsPage() {
             theme="borderless"
             type="tertiary"
             aria-label={`Edit ${project.name}`}
-            onClick={() => { setEditingProject(project); setModalOpen(true); }}
+            disabled={adminAction !== null}
+            loading={detailLoadingId === project.id && expandedId !== project.id}
+            onClick={() => void openProjectEditor(project)}
           />
           <Button
             icon={<Ban size={15} />}
             theme="borderless"
             type="danger"
-            disabled={!project.can_cancel}
+            disabled={adminAction !== null || !project.can_cancel}
             loading={adminAction?.id === project.id && adminAction.type === "cancel"}
             aria-label={`Cancel ${project.name}`}
             onClick={() => void handleAdminProjectAction(project, "cancel")}
@@ -188,7 +249,7 @@ export function WorkProjectsPage() {
             icon={<RotateCcw size={15} />}
             theme="borderless"
             type="tertiary"
-            disabled={!project.can_retry}
+            disabled={adminAction !== null || !project.can_retry}
             loading={adminAction?.id === project.id && adminAction.type === "retry"}
             aria-label={`Retry ${project.name}`}
             onClick={() => void handleAdminProjectAction(project, "retry")}
@@ -198,6 +259,7 @@ export function WorkProjectsPage() {
               icon={<Trash2 size={15} />}
               theme="borderless"
               type="danger"
+              disabled={adminAction !== null}
               loading={adminAction?.id === project.id && adminAction.type === "delete"}
               aria-label={`Delete ${project.name}`}
             />
@@ -206,8 +268,6 @@ export function WorkProjectsPage() {
       ),
     },
   ];
-
-  const expandedProject = projects.find((project) => project.id === expandedId) ?? null;
 
   return (
     <>
@@ -235,15 +295,23 @@ export function WorkProjectsPage() {
         onPrevious={previous}
         onNext={next}
       >
-        <ResourceTable<WorkProject>
+        <ResourceTable<WorkProjectSummary>
           ariaLabel="Work projects"
           className="work-projects-table"
           columns={columns}
           rows={projects}
           rowKey={(project) => project.id}
         />
-        {expandedProject ? (
-          <WorkProjectExpanded project={expandedProject} />
+        {expandedId ? (
+          <AsyncContent
+            loading={detailLoadingId === expandedId}
+            empty={expandedProject === null}
+            emptyIcon={<FolderKanban size={42} />}
+            emptyTitle="Project details are unavailable"
+            wrapperClassName="work-project-detail-spin"
+          >
+            {expandedProject ? <WorkProjectExpanded project={expandedProject} /> : null}
+          </AsyncContent>
         ) : null}
       </ResourcePageShell>
 

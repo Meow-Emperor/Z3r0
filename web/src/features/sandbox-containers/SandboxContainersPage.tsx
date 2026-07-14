@@ -1,4 +1,4 @@
-import { Button, Modal, Popconfirm, Select, Tag, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Select, Spin, Tag, Tooltip } from "@douyinfe/semi-ui";
 import {
   Box,
   Boxes,
@@ -13,7 +13,6 @@ import {
   SquareStop,
   SquareTerminal,
   Trash2,
-  User,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";
@@ -32,14 +31,14 @@ import {
 } from "../../shared/api/sandboxContainers";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { querySystemUsers } from "../../shared/api/systemUsers";
-import { showApiError } from "../../shared/api/feedback";
 import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
+import { ResourceModal } from "../../shared/components/ResourceModal";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { OwnerCell, ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
-import { useOptionList } from "../../shared/hooks/useOptionList";
+import { useOptionList, type OptionListResult } from "../../shared/hooks/useOptionList";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
@@ -47,6 +46,7 @@ import { useAuth } from "../../shared/auth/AuthProvider";
 import { formatDateTime } from "../../shared/lib/date";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 import { UI_TEXT } from "../../shared/lib/uiText";
+import { egressProxyOption, sandboxEgressModeOptions } from "../../shared/lib/sandboxOptions";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { SandboxContainerFormModal } from "./SandboxContainerFormModal";
 
@@ -57,36 +57,20 @@ export function SandboxContainersPage() {
     setKeyword, search, previous, next, canGoBack, canGoNext,
   } = usePagedResourceList<SandboxContainer>({ query: querySandboxContainers });
   const [modalOpen, setModalOpen] = useState(false);
-  const {
-    items: images,
-    loading: imagesLoading,
-    load: loadReadyImages,
-  } = useOptionList<SandboxImage>({ query: querySandboxImages });
-  const {
-    items: hosts,
-    loading: hostsLoading,
-    load: loadHosts,
-  } = useOptionList<ManagedHost>({ query: queryManagedHosts });
-  const {
-    items: users,
-    loading: usersLoading,
-    load: loadUsers,
-  } = useOptionList<SystemUser>({ query: querySystemUsers });
-  const {
-    items: egressProxies,
-    loading: egressProxiesLoading,
-    load: loadEgressProxies,
-  } = useOptionList<EgressProxy>({ query: queryEgressProxies });
+  const imageOptions = useOptionList<SandboxImage>({ query: querySandboxImages });
+  const hostOptions = useOptionList<ManagedHost>({ query: queryManagedHosts });
+  const userOptions = useOptionList<SystemUser>({ query: querySystemUsers });
+  const egressProxyOptions = useOptionList<EgressProxy>({ query: queryEgressProxies });
   const [egressModalContainer, setEgressModalContainer] = useState<SandboxContainer | null>(null);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
 
   const refreshAll = useCallback(async () => {
     await loadContainers();
-    await loadReadyImages();
-    await loadHosts();
-    await loadUsers();
-    await loadEgressProxies();
-  }, [loadContainers, loadReadyImages, loadHosts, loadUsers, loadEgressProxies]);
+    await imageOptions.load();
+    await hostOptions.load();
+    await userOptions.load();
+    await egressProxyOptions.load();
+  }, [egressProxyOptions.load, hostOptions.load, imageOptions.load, loadContainers, userOptions.load]);
 
   const { run: startContainer, busyId: startingId } = useResourceAction<SandboxContainer>(
     (container) => startSandboxContainer(container.id), loadContainers,
@@ -107,7 +91,7 @@ export function SandboxContainersPage() {
   useAdminResourceHeader({
     createLabel: "Create Container",
     refreshLabel: "Refresh sandbox containers",
-    loading: loading || imagesLoading || hostsLoading || usersLoading || egressProxiesLoading,
+    loading: loading || imageOptions.loading || hostOptions.loading || userOptions.loading || egressProxyOptions.loading,
     onCreate: () => setModalOpen(true),
     onRefresh: refreshAll,
   });
@@ -263,22 +247,17 @@ export function SandboxContainersPage() {
       <SandboxContainerFormModal
         open={modalOpen}
         saving={saving}
-        images={images}
-        imagesLoading={imagesLoading}
-        hosts={hosts}
-        hostsLoading={hostsLoading}
-        users={users}
-        usersLoading={usersLoading}
-        egressProxies={egressProxies}
-        egressProxiesLoading={egressProxiesLoading}
+        imageOptions={imageOptions}
+        hostOptions={hostOptions}
+        userOptions={userOptions}
+        egressProxyOptions={egressProxyOptions}
         currentUserId={user?.id ?? 0}
         onCancel={() => setModalOpen(false)}
         onSubmit={handleCreate}
       />
       <ContainerEgressModal
         container={egressModalContainer}
-        egressProxies={egressProxies}
-        loading={egressProxiesLoading}
+        egressProxyOptions={egressProxyOptions}
         onClose={() => setEgressModalContainer(null)}
         onSaved={async () => {
           setEgressModalContainer(null);
@@ -291,92 +270,75 @@ export function SandboxContainersPage() {
 
 function ContainerEgressModal({
   container,
-  egressProxies,
-  loading,
+  egressProxyOptions,
   onClose,
   onSaved,
 }: {
   container: SandboxContainer | null;
-  egressProxies: EgressProxy[];
-  loading: boolean;
+  egressProxyOptions: OptionListResult<EgressProxy>;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [selectedProxyId, setSelectedProxyId] = useState<number | undefined>();
-  const [saving, setSaving] = useState(false);
+  const { saving, submit } = useResourceSubmit({ onSuccess: onSaved });
 
   useEffect(() => {
     setEgressMode(container?.egress_mode ?? SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
     setSelectedProxyId(container?.egress_proxy_id ?? undefined);
   }, [container]);
 
-  const save = async () => {
+  const save = () => {
     if (!container) return;
-    setSaving(true);
-    try {
-      await updateSandboxContainerEgress(container.id, {
+    void submit(() => updateSandboxContainerEgress(container.id, {
         egress_mode: egressMode,
         egress_proxy_id: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? selectedProxyId : undefined,
-      });
-      await onSaved();
-    } catch (error) {
-      showApiError(error);
-    } finally {
-      setSaving(false);
-    }
+      }));
   };
 
   return (
-    <Modal
+    <ResourceModal
       title={container ? `Egress: ${container.container_name}` : "Egress"}
-      visible={Boolean(container)}
-      width={460}
-      okText={UI_TEXT.save}
-      cancelText={UI_TEXT.cancel}
-      confirmLoading={saving}
-      okButtonProps={{
-        type: "primary",
-        disabled: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !selectedProxyId,
-      }}
-      onOk={() => void save()}
+      titleIcon={<Route size={17} />}
+      open={Boolean(container)}
+      saving={saving}
+      submitLabel={UI_TEXT.save}
+      submitDisabled={egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY && !selectedProxyId}
+      onSubmit={save}
       onCancel={onClose}
     >
-      <div className="resource-form">
+      <label>
+        <span>Egress Mode</span>
+        <Select
+          prefix={<Route size={16} />}
+          value={egressMode}
+          optionList={sandboxEgressModeOptions({ includeProxy: true, supportsTor: Boolean(container?.supports_tor) })}
+          onChange={(value) => {
+            if (typeof value !== "string") return;
+            const next = value as SandboxContainerEgressMode;
+            setEgressMode(next);
+            if (next !== SANDBOX_CONTAINER_EGRESS_MODE.PROXY) setSelectedProxyId(undefined);
+          }}
+        />
+      </label>
+      {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
         <label>
-          <span>Egress Mode</span>
+          <span>Managed Proxy</span>
           <Select
-            prefix={<Route size={16} />}
-            value={egressMode}
-            optionList={[
-              { label: "Direct", value: SANDBOX_CONTAINER_EGRESS_MODE.DIRECT },
-              { label: "Managed Proxy", value: SANDBOX_CONTAINER_EGRESS_MODE.PROXY },
-              { label: "Tor", value: SANDBOX_CONTAINER_EGRESS_MODE.TOR, disabled: !container?.supports_tor },
-            ]}
-            onChange={(value) => {
-              if (typeof value !== "string") return;
-              const next = value as SandboxContainerEgressMode;
-              setEgressMode(next);
-              if (next !== SANDBOX_CONTAINER_EGRESS_MODE.PROXY) setSelectedProxyId(undefined);
-            }}
+            prefix={<Network size={16} />}
+            value={selectedProxyId}
+            loading={egressProxyOptions.busy}
+            placeholder="Select an egress proxy"
+            emptyContent={egressProxyOptions.busy ? <Spin size="small" /> : "No egress proxies"}
+            optionList={egressProxyOptions.items.map(egressProxyOption)}
+            remote
+            onSearch={egressProxyOptions.search}
+            onListScroll={egressProxyOptions.onListScroll}
+            onChange={(value) => setSelectedProxyId(typeof value === "number" ? value : undefined)}
           />
         </label>
-        {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
-          <label>
-            <span>Managed Proxy</span>
-            <Select
-              prefix={<Network size={16} />}
-              value={selectedProxyId}
-              loading={loading}
-              placeholder="Select an egress proxy"
-              emptyContent="No egress proxies"
-              optionList={egressProxies.map((proxy) => ({ label: egressProxyOptionLabel(proxy), value: proxy.id }))}
-              onChange={(value) => setSelectedProxyId(typeof value === "number" ? value : undefined)}
-            />
-          </label>
-        ) : null}
-      </div>
-    </Modal>
+      ) : null}
+    </ResourceModal>
   );
 }
 
@@ -398,10 +360,6 @@ function renderContainerPorts(container: SandboxContainer) {
       ))}
     </div>
   );
-}
-
-function egressProxyOptionLabel(proxy: EgressProxy) {
-  return `${proxy.proxy_type}://${proxy.proxy_host}:${proxy.proxy_port}`;
 }
 
 function egressTagColor(mode: SandboxContainerEgressMode) {

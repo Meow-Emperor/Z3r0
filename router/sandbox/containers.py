@@ -18,9 +18,10 @@ from handler.sandbox.containers import (
     handle_write_file,
     pause_sandbox_container_handler,
     query_available_sandbox_containers_handler,
+    query_sandbox_container_host_options_handler,
+    query_sandbox_container_image_options_handler,
     query_sandbox_containers_handler,
     resume_sandbox_container_handler,
-    sandbox_container_create_options_handler,
     start_sandbox_container_handler,
     stop_sandbox_container_handler,
     update_sandbox_container_egress_handler,
@@ -46,8 +47,9 @@ from schema.sandbox.containers import (
     CreateSandboxContainerRequest,
     DeleteSandboxContainerResponse,
     ListContainerFilesResponse,
+    QuerySandboxContainerHostOptionsResponse,
+    QuerySandboxContainerImageOptionsResponse,
     QuerySandboxContainersResponse,
-    SandboxContainerCreateOptionsResponse,
     SandboxContainerSchema,
     UpdateSandboxContainerEgressRequest,
 )
@@ -115,10 +117,22 @@ async def query_available_sandbox_containers_route(
     )
 
 
-async def sandbox_container_create_options_route(
+async def query_sandbox_container_host_options_route(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
+    keyword: str = Query(default=""),
     _: AuthUser = Depends(require_user),
-) -> CommonResponse[SandboxContainerCreateOptionsResponse]:
-    return await sandbox_container_create_options_handler()
+) -> CommonResponse[QuerySandboxContainerHostOptionsResponse]:
+    return await query_sandbox_container_host_options_handler(page, size, keyword)
+
+
+async def query_sandbox_container_image_options_route(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=RESOURCE_PAGE_SIZE, ge=1, le=RESOURCE_PAGE_MAX_SIZE),
+    keyword: str = Query(default=""),
+    _: AuthUser = Depends(require_user),
+) -> CommonResponse[QuerySandboxContainerImageOptionsResponse]:
+    return await query_sandbox_container_image_options_handler(page, size, keyword)
 
 
 async def delete_sandbox_container_route(
@@ -182,10 +196,18 @@ router.add_api_route(
 )
 
 router.add_api_route(
-    "/create-options",
-    sandbox_container_create_options_route,
+    "/create-options/hosts",
+    query_sandbox_container_host_options_route,
     methods=["GET"],
-    response_model=CommonResponse[SandboxContainerCreateOptionsResponse],
+    response_model=CommonResponse[QuerySandboxContainerHostOptionsResponse],
+    responses=COMMON_ERROR_RESPONSES,
+)
+
+router.add_api_route(
+    "/create-options/images",
+    query_sandbox_container_image_options_route,
+    methods=["GET"],
+    response_model=CommonResponse[QuerySandboxContainerImageOptionsResponse],
     responses=COMMON_ERROR_RESPONSES,
 )
 

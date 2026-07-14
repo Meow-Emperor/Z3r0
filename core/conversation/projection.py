@@ -8,8 +8,8 @@ from typing import Any, Protocol
 
 from agents.items import TResponseInputItem
 
-from core import extract_message_text, tool_call_id as _tool_call_id
 from core.conversation.formats import is_internal_context_item
+from core.conversation.items import extract_message_text, tool_call_id as _tool_call_id
 
 
 _OWNER_PRIVATE_TYPES = frozenset({"reasoning", "function_call", "function_call_output"})

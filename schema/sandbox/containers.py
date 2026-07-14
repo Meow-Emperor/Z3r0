@@ -68,9 +68,12 @@ class SandboxContainerHostOptionSchema(BaseModel):
     docker_management_port: int
 
 
-class SandboxContainerCreateOptionsResponse(BaseModel):
-    hosts: list[SandboxContainerHostOptionSchema]
-    images: list[SandboxImageSchema]
+class QuerySandboxContainerHostOptionsResponse(PaginatedResponse[SandboxContainerHostOptionSchema]):
+    pass
+
+
+class QuerySandboxContainerImageOptionsResponse(PaginatedResponse[SandboxImageSchema]):
+    pass
 
 
 # create sandbox container request schema

@@ -1,14 +1,18 @@
-import { Button, Modal, Popconfirm, Select, Table, Tag } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Select, Table, Tag } from "@douyinfe/semi-ui";
 import { Boxes, Download, Pencil, Server, SquareTerminal, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createManagedHost, deleteManagedHost, listManagedHostImages, pullManagedHostImages, removeManagedHostImage, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
+import { RESOURCE_PAGE_SIZE } from "../../shared/api/generated/constants";
 import type { ManagedHost, ManagedHostImage, SandboxImage } from "../../shared/api/types";
+import { AppModal } from "../../shared/components/AppModal";
+import { AsyncContent } from "../../shared/components/AsyncContent";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
+import { useOptionList } from "../../shared/hooks/useOptionList";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
@@ -162,63 +166,97 @@ export function HostsPage() {
 
 function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose: () => void }) {
   const [hostImages, setHostImages] = useState<ManagedHostImage[]>([]);
-  const [systemImages, setSystemImages] = useState<SandboxImage[]>([]);
   const [selectedImageNames, setSelectedImageNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const actionIdRef = useRef(0);
+  const activeActionRef = useRef<number | null>(null);
+  const imageOptions = useOptionList<SandboxImage>({
+    enabled: Boolean(host),
+    query: querySandboxImages,
+  });
 
   useEffect(() => {
-    if (!host) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    activeActionRef.current = null;
     setSelectedImageNames([]);
+    setHostImages([]);
+    setPulling(false);
+    setRemovingId(null);
+    if (!host) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    Promise.all([
-      listManagedHostImages(host.id),
-      querySandboxImages({ page: 1, size: 100, keyword: "" }),
-    ])
-      .then(([hostResponse, imageResponse]) => {
-        setHostImages(hostResponse.data?.items ?? []);
-        setSystemImages(imageResponse.data?.items ?? []);
+    listManagedHostImages(host.id)
+      .then((hostResponse) => {
+        if (requestIdRef.current === requestId) {
+          setHostImages(hostResponse.data?.items ?? []);
+        }
       })
-      .catch(showApiError)
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if (requestIdRef.current === requestId) showApiError(error);
+      })
+      .finally(() => {
+        if (requestIdRef.current === requestId) setLoading(false);
+      });
+    return () => {
+      if (requestIdRef.current === requestId) requestIdRef.current += 1;
+    };
   }, [host]);
 
   const pullSelected = async () => {
-    if (!host || selectedImageNames.length === 0) return;
+    if (!host || selectedImageNames.length === 0 || activeActionRef.current !== null) return;
+    const actionId = actionIdRef.current + 1;
+    actionIdRef.current = actionId;
+    activeActionRef.current = actionId;
+    const requestId = requestIdRef.current;
     setPulling(true);
     try {
       const response = await pullManagedHostImages(host.id, { image_names: selectedImageNames });
+      if (requestIdRef.current !== requestId) return;
       showApiSuccess(response);
       const refreshed = await listManagedHostImages(host.id);
+      if (requestIdRef.current !== requestId) return;
       setHostImages(refreshed.data?.items ?? []);
       setSelectedImageNames([]);
     } catch (error) {
-      showApiError(error);
+      if (requestIdRef.current === requestId) showApiError(error);
     } finally {
-      setPulling(false);
+      if (activeActionRef.current === actionId) activeActionRef.current = null;
+      if (requestIdRef.current === requestId && activeActionRef.current === null) setPulling(false);
     }
   };
 
   const removeImage = async (image: ManagedHostImage) => {
-    if (!host) return;
+    if (!host || activeActionRef.current !== null) return;
+    const actionId = actionIdRef.current + 1;
+    actionIdRef.current = actionId;
+    activeActionRef.current = actionId;
+    const requestId = requestIdRef.current;
     setRemovingId(image.image_id);
     try {
       await removeManagedHostImage(host.id, { image_id: image.image_id, force: false });
-      setHostImages((current) => current.filter((i) => i.image_id !== image.image_id));
+      if (requestIdRef.current === requestId) {
+        setHostImages((current) => current.filter((i) => i.image_id !== image.image_id));
+      }
     } catch (error) {
-      showApiError(error);
+      if (requestIdRef.current === requestId) showApiError(error);
     } finally {
-      setRemovingId(null);
+      if (activeActionRef.current === actionId) activeActionRef.current = null;
+      if (requestIdRef.current === requestId && activeActionRef.current === null) setRemovingId(null);
     }
   };
 
   return (
-    <Modal
+    <AppModal
       title={host ? `Images on ${host.ip_address}` : "Host Images"}
-      visible={Boolean(host)}
+      titleIcon={<Boxes size={17} />}
+      open={Boolean(host)}
       width={680}
-      footer={null}
       onCancel={onClose}
       className="host-images-modal"
     >
@@ -227,20 +265,30 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
           multiple
           value={selectedImageNames}
           placeholder="Select images to pull"
-          optionList={systemImages.map((image) => ({ label: image.image_name, value: image.image_name }))}
+          optionList={imageOptions.items.map((image) => ({ label: image.image_name, value: image.image_name }))}
+          loading={imageOptions.busy}
+          disabled={activeActionRef.current !== null}
+          remote
+          onSearch={imageOptions.search}
+          onListScroll={imageOptions.onListScroll}
           onChange={(value) => setSelectedImageNames(Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [])}
         />
-        <Button icon={<Download size={15} />} theme="solid" type="primary" loading={pulling} disabled={selectedImageNames.length === 0} onClick={() => void pullSelected()}>
+        <Button icon={<Download size={15} />} theme="solid" type="primary" loading={pulling} disabled={activeActionRef.current !== null || selectedImageNames.length === 0} onClick={() => void pullSelected()}>
           Pull
         </Button>
       </div>
-      <Table
+      <AsyncContent
         loading={loading}
-        dataSource={hostImages}
-        pagination={false}
-        size="small"
-        rowKey={(record?: ManagedHostImage) => record?.image_id || record?.image_name || ""}
-        columns={[
+        empty={hostImages.length === 0}
+        emptyIcon={<Boxes size={42} />}
+        emptyTitle="No host images found"
+      >
+        <Table
+          dataSource={hostImages}
+          pagination={{ pageSize: RESOURCE_PAGE_SIZE }}
+          size="small"
+          rowKey={(record?: ManagedHostImage) => record?.image_id || record?.image_name || ""}
+          columns={[
           { title: "Image", dataIndex: "image_name" },
           { title: "Hash", dataIndex: "image_hash", width: 120, render: (value) => String(value || "").slice(0, 12) || "-" },
           { title: "Size", dataIndex: "image_size", width: 100, render: (value) => formatBytes(Number(value || 0)) },
@@ -250,13 +298,15 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
               <Popconfirm title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void removeImage(record as ManagedHostImage)}>
                 <Button icon={<Trash2 size={14} />} theme="borderless" type="danger" size="small"
                   loading={removingId === (record as ManagedHostImage).image_id}
+                  disabled={activeActionRef.current !== null}
                   aria-label="Remove image"
                 />
               </Popconfirm>
             ),
           },
-        ]}
-      />
-    </Modal>
+          ]}
+        />
+      </AsyncContent>
+    </AppModal>
   );
 }

@@ -10,11 +10,12 @@ from database import get_async_session
 from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from schema.host.hosts import ManagedHostImageSchema, PullManagedHostImageResultSchema
-from service.common.pagination import Page, paginate_statement
+from service.common.pagination import Page, RESOURCE_PAGE_SIZE, paginate_statement
 from service.host.docker import list_host_images_sync, pull_host_images_sync, remove_host_image_sync
 
 
 DEFAULT_LOCAL_HOST_ID = 1
+_IMAGE_PULL_BATCH_SIZE = 4
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,9 @@ async def update_managed_host(
     docker_client_key: str | None = None,
 ) -> UpdateManagedHostResult:
     async with get_async_session() as session:
-        host = await session.get(ManagedHost, id)
+        host = (await session.exec(
+            select(ManagedHost).where(ManagedHost.id == id).with_for_update()
+        )).one_or_none()
         if host is None:
             return UpdateManagedHostResult(host=None, not_found=True, message="managed host not found")
 
@@ -152,7 +155,9 @@ async def delete_managed_host(id: int) -> DeleteManagedHostResult:
     if id == DEFAULT_LOCAL_HOST_ID:
         return DeleteManagedHostResult(deleted=False, message="default local host cannot be deleted")
     async with get_async_session() as session:
-        host = await session.get(ManagedHost, id)
+        host = (await session.exec(
+            select(ManagedHost).where(ManagedHost.id == id).with_for_update()
+        )).one_or_none()
         if host is None:
             return DeleteManagedHostResult(deleted=False, not_found=True, message="managed host not found")
         if await _host_has_sandbox_containers(session, id):
@@ -167,7 +172,11 @@ async def delete_managed_host(id: int) -> DeleteManagedHostResult:
     return DeleteManagedHostResult(deleted=True)
 
 
-async def query_managed_hosts(page: int = 1, size: int = 100, keyword: str = "") -> Page[ManagedHost]:
+async def query_managed_hosts(
+    page: int = 1,
+    size: int = RESOURCE_PAGE_SIZE,
+    keyword: str = "",
+) -> Page[ManagedHost]:
     statement = select(ManagedHost).order_by(ManagedHost.id)
 
     keyword = keyword.strip()
@@ -254,7 +263,14 @@ async def pull_managed_host_images(id: int, image_names: list[str]) -> list[Pull
     host = await query_managed_host_by_id(id)
     if host is None:
         return None
-    return await asyncio.to_thread(pull_host_images_sync, host, image_names)
+    results: list[PullManagedHostImageResultSchema] = []
+    for offset in range(0, len(image_names), _IMAGE_PULL_BATCH_SIZE):
+        groups = await asyncio.gather(*(
+            asyncio.to_thread(pull_host_images_sync, host, [image_name])
+            for image_name in image_names[offset:offset + _IMAGE_PULL_BATCH_SIZE]
+        ))
+        results.extend(item for group in groups for item in group)
+    return results
 
 
 async def delete_managed_host_image(id: int, image_id: str, force: bool = False) -> str | None:

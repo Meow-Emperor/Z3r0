@@ -1,5 +1,6 @@
 .git
 .venv
+.ruff_cache
 *.pyc
 *.pyo
 *.log
@@ -21,3 +22,8 @@ web/node_modules
 web/dist
 web/dist-app
 web/dist-landing
+
+assets
+docs
+sandbox
+scripts

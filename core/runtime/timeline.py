@@ -14,6 +14,7 @@ from typing import TypeAlias
 
 from logger import get_logger
 from schema.agent.events import AgentEventSchema
+from service.agent.event_log import upsert_timeline_events
 
 
 logger = get_logger(__name__)
@@ -21,6 +22,11 @@ logger = get_logger(__name__)
 # event types that never enter the persisted timeline
 _CONTROL_TYPES = frozenset({"run_state", "done"})
 _DELTA_TYPES = frozenset({"text_delta", "thinking_delta"})
+_FLUSH_RETRY_DELAYS_SECONDS = (0.1, 0.5, 1.5)
+
+
+class TimelinePersistenceError(RuntimeError):
+    pass
 
 
 def timeline_item_key(event: AgentEventSchema) -> str | None:
@@ -70,6 +76,7 @@ class TimelineLogWriter:
         self._task: asyncio.Task | None = None
         self._control_lock = asyncio.Lock()
         self._stopping = False
+        self._pending: dict[str, _TimelineRow] = {}
 
     def start(self) -> None:
         if self._task is None or self._task.done():
@@ -106,8 +113,10 @@ class TimelineLogWriter:
 
         async with self._control_lock:
             rows, barriers = self._drain_remaining()
-        await self._flush(rows)
-        self._resolve_barriers(barriers)
+        persisted = await self._flush(rows)
+        self._resolve_barriers(barriers, persisted=persisted)
+        if not persisted:
+            raise TimelinePersistenceError(f"timeline persistence failed for session {self._session_id}")
 
     async def _run(self) -> None:
         while True:
@@ -135,15 +144,20 @@ class TimelineLogWriter:
             rows.append(item)
             return False
         if isinstance(item, asyncio.Future):
-            await self._flush(rows)
+            persisted = await self._flush(rows)
             rows.clear()
             if not item.done():
-                item.set_result(None)
+                if persisted:
+                    item.set_result(None)
+                else:
+                    item.set_exception(TimelinePersistenceError(
+                        f"timeline persistence failed for session {self._session_id}"
+                    ))
             return False
         await self._flush(rows)
         drained_rows, barriers = self._drain_remaining()
-        await self._flush(drained_rows)
-        self._resolve_barriers(barriers)
+        persisted = await self._flush(drained_rows)
+        self._resolve_barriers(barriers, persisted=persisted)
         return True
 
     def _drain_remaining(self) -> tuple[list[_TimelineRow], list[_FlushBarrier]]:
@@ -161,27 +175,56 @@ class TimelineLogWriter:
         return rows, barriers
 
     @staticmethod
-    def _resolve_barriers(barriers: list[_FlushBarrier]) -> None:
+    def _resolve_barriers(barriers: list[_FlushBarrier], *, persisted: bool = True) -> None:
         for barrier in barriers:
-            if not barrier.done():
+            if barrier.done():
+                continue
+            if persisted:
                 barrier.set_result(None)
+            else:
+                barrier.set_exception(TimelinePersistenceError("timeline persistence failed"))
 
-    async def _flush(self, batch: list[_TimelineRow]) -> None:
-        from service.agent.event_log import upsert_timeline_events
-
-        if not batch:
-            return
-        # collapse repeated keys within the window, keeping the latest payload
-        collapsed: dict[str, _TimelineRow] = {}
+    async def _flush(self, batch: list[_TimelineRow]) -> bool:
+        # Keep failed rows in memory and merge newer payloads by stable key. A
+        # later flush retries the entire pending set instead of dropping it.
         for row in batch:
-            collapsed[row.item_key] = row
-        try:
-            await upsert_timeline_events(
-                self._session_id,
-                [(row.item_key, row.seq, row.payload, row.created_at) for row in collapsed.values()],
-            )
-        except Exception:
-            logger.exception("timeline writer upsert failed session=%s", self._session_id)
+            self._pending[row.item_key] = row
+        if not self._pending:
+            return True
+
+        pending = tuple(self._pending.values())
+        attempts = len(_FLUSH_RETRY_DELAYS_SECONDS) + 1
+        for attempt in range(1, attempts + 1):
+            try:
+                await upsert_timeline_events(
+                    self._session_id,
+                    [(row.item_key, row.seq, row.payload, row.created_at) for row in pending],
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                if attempt >= attempts:
+                    logger.exception(
+                        "timeline writer upsert failed after %d attempts session=%s pending=%d",
+                        attempts,
+                        self._session_id,
+                        len(pending),
+                    )
+                    return False
+                logger.warning(
+                    "timeline writer upsert retry session=%s attempt=%d/%d",
+                    self._session_id,
+                    attempt,
+                    attempts,
+                    exc_info=True,
+                )
+                await asyncio.sleep(_FLUSH_RETRY_DELAYS_SECONDS[attempt - 1])
+            else:
+                for row in pending:
+                    if self._pending.get(row.item_key) is row:
+                        self._pending.pop(row.item_key, None)
+                return True
+        return False
 
     async def stop(self) -> None:
         async with self._control_lock:
@@ -201,5 +244,5 @@ class TimelineLogWriter:
                 self._task = None
             rows, barriers = self._drain_remaining()
         # final drain so the last completed segments are not lost on eviction
-        await self._flush(rows)
-        self._resolve_barriers(barriers)
+        persisted = await self._flush(rows)
+        self._resolve_barriers(barriers, persisted=persisted)

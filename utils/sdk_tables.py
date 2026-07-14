@@ -2,14 +2,9 @@ from sqlalchemy import Column, Integer, String, TIMESTAMP, Table, Text
 from sqlmodel import SQLModel
 
 
-# placeholder row written by the SDK bootstrap in database.py
-BOOTSTRAP_SESSION_ID = "__bootstrap__"
-
-# minimal projection of the SDK-managed session storage tables; registered on
-# SQLModel.metadata so app-side FKs (AgentSessionMeta, AgentMessageMeta) can
-# resolve in the same metadata. The actual schema is owned by the SDK; SDK
-# creates the tables first in database.create_all_tables(), so SQLModel's own
-# create_all sees them already present and skips (checkfirst=True default).
+# Minimal descriptors for querying the SDK-managed session tables and resolving
+# app-owned foreign keys. The SDK creates the physical tables before app schema
+# initialization; these descriptors never create or alter the SDK schema.
 metadata = SQLModel.metadata
 
 agent_sessions = Table(

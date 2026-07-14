@@ -7,7 +7,7 @@ from sqlmodel import select
 from database import get_async_session
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
-from service.common.pagination import Page, paginate_statement
+from service.common.pagination import Page, RESOURCE_PAGE_SIZE, paginate_statement
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,9 @@ async def create_sandbox_image(
 
 async def delete_sandbox_image(id: int) -> DeleteSandboxImageResult:
     async with get_async_session() as session:
-        sandbox_image = await session.get(SandboxImage, id)
+        sandbox_image = (await session.exec(
+            select(SandboxImage).where(SandboxImage.id == id).with_for_update()
+        )).one_or_none()
         if sandbox_image is None:
             return DeleteSandboxImageResult(deleted=False, not_found=True, message="sandbox image not found")
 
@@ -56,7 +58,11 @@ async def delete_sandbox_image(id: int) -> DeleteSandboxImageResult:
     return DeleteSandboxImageResult(deleted=True)
 
 
-async def query_sandbox_images(page: int = 1, size: int = 100, keyword: str = "") -> Page[SandboxImage]:
+async def query_sandbox_images(
+    page: int = 1,
+    size: int = RESOURCE_PAGE_SIZE,
+    keyword: str = "",
+) -> Page[SandboxImage]:
     statement = select(SandboxImage).order_by(SandboxImage.id)
 
     keyword = keyword.strip()

@@ -10,6 +10,12 @@ import {
 } from "react";
 import { listAgents } from "../../shared/api/agents";
 import {
+  AGENT_EVENT_TYPE,
+  AGENT_EVENT_TYPE_VALUES,
+  RESOURCE_PAGE_SIZE,
+  SESSION_TYPE,
+} from "../../shared/api/generated/constants";
+import {
   buildAgentStreamUrl,
   cancelAllAgentSessionTasks,
   createAgentSessionTurn,
@@ -22,6 +28,7 @@ import {
 } from "../../shared/api/agentSessions";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import { getStoredAccessToken } from "../../shared/auth/session";
+import { mergeByKey } from "../../shared/lib/array";
 import type {
   AgentInfo,
   AgentInputPart,
@@ -38,12 +45,12 @@ import {
   type TimelineStore,
 } from "./timelineStore";
 
-type ConnectionStatus = "idle" | "connecting" | "open" | "closed";
+export type AgentSessionConnectionStatus = "idle" | "connecting" | "open" | "closed";
 
 type SessionRuntime = {
   store: TimelineStore;
   state: ChatState;
-  status: ConnectionStatus;
+  status: AgentSessionConnectionStatus;
   historyLoading: boolean;
   historyPrepending: boolean;
   historyHasMore: boolean;
@@ -76,7 +83,10 @@ const LIVE_FLUSH_INTERVAL_MS = 33;
 type AgentSessionContextValue = {
   sessions: AgentSessionSummary[];
   sessionsLoading: boolean;
+  sessionsLoadingMore: boolean;
+  sessionsHasMore: boolean;
   refreshSessions: () => Promise<void>;
+  loadMoreSessions: () => Promise<void>;
   syncSessionSummaries: (items: AgentSessionSummary[]) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   dropSessionRuntime: (sessionId: string) => void;
@@ -86,7 +96,7 @@ type AgentSessionContextValue = {
   selectSession: (sessionId: string | null, options?: { navigateBlank?: boolean }) => void;
 
   chatState: ChatState;
-  status: ConnectionStatus;
+  status: AgentSessionConnectionStatus;
   historyLoading: boolean;
   historyPrepending: boolean;
   historyHasMore: boolean;
@@ -116,6 +126,11 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<AgentSessionSummary[]>([]);
   const [sessionSummaries, setSessionSummaries] = useState<Map<string, AgentSessionSummary>>(() => new Map());
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsLoadingMore, setSessionsLoadingMore] = useState(false);
+  const [sessionsPage, setSessionsPage] = useState(1);
+  const [sessionsTotal, setSessionsTotal] = useState(0);
+  const sessionsPageRef = useRef(1);
+  const sessionsLoadingMoreRef = useRef(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [runtimes, setRuntimes] = useState<Map<string, SessionRuntime>>(() => new Map());
 
@@ -135,6 +150,8 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
   const liveFlushTimersRef = useRef<Map<string, number>>(new Map());
   const liveFrameEventsRef = useRef<Map<string, AgentStreamEvent[]>>(new Map());
   const manualBlankSessionRef = useRef(false);
+  const sandboxSelectionGenerationRef = useRef<Map<string, number>>(new Map());
+  const controlCommandSessionsRef = useRef<Set<string>>(new Set());
 
   const clearDeletedMarkerLater = useCallback((sessionId: string) => {
     const existing = deletedMarkerTimersRef.current.get(sessionId);
@@ -146,7 +163,6 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     deletedMarkerTimersRef.current.set(sessionId, timer);
   }, []);
 
-  // ---------------------------------------------------------------- helpers
   const initRuntime = useCallback((sessionId: string) => {
     setRuntimes((prev) => {
       if (prev.has(sessionId)) return prev;
@@ -189,6 +205,8 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     });
     ensuredRef.current.delete(sessionId);
     loadingHistoryRef.current.delete(sessionId);
+    sandboxSelectionGenerationRef.current.delete(sessionId);
+    controlCommandSessionsRef.current.delete(sessionId);
     if (!options.keepDeletedMarker) {
       deletedSessionsRef.current.delete(sessionId);
       const deletedTimer = deletedMarkerTimersRef.current.get(sessionId);
@@ -221,13 +239,13 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       return next;
     });
     setSessions((prev) => {
-      if (item.session_type !== "chat") return prev.filter((session) => session.session_id !== item.session_id);
+      if (item.session_type !== SESSION_TYPE.CHAT) return prev.filter((session) => session.session_id !== item.session_id);
       if (!prev.some((session) => session.session_id === item.session_id)) return [item, ...prev];
       return prev.map((session) => session.session_id === item.session_id ? item : session);
     });
   }, []);
 
-  // ------------------------------------------------------------- agents
+  // Agent catalog
   useEffect(() => {
     listAgents()
       .then((response) => {
@@ -237,13 +255,20 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       .catch(showApiError);
   }, []);
 
-  // ------------------------------------------------------------- sessions
+  // Session list
   const refreshSessions = useCallback(async (silent = false) => {
     if (!silent) setSessionsLoading(true);
     try {
-      const response = await listAgentSessions();
+      const response = await listAgentSessions({ page: 1, size: RESOURCE_PAGE_SIZE });
       const items = response.data?.items ?? [];
-      setSessions(items);
+      if (silent && sessionsPageRef.current > 1) {
+        setSessions((current) => mergeRefreshedSessionHead(current, items));
+      } else {
+        setSessions(items);
+        setSessionsPage(1);
+        sessionsPageRef.current = 1;
+      }
+      setSessionsTotal(response.data?.total ?? items.length);
       syncSessionSummaries(items);
     } catch (error) {
       if (!silent) showApiError(error);
@@ -252,6 +277,27 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [syncSessionSummaries]);
 
+  const loadMoreSessions = useCallback(async () => {
+    if (sessionsLoadingMoreRef.current || sessions.length >= sessionsTotal) return;
+    const nextPage = sessionsPage + 1;
+    sessionsLoadingMoreRef.current = true;
+    setSessionsLoadingMore(true);
+    try {
+      const response = await listAgentSessions({ page: nextPage, size: RESOURCE_PAGE_SIZE });
+      const items = response.data?.items ?? [];
+      setSessions((current) => mergeByKey(current, items, (session) => session.session_id));
+      setSessionsPage(nextPage);
+      sessionsPageRef.current = nextPage;
+      setSessionsTotal(response.data?.total ?? sessionsTotal);
+      syncSessionSummaries(items);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      sessionsLoadingMoreRef.current = false;
+      setSessionsLoadingMore(false);
+    }
+  }, [sessions.length, sessionsPage, sessionsTotal, syncSessionSummaries]);
+
   const refreshSessionsRef = useRef(refreshSessions);
   refreshSessionsRef.current = refreshSessions;
 
@@ -259,7 +305,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     void refreshSessions();
   }, [refreshSessions]);
 
-  // ------------------------------------------------------------ ws + idle
+  // WebSocket lifecycle
   const clearIdleTimer = useCallback((sessionId: string) => {
     const timer = idleTimersRef.current.get(sessionId);
     if (timer != null) {
@@ -303,10 +349,10 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
 
     applyStore(sessionId, (store) => ingestEvents(store, events));
 
-    if (events.some((event) => event.type === "user_message")) {
+    if (events.some((event) => event.type === AGENT_EVENT_TYPE.USER_MESSAGE)) {
       void refreshSessionsRef.current(true);
     }
-    if (events.some((event) => event.type === "run_state" && !event.running)) {
+    if (events.some((event) => event.type === AGENT_EVENT_TYPE.RUN_STATE && !event.running)) {
       void refreshSessionsRef.current(true);
     }
   }, [applyStore]);
@@ -371,7 +417,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
           return { ...r, status: "closed" };
         }
         const errored = ingestEvents(r.store, [{
-          type: "error",
+          type: AGENT_EVENT_TYPE.ERROR,
           created_at: new Date().toISOString(),
           seq: 0,
           agent_name: "",
@@ -391,7 +437,8 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       if (socketsRef.current.get(sessionId) !== socket) return;
       markActivity(sessionId);
       try {
-        const parsed = JSON.parse(event.data) as AgentStreamEvent;
+        const parsed = parseAgentStreamEvent(JSON.parse(event.data));
+        if (!parsed) return;
         if (deletedSessionsRef.current.has(sessionId)) return;
         enqueueStreamEvent(sessionId, parsed);
       } catch {
@@ -419,7 +466,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [connectFor, updateRuntime]);
 
-  // ---------------------------------------------------------- history load
+  // Persisted history
   const loadHistory = useCallback((sessionId: string, markEnsured: boolean) => {
     if (deletedSessionsRef.current.has(sessionId)) return;
     if (loadingHistoryRef.current.has(sessionId)) return;
@@ -486,7 +533,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     updateRuntime(targetSessionId, (r) => ({ ...r, historyPrepending: true }));
     try {
       const response = await listAgentEvents(targetSessionId, {
-        beforeSeq: runtime.historyBeforeSeq,
+        before_seq: runtime.historyBeforeSeq,
         limit: HISTORY_PAGE_SIZE,
       });
       if (deletedSessionsRef.current.has(targetSessionId)) return;
@@ -509,7 +556,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSessionId, updateRuntime]);
 
-  // ----------------------------------------------------------- selection
+  // Active session
   const selectSession = useCallback((sessionId: string | null, options: { navigateBlank?: boolean } = {}) => {
     if (sessionId) {
       initRuntime(sessionId);
@@ -545,7 +592,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSessionId, ensureHistoryLoaded, sessions, tryConnectFor]);
 
-  // ------------------------------------------------------------- agentCode
+  // Agent selection
   const sessionAgentCode = useCallback(
     (sessionId: string | null): string => {
       if (!sessionId) return "";
@@ -580,9 +627,14 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     return sessionAgentCode(sessionId) || defaultAgentCode;
   }, [defaultAgentCode, pendingAgentCode, runtimes, sessionAgentCode]);
 
-  // ------------------------------------------------------------- commands
+  // Session commands
   const updateSelectedSandboxContainer = useCallback(async (sessionId: string, sandboxContainerId: number | null) => {
+    const generation = (sandboxSelectionGenerationRef.current.get(sessionId) ?? 0) + 1;
+    sandboxSelectionGenerationRef.current.set(sessionId, generation);
     const response = await updateAgentSessionSandboxContainer(sessionId, { sandbox_container_id: sandboxContainerId });
+    if (sandboxSelectionGenerationRef.current.get(sessionId) !== generation || deletedSessionsRef.current.has(sessionId)) {
+      return null;
+    }
     const summary = response.data ?? null;
     if (summary) syncSession(summary);
     return summary;
@@ -630,33 +682,42 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
 
   const interrupt = useCallback(async (sessionId: string | null = activeSessionId) => {
     const targetSessionId = sessionId ?? activeSessionId;
-    if (!targetSessionId) return;
+    if (!targetSessionId || controlCommandSessionsRef.current.has(targetSessionId)) return;
+    controlCommandSessionsRef.current.add(targetSessionId);
     try {
       const response = await interruptAgentSession(targetSessionId);
+      if (deletedSessionsRef.current.has(targetSessionId)) return;
       const data = requireTurnData(response.data);
       syncSession(data.session);
       applyTurnEvents(targetSessionId, data.events);
       tryConnectFor(targetSessionId);
     } catch (error) {
-      showApiError(error);
+      if (!deletedSessionsRef.current.has(targetSessionId)) showApiError(error);
+    } finally {
+      controlCommandSessionsRef.current.delete(targetSessionId);
     }
   }, [activeSessionId, applyTurnEvents, syncSession, tryConnectFor]);
 
   const cancelAll = useCallback(async (sessionId: string | null = activeSessionId) => {
     const targetSessionId = sessionId ?? activeSessionId;
-    if (!targetSessionId) return;
+    if (!targetSessionId || controlCommandSessionsRef.current.has(targetSessionId)) return;
+    controlCommandSessionsRef.current.add(targetSessionId);
     try {
       const response = await cancelAllAgentSessionTasks(targetSessionId);
+      if (deletedSessionsRef.current.has(targetSessionId)) return;
       const data = requireTurnData(response.data);
       syncSession(data.session);
       applyTurnEvents(targetSessionId, data.events);
       tryConnectFor(targetSessionId);
     } catch (error) {
-      showApiError(error);
+      if (!deletedSessionsRef.current.has(targetSessionId)) showApiError(error);
+    } finally {
+      controlCommandSessionsRef.current.delete(targetSessionId);
     }
   }, [activeSessionId, applyTurnEvents, syncSession, tryConnectFor]);
 
   const deleteSession = useCallback(async (sessionId: string) => {
+    if (deletedSessionsRef.current.has(sessionId)) return;
     deletedSessionsRef.current.add(sessionId);
     closeSocket(sessionId);
     dropRuntime(sessionId, { keepDeletedMarker: true });
@@ -673,7 +734,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSessionId, clearDeletedMarkerLater, closeSocket, dropRuntime, refreshSessions, selectSession]);
 
-  // -------------------------------------------------------------- unmount
+  // Runtime cleanup
   useEffect(() => {
     return () => {
       for (const socket of socketsRef.current.values()) socket.close();
@@ -690,15 +751,18 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
       loadingHistoryRef.current.clear();
       deletedSessionsRef.current.clear();
       liveFrameEventsRef.current.clear();
+      sandboxSelectionGenerationRef.current.clear();
+      controlCommandSessionsRef.current.clear();
     };
   }, []);
 
-  // -------------------------------------------------------------- derived
   const defaultRuntime = useMemo(createSessionRuntime, []);
   const activeRuntime = activeSessionId ? runtimes.get(activeSessionId) ?? defaultRuntime : defaultRuntime;
   const activeSessionSummary = activeSessionId ? sessionSummaries.get(activeSessionId) ?? null : null;
   const value = useMemo<AgentSessionContextValue>(() => ({
-    sessions, sessionsLoading, refreshSessions, syncSessionSummaries, deleteSession,
+    sessions, sessionsLoading, sessionsLoadingMore,
+    sessionsHasMore: sessions.length < sessionsTotal,
+    refreshSessions, loadMoreSessions, syncSessionSummaries, deleteSession,
     dropSessionRuntime,
     activeSessionId, activeSessionSummary, selectSession,
     chatState: activeRuntime.state,
@@ -710,7 +774,8 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     agents, defaultAgentCode, activeAgentCode, setActiveAgentCode,
     send, updateSelectedSandboxContainer, interrupt, cancelAll, loadPreviousHistory,
   }), [
-    sessions, sessionsLoading, refreshSessions, syncSessionSummaries, deleteSession,
+    sessions, sessionsLoading, sessionsLoadingMore, sessionsTotal,
+    refreshSessions, loadMoreSessions, syncSessionSummaries, deleteSession,
     dropSessionRuntime,
     activeSessionId, activeSessionSummary, selectSession,
     activeRuntime,
@@ -735,4 +800,21 @@ function websocketCloseMessage(event: CloseEvent | Event): string {
 function requireTurnData(data: AgentTurnData | null | undefined): AgentTurnData {
   if (!data) throw new Error("agent session turn response missing data");
   return data;
+}
+
+const AGENT_EVENT_TYPE_SET = new Set<string>(AGENT_EVENT_TYPE_VALUES);
+
+function parseAgentStreamEvent(value: unknown): AgentStreamEvent | null {
+  if (typeof value !== "object" || value === null) return null;
+  const type = Reflect.get(value, "type");
+  if (typeof type !== "string" || !AGENT_EVENT_TYPE_SET.has(type)) return null;
+  return value as AgentStreamEvent;
+}
+
+function mergeRefreshedSessionHead(
+  current: AgentSessionSummary[],
+  head: AgentSessionSummary[],
+): AgentSessionSummary[] {
+  const headIds = new Set(head.map((session) => session.session_id));
+  return [...head, ...current.filter((session) => !headIds.has(session.session_id))];
 }

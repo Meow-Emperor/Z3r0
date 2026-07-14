@@ -1,3 +1,4 @@
+import { AGENT_SUBORDINATE_STATUS } from "../../shared/api/generated/constants";
 import type { ChatNode, NestedTranscript, SubagentExecutionItem, TranscriptBlock } from "./chatState";
 
 export type SubagentTab = {
@@ -38,35 +39,43 @@ export function findSubagentTarget(nodes: ChatNode[], selection: SubagentSelecti
   const runs = new Map<string, SubagentRunTarget>();
   for (const { task, transcript } of subagentRuns(nodes, true)) {
     if (task.agentCode !== selection || runs.has(task.runId)) continue;
-    runs.set(task.runId, { task, transcript, live: task.status === "running" });
+    runs.set(task.runId, { task, transcript, live: isSubagentRunning(task.status) });
   }
   const orderedRuns = Array.from(runs.values()).reverse();
   return orderedRuns.length ? { runs: orderedRuns } : null;
 }
 
 export function subagentStatusColor(status: SubagentExecutionItem["status"]): "red" | "green" | "amber" {
-  if (status === "failed" || status === "canceled") return "red";
-  return status === "completed" ? "green" : "amber";
+  if (isSubagentFailed(status)) return "red";
+  return status === AGENT_SUBORDINATE_STATUS.COMPLETED ? "green" : "amber";
 }
 
 export function subordinateStatusLabel(status: SubagentExecutionItem["status"]) {
   switch (status) {
-    case "running":
+    case AGENT_SUBORDINATE_STATUS.RUNNING:
       return "Running";
-    case "completed":
+    case AGENT_SUBORDINATE_STATUS.COMPLETED:
       return "Completed";
-    case "canceled":
+    case AGENT_SUBORDINATE_STATUS.CANCELED:
       return "Canceled";
-    case "failed":
+    case AGENT_SUBORDINATE_STATUS.FAILED:
       return "Failed";
   }
+}
+
+export function isSubagentRunning(status: SubagentExecutionItem["status"] | undefined): boolean {
+  return status === AGENT_SUBORDINATE_STATUS.RUNNING;
+}
+
+export function isSubagentFailed(status: SubagentExecutionItem["status"] | undefined): boolean {
+  return status === AGENT_SUBORDINATE_STATUS.FAILED || status === AGENT_SUBORDINATE_STATUS.CANCELED;
 }
 
 function mergeSubagentStatus(
   current: SubagentExecutionItem["status"] | undefined,
   next: SubagentExecutionItem["status"],
 ): SubagentExecutionItem["status"] {
-  if (current === "running" || next === "running") return "running";
+  if (isSubagentRunning(current) || isSubagentRunning(next)) return AGENT_SUBORDINATE_STATUS.RUNNING;
   return next;
 }
 
@@ -94,7 +103,7 @@ function* subagentRunsFromBlocks(blocks: TranscriptBlock[], reverse: boolean): G
     yield {
       task,
       transcript: block.kind === "tool" ? block.nested : undefined,
-      live: task.status === "running",
+      live: isSubagentRunning(task.status),
     };
   }
 }

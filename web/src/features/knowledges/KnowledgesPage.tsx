@@ -1,6 +1,6 @@
 import { Button, Popconfirm, Select, TabPane, Tabs, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
 import { Braces, DatabaseZap, Eye, FileText, Network, Trash2, Upload } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   deleteKnowledgeDocument,
   getKnowledgeGraph,
@@ -11,13 +11,16 @@ import {
 } from "../../shared/api/knowledges";
 import { showApiError } from "../../shared/api/feedback";
 import {
-  KNOWLEDGE_DOCUMENT_STATUSES,
-  KNOWLEDGE_GRAPH_EXPANSION_NODES,
+  KNOWLEDGE_DOCUMENT_ACCEPT,
+  KNOWLEDGE_DOCUMENT_INFLIGHT_STATUS_VALUES,
+  KNOWLEDGE_DOCUMENT_STATUS_VALUES,
+  KNOWLEDGE_GRAPH_EXPANSION_BATCH_SIZE,
   KNOWLEDGE_GRAPH_MAX_NODES,
 } from "../../shared/api/generated/constants";
 import type {
   KnowledgeDocument,
   KnowledgeDocumentStatus,
+  KnowledgeDocumentStatusCounts,
   KnowledgeGraph,
   KnowledgeVector,
   QueryKnowledgeDocumentsData,
@@ -30,6 +33,7 @@ import {
   ResourceSearchForm,
 } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { TabLabel } from "../../shared/components/TabLabel";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
@@ -42,16 +46,18 @@ import { KNOWLEDGE_STATUS_COLORS } from "./knowledgeUi";
 type KnowledgeTab = "documents" | "vectors" | "graph";
 
 const EMPTY_GRAPH: KnowledgeGraph = { nodes: [], edges: [], is_truncated: false };
+const EMPTY_STATUS_COUNTS: KnowledgeDocumentStatusCounts = {
+  total: 0,
+  pending: 0,
+  parsing: 0,
+  analyzing: 0,
+  processing: 0,
+  processed: 0,
+  failed: 0,
+};
 const DOCUMENT_POLL_INTERVAL_MS = 5_000;
-const INFLIGHT_DOCUMENT_STATUSES: KnowledgeDocumentStatus[] = [
-  "pending",
-  "parsing",
-  "analyzing",
-  "processing",
-  "preprocessed",
-];
-function countInflightDocuments(counts: Record<string, number>) {
-  return INFLIGHT_DOCUMENT_STATUSES.reduce(
+function countInflightDocuments(counts: KnowledgeDocumentStatusCounts) {
+  return KNOWLEDGE_DOCUMENT_INFLIGHT_STATUS_VALUES.reduce(
     (total, documentStatus) => total + (counts[documentStatus] ?? 0),
     0,
   );
@@ -60,24 +66,22 @@ function countInflightDocuments(counts: Record<string, number>) {
 export function KnowledgesPage() {
   const [activeTab, setActiveTab] = useState<KnowledgeTab>("documents");
   const [status, setStatus] = useState<KnowledgeDocumentStatus | undefined>();
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [statusCounts, setStatusCounts] = useState<KnowledgeDocumentStatusCounts>(EMPTY_STATUS_COUNTS);
   const [graph, setGraph] = useState<KnowledgeGraph>(EMPTY_GRAPH);
   const [graphQuery, setGraphQuery] = useState("");
   const [activeGraphQuery, setActiveGraphQuery] = useState("");
   const [graphLoading, setGraphLoading] = useState(false);
+  const [graphLoaded, setGraphLoaded] = useState(false);
   const [graphExpansionLimits, setGraphExpansionLimits] = useState<Record<string, number>>({});
   const [expandedGraphNodeIds, setExpandedGraphNodeIds] = useState<Set<string>>(new Set());
   const [expandingGraphNodeIds, setExpandingGraphNodeIds] = useState<Set<string>>(new Set());
   const [awaitingUploadCompletion, setAwaitingUploadCompletion] = useState(false);
-  const [processingCompletionVersion, setProcessingCompletionVersion] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [detailTarget, setDetailTarget] = useState<KnowledgeDetailTarget | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const graphRequestRef = useRef(0);
   const graphExpansionRequestsRef = useRef<Set<string>>(new Set());
-  const latestInflightDocumentsRef = useRef(0);
-  const documentDataVersionRef = useRef(0);
-  const handledProcessingCompletionVersionRef = useRef(0);
+  const uploadRef = useRef(false);
 
   const queryDocumentPage = useCallback(
     ({ page, size }: { page: number; size: number }) => queryKnowledgeDocuments({ page, size, status }),
@@ -85,14 +89,7 @@ export function KnowledgesPage() {
   );
   const updateDocumentMetrics = useCallback((data: QueryKnowledgeDocumentsData | null) => {
     if (!data) return;
-    const counts = data.status_counts;
-    const nextInflightDocuments = countInflightDocuments(counts);
-    if (latestInflightDocumentsRef.current > 0 && nextInflightDocuments === 0) {
-      setProcessingCompletionVersion((current) => current + 1);
-    }
-    latestInflightDocumentsRef.current = nextInflightDocuments;
-    documentDataVersionRef.current += 1;
-    setStatusCounts(counts);
+    setStatusCounts(data.status_counts);
   }, []);
   const documents = usePagedResourceList<KnowledgeDocument, QueryKnowledgeDocumentsData>({
     query: queryDocumentPage,
@@ -107,33 +104,44 @@ export function KnowledgesPage() {
   });
   const inflightDocuments = countInflightDocuments(statusCounts);
 
+  const invalidateDerivedViews = useCallback(() => {
+    vectors.invalidate();
+    graphRequestRef.current += 1;
+    graphExpansionRequestsRef.current.clear();
+    setGraph(EMPTY_GRAPH);
+    setGraphLoaded(false);
+    setGraphLoading(false);
+    setGraphExpansionLimits({});
+    setExpandedGraphNodeIds(new Set());
+    setExpandingGraphNodeIds(new Set());
+  }, [vectors.invalidate]);
+
   useEffect(() => () => {
     graphRequestRef.current += 1;
     graphExpansionRequestsRef.current.clear();
   }, []);
 
-  const loadGraph = useCallback(async (query = activeGraphQuery) => {
+  const loadGraph = useCallback(async (query: string) => {
     const normalizedQuery = query.trim();
     const requestId = graphRequestRef.current + 1;
     graphRequestRef.current = requestId;
     graphExpansionRequestsRef.current.clear();
     setExpandingGraphNodeIds(new Set());
-    if (!normalizedQuery) {
-      setGraphLoading(false);
-      setGraph(EMPTY_GRAPH);
-      setGraphExpansionLimits({});
-      setExpandedGraphNodeIds(new Set());
-      setExpandingGraphNodeIds(new Set());
-      return;
-    }
     setGraphLoading(true);
     try {
-      const response = await searchKnowledgeGraph({
-        query: normalizedQuery,
-        max_nodes: KNOWLEDGE_GRAPH_MAX_NODES,
-      });
+      const response = normalizedQuery
+        ? await searchKnowledgeGraph({
+            query: normalizedQuery,
+            max_nodes: KNOWLEDGE_GRAPH_MAX_NODES,
+          })
+        : await getKnowledgeGraph({
+            query: "",
+            max_depth: 1,
+            max_nodes: KNOWLEDGE_GRAPH_EXPANSION_BATCH_SIZE,
+          });
       if (graphRequestRef.current === requestId) {
         setGraph(response.data ?? EMPTY_GRAPH);
+        setGraphLoaded(true);
         setGraphExpansionLimits({});
         setExpandedGraphNodeIds(new Set());
         setExpandingGraphNodeIds(new Set());
@@ -143,32 +151,42 @@ export function KnowledgesPage() {
     } finally {
       if (graphRequestRef.current === requestId) setGraphLoading(false);
     }
-  }, [activeGraphQuery]);
+  }, []);
 
   useEffect(() => {
-    if (inflightDocuments === 0 && !awaitingUploadCompletion) return;
+    void loadGraph("");
+  }, [loadGraph]);
+
+  const shouldPollDocuments = inflightDocuments > 0 || awaitingUploadCompletion;
+
+  useEffect(() => {
+    if (!shouldPollDocuments) return;
     let cancelled = false;
     let timer: number | undefined;
 
     const schedule = () => {
-      timer = window.setTimeout(async () => {
-        const previousDataVersion = documentDataVersionRef.current;
-        const previousInflightDocuments = latestInflightDocumentsRef.current;
-        await documents.loadItems();
-        if (cancelled) return;
-        if (documentDataVersionRef.current === previousDataVersion) {
-          schedule();
-          return;
-        }
-        if (latestInflightDocumentsRef.current === 0) {
-          setAwaitingUploadCompletion(false);
-          if (previousInflightDocuments === 0) {
-            await Promise.all([vectors.loadItems(), loadGraph()]);
-          }
-          return;
-        }
+      timer = window.setTimeout(() => void poll(), DOCUMENT_POLL_INTERVAL_MS);
+    };
+    const poll = async () => {
+      const data = await documents.loadItems({ notifyData: false });
+      if (cancelled) return;
+      if (!data) {
         schedule();
-      }, DOCUMENT_POLL_INTERVAL_MS);
+        return;
+      }
+      if (countInflightDocuments(data.status_counts) > 0) {
+        setStatusCounts(data.status_counts);
+        schedule();
+        return;
+      }
+      invalidateDerivedViews();
+      await Promise.all([
+        vectors.loadItems(),
+        loadGraph(activeGraphQuery),
+      ]);
+      if (cancelled) return;
+      setStatusCounts(data.status_counts);
+      setAwaitingUploadCompletion(false);
     };
     schedule();
 
@@ -176,13 +194,7 @@ export function KnowledgesPage() {
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [awaitingUploadCompletion, documents.loadItems, inflightDocuments, loadGraph, vectors.loadItems]);
-
-  useEffect(() => {
-    if (processingCompletionVersion <= handledProcessingCompletionVersionRef.current) return;
-    handledProcessingCompletionVersionRef.current = processingCompletionVersion;
-    void Promise.all([vectors.loadItems(), loadGraph()]);
-  }, [loadGraph, processingCompletionVersion, vectors.loadItems]);
+  }, [activeGraphQuery, documents.loadItems, invalidateDerivedViews, loadGraph, shouldPollDocuments, vectors.loadItems]);
 
   const expandGraphNode = useCallback(async (node: KnowledgeGraph["nodes"][number]) => {
     if (
@@ -193,7 +205,7 @@ export function KnowledgesPage() {
 
     const previousLimit = graphExpansionLimits[node.id] ?? 0;
     const nextLimit = Math.min(
-      previousLimit + KNOWLEDGE_GRAPH_EXPANSION_NODES,
+      previousLimit + KNOWLEDGE_GRAPH_EXPANSION_BATCH_SIZE,
       KNOWLEDGE_GRAPH_MAX_NODES,
     );
     const graphRequestId = graphRequestRef.current;
@@ -227,36 +239,41 @@ export function KnowledgesPage() {
     }
   }, [expandedGraphNodeIds, graph.nodes.length, graphExpansionLimits]);
 
-  const refreshKnowledgeData = useCallback(async () => {
+  const refreshAfterDocumentDeletion = useCallback(async () => {
+    invalidateDerivedViews();
     await Promise.all([
       documents.loadItems(),
       vectors.loadItems(),
-      loadGraph(),
+      loadGraph(activeGraphQuery),
     ]);
-  }, [documents.loadItems, loadGraph, vectors.loadItems]);
+  }, [activeGraphQuery, documents.loadItems, invalidateDerivedViews, loadGraph, vectors.loadItems]);
   const { run: deleteDocument, busyId: deletingDocumentId } = useResourceAction<KnowledgeDocument>(
     (document) => deleteKnowledgeDocument(document.id),
-    refreshKnowledgeData,
+    refreshAfterDocumentDeletion,
   );
 
   const refreshActive = useCallback(async () => {
-    if (activeTab === "documents") await documents.loadItems();
-    if (activeTab === "vectors") await vectors.loadItems();
-    if (activeTab === "graph") await loadGraph();
-  }, [activeTab, documents.loadItems, loadGraph, vectors.loadItems]);
+    await Promise.all([
+      documents.loadItems(),
+      vectors.loadItems(),
+      loadGraph(activeGraphQuery),
+    ]);
+  }, [activeGraphQuery, documents.loadItems, loadGraph, vectors.loadItems]);
 
   const handleTabChange = (key: string) => {
     const next = key as KnowledgeTab;
     setActiveTab(next);
-    if (next === "vectors") void vectors.loadItems();
-    if (next === "graph") void loadGraph();
+    if (next === "graph" && !graphLoaded && !graphLoading) {
+      void loadGraph(activeGraphQuery);
+    }
   };
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (files.length === 0) return;
+    if (files.length === 0 || uploadRef.current) return;
 
+    uploadRef.current = true;
     setUploading(true);
     try {
       const response = await uploadKnowledgeDocuments(files);
@@ -266,6 +283,7 @@ export function KnowledgesPage() {
       const queued = result.queued_files.length;
       if (queued > 0) {
         Toast.success(`${queued} document${queued === 1 ? "" : "s"} queued`);
+        invalidateDerivedViews();
         setAwaitingUploadCompletion(true);
         setActiveTab("documents");
         if (documents.page === 1) await documents.loadItems();
@@ -277,6 +295,7 @@ export function KnowledgesPage() {
     } catch (error) {
       showApiError(error);
     } finally {
+      uploadRef.current = false;
       setUploading(false);
     }
   };
@@ -297,11 +316,11 @@ export function KnowledgesPage() {
   });
 
   const metrics = useMemo(() => [
-    { label: "Documents", value: statusCounts.all ?? documents.total },
-    { label: "Processed", value: statusCounts.processed ?? 0 },
-    { label: "Vectors", value: vectors.total },
-    { label: "Visible Graph", value: `${graph.nodes.length} / ${graph.edges.length}` },
-  ], [documents.total, graph.edges.length, graph.nodes.length, statusCounts, vectors.total]);
+    { label: "Documents", value: statusCounts.total },
+    { label: "Processed", value: statusCounts.processed },
+    { label: "Vectors", value: vectors.loaded ? vectors.total : "-" },
+    { label: "Visible Graph", value: graphLoaded ? `${graph.nodes.length} / ${graph.edges.length}` : "-" },
+  ], [graph.edges.length, graph.nodes.length, graphLoaded, statusCounts, vectors.loaded, vectors.total]);
 
   return (
     <section className="knowledges-page">
@@ -309,7 +328,7 @@ export function KnowledgesPage() {
         ref={fileInputRef}
         hidden
         type="file"
-        accept=".md,.pdf"
+        accept={KNOWLEDGE_DOCUMENT_ACCEPT}
         multiple
         onChange={(event) => void handleUpload(event)}
       />
@@ -366,8 +385,9 @@ export function KnowledgesPage() {
                 }}
               />
             )}
+            loading={graphLoading}
             empty={graph.nodes.length === 0}
-            emptyTitle={activeGraphQuery ? "No graph results found" : "No graph loaded"}
+            emptyTitle={activeGraphQuery ? "No graph results found" : "No graph data available"}
             emptyIcon={<Network size={42} />}
           >
             <KnowledgeGraphView
@@ -483,7 +503,7 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
           value={status}
           placeholder="All statuses"
           showClear
-          optionList={KNOWLEDGE_DOCUMENT_STATUSES.map((value) => ({ label: value, value }))}
+          optionList={KNOWLEDGE_DOCUMENT_STATUS_VALUES.map((value) => ({ label: value, value }))}
           onChange={(value) => onStatus(value as KnowledgeDocumentStatus | undefined)}
         />
       )}
@@ -551,8 +571,4 @@ function VectorsTab({
       <ResourceTable ariaLabel="Knowledge vectors" columns={columns} rows={vectors.items} rowKey={(item) => item.id} />
     </ResourcePanel>
   );
-}
-
-function TabLabel({ icon, text }: { icon: ReactNode; text: string }) {
-  return <span className="workspace-tab-label">{icon}{text}</span>;
 }

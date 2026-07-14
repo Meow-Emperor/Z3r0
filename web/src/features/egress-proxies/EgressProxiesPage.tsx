@@ -1,9 +1,9 @@
 import { Button, Popconfirm, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
 import { Network, Pencil, Server, Trash2, Wifi } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressProxy, updateEgressProxy } from "../../shared/api/egressProxies";
 import { showApiError } from "../../shared/api/feedback";
-import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPES } from "../../shared/api/generated/constants";
+import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPE_VALUES } from "../../shared/api/generated/constants";
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
@@ -27,6 +27,7 @@ export function EgressProxiesPage() {
   const [modal, setModal] = useState<ModalState>(null);
   const secrets = useVisibleResourceIds(proxies);
   const [testingId, setTestingId] = useState<number | null>(null);
+  const testingRef = useRef(false);
 
   const { run: deleteProxy, busyId: deletingId } = useResourceAction<EgressProxy>(
     (proxy) => deleteEgressProxy(proxy.id), loadProxies,
@@ -51,11 +52,13 @@ export function EgressProxiesPage() {
     () => proxies.reduce((acc, proxy) => ({
       ...acc,
       [proxy.proxy_type]: (acc[proxy.proxy_type] ?? 0) + 1,
-    }), Object.fromEntries(EGRESS_PROXY_TYPES.map((type) => [type, 0])) as Record<EgressProxy["proxy_type"], number>),
+    }), Object.fromEntries(EGRESS_PROXY_TYPE_VALUES.map((type) => [type, 0])) as Record<EgressProxy["proxy_type"], number>),
     [proxies],
   );
 
   const testProxy = async (proxy: EgressProxy) => {
+    if (testingRef.current) return;
+    testingRef.current = true;
     setTestingId(proxy.id);
     try {
       const response = await testEgressProxy(proxy.id);
@@ -67,6 +70,7 @@ export function EgressProxiesPage() {
     } catch (error) {
       showApiError(error);
     } finally {
+      testingRef.current = false;
       setTestingId(null);
     }
   };
@@ -129,7 +133,7 @@ export function EgressProxiesPage() {
         loading={loading}
         metrics={[
           { label: "Total", value: total },
-          ...EGRESS_PROXY_TYPES.map((type) => ({ label: type.toUpperCase(), value: summary[type] ?? 0 })),
+          ...EGRESS_PROXY_TYPE_VALUES.map((type) => ({ label: type.toUpperCase(), value: summary[type] ?? 0 })),
         ]}
         empty={proxies.length === 0}
         emptyIcon={<Network size={42} />}

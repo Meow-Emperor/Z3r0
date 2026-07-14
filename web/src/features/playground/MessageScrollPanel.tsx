@@ -1,7 +1,8 @@
-import { Button, Spin } from "@douyinfe/semi-ui";
+import { Button } from "@douyinfe/semi-ui";
 import { ArrowDown } from "lucide-react";
 import { ReactNode, RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cx } from "../../shared/lib/className";
+import { AsyncContent } from "../../shared/components/AsyncContent";
 import { useAutoFollowScroll } from "./useAutoFollowScroll";
 
 type MessageScrollPanelProps = {
@@ -114,23 +115,25 @@ export function MessageScrollPanel({
 
   return (
     <div className={cx("message-scroll-shell", className)}>
-      <div
-        ref={containerRef}
-        className={cx("message-scroll-viewport", scrollbarVisible && "message-scroll-viewport-scrolling")}
-        aria-label={ariaLabel}
-        aria-busy={loading}
-        tabIndex={0}
-        {...scrollHandlers}
+      <AsyncContent
+        loading={loading}
+        empty={false}
+        retainContentWhileLoading={false}
+        wrapperClassName="message-scroll-spin"
       >
-        <div className={cx("message-scroll-content", contentClassName)}>
-          {children(tailRef)}
+        <div
+          ref={containerRef}
+          className={cx("message-scroll-viewport", scrollbarVisible && "message-scroll-viewport-scrolling")}
+          aria-label={ariaLabel}
+          aria-busy={loading}
+          tabIndex={0}
+          {...scrollHandlers}
+        >
+          <div className={cx("message-scroll-content", contentClassName)}>
+            {children(tailRef)}
+          </div>
         </div>
-      </div>
-      {loading ? (
-        <div className="message-scroll-loading" aria-hidden="true">
-          <Spin spinning />
-        </div>
-      ) : null}
+      </AsyncContent>
       {enabled && !following ? (
         <Button
           className={cx("message-scroll-tail-floating", scrollButtonClassName)}

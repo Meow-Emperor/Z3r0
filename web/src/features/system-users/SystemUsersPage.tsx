@@ -2,6 +2,7 @@ import { Button, Popconfirm, Tag } from "@douyinfe/semi-ui";
 import { Pencil, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createSystemUser, deleteSystemUser, querySystemUsers, updateSystemUser } from "../../shared/api/systemUsers";
+import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import type { CreateSystemUserRequest, SystemUser, UpdateSystemUserRequest } from "../../shared/api/types";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
@@ -46,8 +47,8 @@ export function SystemUsersPage() {
   const summary = useMemo(
     () => users.reduce(
       (acc, user) => ({
-        admin: acc.admin + (user.role === "admin" ? 1 : 0),
-        user: acc.user + (user.role === "user" ? 1 : 0),
+        admin: acc.admin + (user.role === SYSTEM_USER_ROLE.ADMIN ? 1 : 0),
+        user: acc.user + (user.role === SYSTEM_USER_ROLE.USER ? 1 : 0),
       }),
       { admin: 0, user: 0 },
     ),

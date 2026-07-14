@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+from handler.common.http import raise_api_error
 from schema.common.responses import CommonResponse
 from schema.egress_proxy.proxies import (
     CreateEgressProxyRequest,
@@ -17,7 +18,6 @@ from service.egress_proxy.proxies import (
     test_egress_proxy,
     update_egress_proxy,
 )
-from service.sandbox.control_proxy import apply_managed_proxy_egress_to_running_containers
 from logger import get_logger
 
 
@@ -45,15 +45,14 @@ async def update_egress_proxy_handler(id: int, request: UpdateEgressProxyRequest
         proxy_password=request.proxy_password,
     )
     if result.not_found:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="egress proxy not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "egress proxy not found")
     if result.proxy is None or result.message:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
-    failed_container_ids = await apply_managed_proxy_egress_to_running_containers(id)
-    if failed_container_ids:
+        raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
+    if result.failed_container_ids:
         logger.warning(
             "egress proxy updated but failed to apply to running containers: proxy=%s containers=%s",
             id,
-            failed_container_ids,
+            result.failed_container_ids,
         )
     return CommonResponse(data=EgressProxySchema.model_validate(result.proxy))
 
@@ -61,16 +60,16 @@ async def update_egress_proxy_handler(id: int, request: UpdateEgressProxyRequest
 async def delete_egress_proxy_handler(id: int) -> CommonResponse:
     result = await delete_egress_proxy(id)
     if result.not_found:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="egress proxy not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "egress proxy not found")
     if not result.deleted:
-        return CommonResponse(code=HTTPStatus.BAD_REQUEST.value, message=result.message)
+        raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=DeleteEgressProxyResponse(id=id))
 
 
 async def test_egress_proxy_handler(id: int) -> CommonResponse:
     result = await test_egress_proxy(id)
     if result.not_found:
-        return CommonResponse(code=HTTPStatus.NOT_FOUND.value, message="egress proxy not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "egress proxy not found")
     return CommonResponse(data=TestEgressProxyResponse(
         id=result.id,
         success=result.success,

@@ -9,13 +9,12 @@ from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
 from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
 from schema.sandbox.containers import (
-    SandboxContainerCreateOptionsResponse,
     SandboxContainerHostOptionSchema,
     SandboxContainerSchema,
     SandboxContainerStatus,
 )
 from schema.system_user.users import SystemUserRole
-from service.common.pagination import Page, paginate_statement
+from service.common.pagination import Page, RESOURCE_PAGE_SIZE, paginate_statement
 from service.sandbox.egress import sandbox_egress_label
 from service.sandbox.types import SandboxContainerRecord
 
@@ -133,7 +132,7 @@ async def query_sandbox_containers(
     user_id: int,
     user_role: SystemUserRole,
     page: int = 1,
-    size: int = 100,
+    size: int = RESOURCE_PAGE_SIZE,
     keyword: str = "",
 ) -> Page[SandboxContainerRecord]:
     statement = _base_container_record_statement().order_by(SandboxContainer.id)
@@ -149,7 +148,7 @@ async def query_available_sandbox_containers(
     work_project_id: int | None = None,
     include_non_running: bool = False,
     page: int = 1,
-    size: int = 100,
+    size: int = RESOURCE_PAGE_SIZE,
     keyword: str = "",
 ) -> Page[SandboxContainerRecord]:
     accessible_work_project_id = await _accessible_work_project_id(
@@ -165,21 +164,51 @@ async def query_available_sandbox_containers(
     return await _paginate_container_records(statement, page, size)
 
 
-async def sandbox_container_create_options() -> SandboxContainerCreateOptionsResponse:
-    async with get_async_session() as session:
-        hosts = (await session.exec(select(ManagedHost).order_by(ManagedHost.id))).all()
-        images = (await session.exec(select(SandboxImage).order_by(SandboxImage.id))).all()
-    return SandboxContainerCreateOptionsResponse(
-        hosts=[
+async def query_sandbox_container_host_options(
+    *,
+    page: int,
+    size: int,
+    keyword: str,
+) -> Page[SandboxContainerHostOptionSchema]:
+    statement = select(ManagedHost).order_by(ManagedHost.id)
+    keyword = keyword.strip()
+    if keyword:
+        pattern = f"%{keyword}%"
+        statement = statement.where(or_(
+            ManagedHost.ip_address.ilike(pattern),
+            cast(ManagedHost.docker_management_port, String).ilike(pattern),
+        ))
+    page_result = await paginate_statement(statement, page=page, size=size)
+    return Page(
+        page=page_result.page,
+        size=page_result.size,
+        total=page_result.total,
+        items=[
             SandboxContainerHostOptionSchema(
                 id=host.id or 0,
                 ip_address=host.ip_address,
                 docker_management_port=host.docker_management_port,
             )
-            for host in hosts
+            for host in page_result.items
         ],
-        images=images,
     )
+
+
+async def query_sandbox_container_image_options(
+    *,
+    page: int,
+    size: int,
+    keyword: str,
+) -> Page[SandboxImage]:
+    statement = select(SandboxImage).order_by(SandboxImage.id)
+    keyword = keyword.strip()
+    if keyword:
+        pattern = f"%{keyword}%"
+        statement = statement.where(or_(
+            SandboxImage.image_name.ilike(pattern),
+            cast(SandboxImage.control_proxy_port, String).ilike(pattern),
+        ))
+    return await paginate_statement(statement, page=page, size=size)
 
 
 async def sandbox_container_is_manageable_by_user(

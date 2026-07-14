@@ -7,8 +7,8 @@ from typing import Any
 
 from agents import TResponseInputItem
 
-from core import extract_message_text as _extract_message_text, tool_call_id as _tool_call_id
 from core.conversation.formats import strip_internal_context_item_id
+from core.conversation.items import extract_message_text as _extract_message_text, tool_call_id as _tool_call_id
 
 
 class ModelInputAdapter:

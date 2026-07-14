@@ -92,7 +92,17 @@ button, input {
 
 body {
   color: var(--z-text);
-  background: var(--z-bg);
+  background-color: var(--z-bg);
+  background-image:
+    linear-gradient(rgba(156, 199, 203, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(156, 199, 203, 0.035) 1px, transparent 1px),
+    linear-gradient(118deg, transparent 16%, rgba(217, 45, 58, 0.13) 38%, transparent 58%),
+    linear-gradient(62deg, transparent 34%, rgba(125, 219, 211, 0.09) 56%, transparent 76%),
+    linear-gradient(145deg, var(--z-bg) 0%, var(--z-bg-mid) 48%, var(--z-bg-deep) 100%);
+  background-position: 0 0, 0 0, 0% 34%, 100% 66%, center;
+  background-size: 52px 52px, 52px 52px, 180% 180%, 180% 180%, cover;
+  background-attachment: fixed;
+  animation: globalBackdropDrift 26s ease-in-out infinite alternate;
   --semi-color-bg-0: var(--z-bg);
   --semi-color-bg-1: var(--z-surface-strong);
   --semi-color-bg-2: var(--z-surface-strong);
@@ -275,6 +285,12 @@ a,
   color: var(--z-text-subtle);
 }
 
+.async-content-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+}
+
 .semi-tooltip-wrapper {
   color: var(--z-text);
   background: var(--z-overlay);
@@ -362,6 +378,7 @@ a,
 
 .semi-button {
   color: var(--z-text);
+  border-radius: 4px;
 }
 
 .semi-button svg,
@@ -440,6 +457,7 @@ a,
   color: var(--z-text);
   background: var(--z-control-bg);
   border-color: var(--z-line);
+  border-radius: 4px;
 }
 
 .semi-input-wrapper:hover,
@@ -532,14 +550,144 @@ a,
   backdrop-filter: blur(14px);
 }
 
-.semi-modal-header,
-.semi-modal-footer {
+.app-modal {
+  --modal-inline-padding: 24px;
+  --modal-content-padding-bottom: 24px;
+  box-sizing: border-box;
+  max-width: calc(100vw - 32px);
+  margin: auto;
+}
+
+.app-modal .semi-modal-content {
+  position: relative;
+  max-width: 100%;
+  max-height: min(680px, calc(100vh - 64px));
+  max-height: min(680px, calc(100dvh - 64px));
+  padding: 0 var(--modal-inline-padding);
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.app-modal .semi-modal-content::before {
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--z-brand), transparent 36%, var(--z-accent), transparent);
+  content: "";
+  opacity: 0.78;
+}
+
+.app-modal .semi-modal-header,
+.app-modal .semi-modal-footer {
+  flex: 0 0 auto;
   border-color: var(--z-line);
 }
 
-.semi-modal-title,
-.semi-modal-header,
-.semi-modal-body,
+.app-modal .semi-modal-header {
+  align-items: center;
+  margin: 0 calc(0px - var(--modal-inline-padding)) 16px;
+  padding: 16px var(--modal-inline-padding) 14px;
+  border-bottom: 1px solid var(--z-line);
+  background: transparent;
+}
+
+.app-modal .semi-modal-title {
+  align-items: center;
+}
+
+.app-modal-title {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: minmax(34px, auto) auto;
+  column-gap: 10px;
+}
+
+.app-modal-title-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  place-items: center;
+  align-self: center;
+  color: var(--z-accent);
+  border: 1px solid var(--z-line-strong);
+  border-radius: 4px;
+  background: rgba(7, 11, 18, 0.64);
+}
+
+.app-modal-title-heading,
+.app-modal-title-description {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-modal-title-heading {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  color: var(--z-text-strong);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.app-modal-title-description {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 2px;
+  color: var(--z-text-subtle);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.app-modal .semi-modal-body {
+  min-width: 0;
+  min-height: 0;
+  padding-bottom: var(--modal-content-padding-bottom);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+}
+
+.app-modal .semi-modal-body,
+.app-modal .semi-modal-body * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.app-modal .semi-modal-body::-webkit-scrollbar,
+.app-modal .semi-modal-body *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.app-modal .semi-modal-footer {
+  width: calc(100% + var(--modal-inline-padding) + var(--modal-inline-padding));
+  margin: 0 calc(0px - var(--modal-inline-padding));
+  padding: 14px var(--modal-inline-padding) 18px;
+  border-top: 1px solid var(--z-line);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.app-modal-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.app-modal-actions .semi-button {
+  margin: 0;
+}
+
 .semi-tabs,
 .semi-tabs-tab {
   color: var(--z-text);
@@ -547,10 +695,16 @@ a,
 
 .semi-tabs-bar-line.semi-tabs-bar-top {
   border-bottom-color: var(--z-line);
+  background: transparent;
 }
 
 .semi-tabs-tab-active {
   color: var(--z-text-strong);
+}
+
+.semi-tabs-tab {
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .semi-tabs-tab-line.semi-tabs-tab-active::before {
@@ -718,7 +872,7 @@ a,
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: var(--z-page-bg);
+  background: transparent;
 }
 
 .route-fallback-spinner {
@@ -739,6 +893,15 @@ a,
   to { background-position: 48px 48px; }
 }
 
+@keyframes globalBackdropDrift {
+  from {
+    background-position: 0 0, 0 0, 0% 34%, 100% 66%, center;
+  }
+  to {
+    background-position: 52px 52px, 52px 52px, 100% 48%, 0% 52%, center;
+  }
+}
+
 @keyframes scanline {
   0% { transform: translateY(-110%); opacity: 0; }
   45%, 55% { opacity: 0.7; }
@@ -746,6 +909,10 @@ a,
 }
 
 @media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none !important;
+  }
+
   .login-panel,
   .session-row,
   .chat-row,

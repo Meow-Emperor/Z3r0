@@ -49,14 +49,12 @@
   background-color: var(--z-scrollbar-hover);
 }
 
-.message-scroll-loading {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-  background: rgba(9, 13, 22, 0.42);
+.message-scroll-spin,
+.message-scroll-spin > .semi-spin-children {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .message-scroll-tail-floating {

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from core.runtime.context import AgentRuntimeContext
+from core.runtime.coordination import resume_target_agent_instance
 from core.sandbox.command_output import COMMAND_TIMEOUT_ERROR
 from logger import get_logger
 from schema.sandbox.async_jobs import SandboxAsyncJobSnapshot
@@ -268,9 +269,7 @@ async def _queue_completion_notification(snapshot: SandboxAsyncJobSnapshot | Non
     if snapshot is None:
         return
     try:
-        from core.delegation.subagents import resume_target_instance
-
-        await resume_target_instance(snapshot.session_id, snapshot.agent_instance_id)
+        await resume_target_agent_instance(snapshot.session_id, snapshot.agent_instance_id)
     except Exception:
         logger.exception("failed to resume owner after async job completion: %s", snapshot.run_id)
 

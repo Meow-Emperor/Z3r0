@@ -7,15 +7,22 @@ from lightrag.base import DocStatus
 
 from core.lightrag.runtime import lightrag_client
 from logger import get_logger
-from service.knowledge.resources import remove_knowledge_source_documents
+from service.knowledge.resources import (
+    remove_knowledge_source_documents,
+    remove_stale_knowledge_source_documents,
+)
 
 
 logger = get_logger(__name__)
 
 _DOCUMENT_STATUS_POLL_SECONDS = 5
 _PIPELINE_RETRY_SECONDS = 5
-_RECOVERABLE_STATUSES = tuple(
-    status for status in DocStatus if status != DocStatus.PROCESSED
+_RECOVERABLE_STATUSES = (
+    DocStatus.PENDING,
+    DocStatus.PARSING,
+    DocStatus.ANALYZING,
+    DocStatus.PROCESSING,
+    DocStatus.FAILED,
 )
 _TERMINAL_STATUSES = frozenset({DocStatus.PROCESSED, DocStatus.FAILED})
 
@@ -101,10 +108,20 @@ async def _knowledge_document_processing_loop() -> None:
 
 
 async def _recoverable_documents() -> tuple[bool, set[str]]:
-    documents = {}
     async with lightrag_client() as rag:
-        for status in _RECOVERABLE_STATUSES:
-            documents.update(await rag.get_docs_by_status(status))
+        status_groups = await asyncio.gather(*(
+            rag.get_docs_by_status(status)
+            for status in _RECOVERABLE_STATUSES
+        ))
+    documents = {
+        document_id: document
+        for group in status_groups
+        for document_id, document in group.items()
+    }
+    await remove_stale_knowledge_source_documents(
+        document.file_path
+        for document in documents.values()
+    )
 
     track_ids = {
         document.track_id
@@ -127,26 +144,38 @@ async def _process_knowledge_documents(track_ids: set[str]) -> None:
 async def _wait_for_document_tracks(track_ids: set[str]) -> None:
     remaining = set(track_ids)
     cleaned_document_ids: set[str] = set()
+    reported_failed_document_ids: set[str] = set()
 
     while remaining:
-        tracked_documents = {}
         async with lightrag_client() as rag:
-            for track_id in tuple(remaining):
-                tracked_documents[track_id] = await rag.aget_docs_by_track_id(track_id)
+            current_track_ids = tuple(remaining)
+            track_groups = await asyncio.gather(*(
+                rag.aget_docs_by_track_id(track_id)
+                for track_id in current_track_ids
+            ))
+        tracked_documents = dict(zip(current_track_ids, track_groups, strict=True))
 
-        processed_file_names: list[str] = []
+        removable_file_names: list[str] = []
         for track_id, documents in tracked_documents.items():
             if not documents:
                 remaining.discard(track_id)
                 continue
 
             for document_id, document in documents.items():
-                if (
-                    document.status == DocStatus.PROCESSED
-                    and document_id not in cleaned_document_ids
-                ):
+                if document_id not in cleaned_document_ids and _source_is_disposable(document):
                     cleaned_document_ids.add(document_id)
-                    processed_file_names.append(document.file_path)
+                    removable_file_names.append(document.file_path)
+                if (
+                    document.status == DocStatus.FAILED
+                    and document_id not in reported_failed_document_ids
+                ):
+                    reported_failed_document_ids.add(document_id)
+                    logger.error(
+                        "knowledge document processing failed: document_id=%s, file=%s, error=%s",
+                        document_id,
+                        document.file_path,
+                        document.error_msg or "unspecified processing error",
+                    )
 
             if all(
                 document.status in _TERMINAL_STATUSES
@@ -154,6 +183,18 @@ async def _wait_for_document_tracks(track_ids: set[str]) -> None:
             ):
                 remaining.discard(track_id)
 
-        await remove_knowledge_source_documents(processed_file_names)
+        await remove_knowledge_source_documents(removable_file_names)
         if remaining:
             await asyncio.sleep(_DOCUMENT_STATUS_POLL_SECONDS)
+
+
+def _source_is_disposable(document: object) -> bool:
+    status = getattr(document, "status", None)
+    if status == DocStatus.PROCESSED:
+        return True
+    metadata = getattr(document, "metadata", None)
+    return (
+        status == DocStatus.FAILED
+        and isinstance(metadata, dict)
+        and metadata.get("is_duplicate") is True
+    )

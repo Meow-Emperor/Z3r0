@@ -14,6 +14,7 @@ from schema.work_project.findings import (
     WorkProjectFindingStatus,
 )
 from service.common.pagination import Page, paginate_statement
+from service.work_project.locking import lock_active_work_project
 
 
 async def query_work_project_findings(
@@ -56,6 +57,8 @@ async def create_work_project_finding(
 ) -> tuple[WorkProjectFindingSchema | None, str]:
     now = datetime.now()
     async with get_async_session() as session:
+        if error := await lock_active_work_project(session, project_id):
+            return None, error
         error = await _validate_refs(session, project_id, request)
         if error:
             return None, error
@@ -91,7 +94,11 @@ async def update_work_project_finding(
     request: WorkProjectFindingRequest,
 ) -> tuple[WorkProjectFindingSchema | None, str]:
     async with get_async_session() as session:
-        finding = await session.get(WorkProjectFinding, finding_id)
+        if error := await lock_active_work_project(session, project_id):
+            return None, error
+        finding = (await session.exec(
+            select(WorkProjectFinding).where(WorkProjectFinding.id == finding_id).with_for_update()
+        )).one_or_none()
         if finding is None or finding.project_id != project_id:
             return None, "finding not found"
         error = await _validate_refs(session, project_id, request)
@@ -124,7 +131,11 @@ async def update_work_project_finding(
 
 async def delete_work_project_finding(project_id: int, finding_id: int) -> str:
     async with get_async_session() as session:
-        finding = await session.get(WorkProjectFinding, finding_id)
+        if error := await lock_active_work_project(session, project_id):
+            return error
+        finding = (await session.exec(
+            select(WorkProjectFinding).where(WorkProjectFinding.id == finding_id).with_for_update()
+        )).one_or_none()
         if finding is None or finding.project_id != project_id:
             return "finding not found"
         await session.delete(finding)

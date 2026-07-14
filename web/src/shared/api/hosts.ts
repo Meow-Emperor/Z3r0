@@ -4,6 +4,7 @@ import type {
   CreateManagedHostRequest,
   CreateManagedHostResponse,
   DeleteManagedHostImageRequest,
+  DeleteManagedHostImageResponse,
   DeleteManagedHostResponse,
   ListManagedHostImagesResponse,
   ManagedHostPathParams,
@@ -42,7 +43,7 @@ export function pullManagedHostImages(id: ManagedHostPathParams["id"], payload: 
 }
 
 export function removeManagedHostImage(id: ManagedHostPathParams["id"], payload: DeleteManagedHostImageRequest) {
-  return apiPost(`${HOSTS_PATH}/${id}/images/remove`, payload);
+  return apiPost<DeleteManagedHostImageResponse>(`${HOSTS_PATH}/${id}/images/remove`, payload);
 }
 
 export function buildHostShellUrl(id: ManagedHostPathParams["id"]) {

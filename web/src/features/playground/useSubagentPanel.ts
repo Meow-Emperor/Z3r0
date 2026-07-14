@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatState } from "./chatState";
 import {
   collectSubagentTabs,
+  isSubagentRunning,
   type SubagentTab,
   type SubagentSelection,
 } from "./subagentView";
@@ -28,7 +29,7 @@ export function useSubagentPanel(chatState: ChatState, scopeKey: string | null) 
       for (const runId of tab.runIds) {
         if (knownRuns.has(runId)) continue;
         knownRuns.add(runId);
-        if (tab.status === "running") newestRunning = tab;
+        if (isSubagentRunning(tab.status)) newestRunning = tab;
       }
     }
 
@@ -68,7 +69,7 @@ export function useSubagentPanel(chatState: ChatState, scopeKey: string | null) 
 
 function latestRunningTab(tabs: SubagentTab[]): SubagentTab | null {
   for (let index = tabs.length - 1; index >= 0; index -= 1) {
-    if (tabs[index].status === "running") return tabs[index];
+    if (isSubagentRunning(tabs[index].status)) return tabs[index];
   }
   return null;
 }

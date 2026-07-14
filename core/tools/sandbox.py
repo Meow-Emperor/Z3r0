@@ -184,7 +184,7 @@ async def read_sandbox_command_output(
     if container_id is None:
         return _error_result("No sandbox container selected.")
     try:
-        read_cmd, start, count, end = command_output.read_command(output_file, start_line, line_count)
+        read_cmd, start, count, _ = command_output.read_command(output_file, start_line, line_count)
         result = await execute_sandbox_container_command(
             id=container_id,
             command=read_cmd,

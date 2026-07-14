@@ -28,7 +28,12 @@ export class ApiError extends Error {
 }
 
 function isCommonResponsePayload(value: unknown): value is CommonResponsePayload {
-  return typeof value === "object" && value !== null && "message" in value;
+  return typeof value === "object"
+    && value !== null
+    && "code" in value
+    && typeof value.code === "number"
+    && "message" in value
+    && typeof value.message === "string";
 }
 
 async function parseJsonResponse(response: Response) {

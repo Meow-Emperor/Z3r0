@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 
 from agents import (
     Agent,
@@ -19,6 +18,7 @@ from config import AgentConfig, WORKSPACE, get_config
 from core.agent.instructions import build_instructions
 from core.agent.models import build_openai_model
 from core.agent.specs import AGENT_SPECS, AgentSpec, ToolMount
+from core.agent.tool_snapshot import AgentToolSnapshot
 from core.delegation.subagents import build_subagent_tools
 from core.runtime.context import AgentRuntimeContext
 from core.tools.reports import export_report
@@ -50,23 +50,6 @@ async def _end_turn_after_async_dispatch(
         if status == SandboxAsyncJobStatus.RUNNING.value:
             return ToolsToFinalOutputResult(is_final_output=True, final_output=result.output)
     return ToolsToFinalOutputResult(is_final_output=False)
-
-
-@dataclass(frozen=True, slots=True)
-class AgentToolSnapshot:
-    sandbox_container_id: int | None = None
-    sandbox_container_generation: int = 0
-    sandbox_skill_metadata: tuple[str, ...] = ()
-    work_project_id: int | None = None
-
-    @classmethod
-    def from_context(cls, context: AgentRuntimeContext) -> "AgentToolSnapshot":
-        return cls(
-            sandbox_container_id=context.sandbox_container_id,
-            sandbox_container_generation=context.sandbox_container_generation,
-            sandbox_skill_metadata=context.sandbox_skill_metadata,
-            work_project_id=context.work_project_id,
-        )
 
 
 class AgentRegistry:
@@ -202,11 +185,10 @@ def _has_work_project_tool(spec: AgentSpec) -> bool:
 
 
 def _tool_mount_available(mount: ToolMount, snapshot: AgentToolSnapshot) -> bool:
-    if mount.requires_sandbox_container and snapshot.sandbox_container_id is None:
-        return False
-    if mount.requires_work_project and snapshot.work_project_id is None:
-        return False
-    return True
+    return not (
+        (mount.requires_sandbox_container and snapshot.sandbox_container_id is None)
+        or (mount.requires_work_project and snapshot.work_project_id is None)
+    )
 
 
 def _build_subagent_tools(spec: AgentSpec, registry: AgentRegistry) -> list[Tool]:
