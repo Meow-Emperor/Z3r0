@@ -51,10 +51,7 @@ import {
 type AdminAction = "cancel" | "retry" | "delete";
 
 export function WorkProjectsPage() {
-  const {
-    items: projects, page, keyword, loading, loadItems: loadProjects, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<WorkProjectSummary>({ query: queryWorkProjects });
+  const projects = usePagedResourceList<WorkProjectSummary>({ query: queryWorkProjects });
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<WorkProject | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -76,13 +73,13 @@ export function WorkProjectsPage() {
   }, []);
 
   const refreshAll = useCallback(async () => {
-    await loadProjects();
-  }, [loadProjects]);
+    await projects.loadItems();
+  }, [projects.loadItems]);
 
   useAdminResourceHeader({
     createLabel: "Create Project",
     refreshLabel: "Refresh work projects",
-    loading: loading || adminAction !== null || detailLoadingId !== null,
+    loading: projects.loading || adminAction !== null || detailLoadingId !== null,
     onCreate: () => {
       setEditingProject(null);
       setModalOpen(true);
@@ -100,7 +97,7 @@ export function WorkProjectsPage() {
   });
 
   const summary = useMemo(
-    () => projects.reduce(
+    () => projects.items.reduce(
       (acc, project) => ({
         working: acc.working + (project.status === WORK_PROJECT_STATUS.WORKING ? 1 : 0),
         sessions: acc.sessions + project.session_count,
@@ -108,7 +105,7 @@ export function WorkProjectsPage() {
       }),
       { working: 0, sessions: 0, assets: 0 },
     ),
-    [projects],
+    [projects.items],
   );
 
   const handleSubmit = (payload: CreateWorkProjectRequest) => submit(() => (
@@ -170,7 +167,7 @@ export function WorkProjectsPage() {
       if (type === "delete") {
         setExpandedId((current) => (current === project.id ? null : current));
       }
-      await loadProjects();
+      await projects.loadItems();
       if (!mountedRef.current) return;
       if (expandedId === project.id && type !== "delete") {
         const detail = await loadProjectDetail(project.id);
@@ -273,33 +270,22 @@ export function WorkProjectsPage() {
     <>
       <ResourcePageShell
         searchPlaceholder="Search project name, type, description, or status"
-        keyword={keyword}
-        loading={loading}
+        state={projects}
         metrics={[
-          { label: "Total", value: total },
+          { label: "Total", value: projects.total },
           { label: "Working", value: summary.working },
           { label: "Project sessions", value: summary.sessions },
           { label: "Assets", value: summary.assets },
         ]}
-        empty={projects.length === 0}
+        empty={projects.items.length === 0}
         emptyIcon={<FolderKanban size={42} />}
         emptyTitle="No projects found"
-        page={page}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={total}
-        canGoBack={canGoBack}
-        canGoNext={canGoNext}
-        onKeywordChange={setKeyword}
-        onSearch={search}
-        onPrevious={previous}
-        onNext={next}
       >
         <ResourceTable<WorkProjectSummary>
           ariaLabel="Work projects"
           className="work-projects-table"
           columns={columns}
-          rows={projects}
+          rows={projects.items}
           rowKey={(project) => project.id}
         />
         {expandedId ? (

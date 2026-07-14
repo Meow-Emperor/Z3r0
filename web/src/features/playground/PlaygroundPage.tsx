@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import "../../app/styles/playground.css";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";
 import { showApiError, showApiSuccess } from "../../shared/api/feedback";
 import { SANDBOX_CONTAINER_STATUS, SESSION_TYPE } from "../../shared/api/generated/constants";

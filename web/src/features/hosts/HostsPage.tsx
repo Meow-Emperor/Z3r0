@@ -8,8 +8,8 @@ import { RESOURCE_PAGE_SIZE } from "../../shared/api/generated/constants";
 import type { ManagedHost, ManagedHostImage, SandboxImage } from "../../shared/api/types";
 import { AppModal } from "../../shared/components/AppModal";
 import { AsyncContent } from "../../shared/components/AsyncContent";
-import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
-import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
+import type { ResourceColumn } from "../../shared/components/ResourceTable";
 import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { useOptionList } from "../../shared/hooks/useOptionList";
@@ -26,43 +26,40 @@ import { HostFormModal } from "./HostFormModal";
 type ModalState = { mode: "create" } | { mode: "edit"; host: ManagedHost } | null;
 
 export function HostsPage() {
-  const {
-    items: hosts, page, keyword, loading, loadItems: loadHosts, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<ManagedHost>({ query: queryManagedHosts });
+  const hosts = usePagedResourceList<ManagedHost>({ query: queryManagedHosts });
   const [modal, setModal] = useState<ModalState>(null);
   const [imageModalHost, setImageModalHost] = useState<ManagedHost | null>(null);
-  const secrets = useVisibleResourceIds(hosts);
+  const secrets = useVisibleResourceIds(hosts.items);
   const { openHostShell } = useContainerShell();
   const { run: deleteHost, busyId: deletingHostId } = useResourceAction<ManagedHost>(
     (host) => deleteManagedHost(host.id),
-    loadHosts,
+    hosts.loadItems,
   );
 
   useAdminResourceHeader({
     createLabel: "Create Host",
     refreshLabel: "Refresh hosts",
-    loading,
+    loading: hosts.loading,
     onCreate: () => setModal({ mode: "create" }),
-    onRefresh: loadHosts,
+    onRefresh: hosts.loadItems,
   });
 
   const { saving, submit } = useResourceSubmit({
     onSuccess: async () => {
       setModal(null);
-      await loadHosts();
+      await hosts.loadItems();
     },
   });
 
   const summary = useMemo(
-    () => hosts.reduce(
+    () => hosts.items.reduce(
       (acc, host) => ({
         ssh: acc.ssh + (host.ssh_port > 0 ? 1 : 0),
         docker: acc.docker + (host.docker_management_port > 0 ? 1 : 0),
       }),
       { ssh: 0, docker: 0 },
     ),
-    [hosts],
+    [hosts.items],
   );
 
   const columns: ResourceColumn<ManagedHost>[] = [
@@ -120,36 +117,21 @@ export function HostsPage() {
 
   return (
     <>
-      <ResourcePageShell
+      <PagedResourceTable
+        ariaLabel="Managed hosts"
+        columns={columns}
+        rows={hosts.items}
+        rowKey={(host) => host.id}
         searchPlaceholder="Search IP, account, SSH port, or Docker port"
-        keyword={keyword}
-        loading={loading}
+        state={hosts}
         metrics={[
-          { label: "Total", value: total },
+          { label: "Total", value: hosts.total },
           { label: "SSH", value: summary.ssh },
           { label: "Docker Ports", value: summary.docker },
         ]}
-        empty={hosts.length === 0}
         emptyIcon={<Server size={42} />}
         emptyTitle="No hosts found"
-        page={page}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={total}
-        canGoBack={canGoBack}
-        canGoNext={canGoNext}
-        onKeywordChange={setKeyword}
-        onSearch={search}
-        onPrevious={previous}
-        onNext={next}
-      >
-        <ResourceTable<ManagedHost>
-          ariaLabel="Managed hosts"
-          columns={columns}
-          rows={hosts}
-          rowKey={(host) => host.id}
-        />
-      </ResourcePageShell>
+      />
 
       <HostFormModal
         open={Boolean(modal)}

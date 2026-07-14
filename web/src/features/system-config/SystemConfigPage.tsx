@@ -381,10 +381,10 @@ function LightRAGConfigEditor({ value, onChange }: {
       <Field kind="text" label="Extraction LLM Model" value={value.llm_model}
         onChange={(llm_model) => onChange({ llm_model })} />
       <div className="lightrag-retrieval-fields">
-        <Field kind="number" label="Graph Matches" value={value.graph_matches} width="compact"
+        <Field kind="number" label="Graph Matches" value={value.graph_matches} width="fill"
           min={LIGHTRAG_CONSTRAINTS.graph_matches.minimum} max={LIGHTRAG_CONSTRAINTS.graph_matches.maximum}
           onChange={(graph_matches) => onChange({ graph_matches })} />
-        <Field kind="number" label="Chunk Matches" value={value.chunk_matches} width="compact"
+        <Field kind="number" label="Chunk Matches" value={value.chunk_matches} width="fill"
           min={LIGHTRAG_CONSTRAINTS.chunk_matches.minimum} max={LIGHTRAG_CONSTRAINTS.chunk_matches.maximum}
           onChange={(chunk_matches) => onChange({ chunk_matches })} />
       </div>

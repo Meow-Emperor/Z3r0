@@ -1,4 +1,4 @@
-import { apiGet, apiPatch } from "./client";
+import { defineJsonEndpoint } from "./client";
 import type {
   GetInstanceConfigResponse,
   UpdateInstanceConfigRequest,
@@ -7,10 +7,9 @@ import type {
 
 const SYSTEM_CONFIG_PATH = "/api/system-config";
 
-export function getInstanceConfig() {
-  return apiGet<GetInstanceConfigResponse>(`${SYSTEM_CONFIG_PATH}/instance`);
-}
-
-export function updateInstanceConfig(payload: UpdateInstanceConfigRequest) {
-  return apiPatch<UpdateInstanceConfigResponse>(`${SYSTEM_CONFIG_PATH}/instance`, payload);
-}
+export const getInstanceConfig = defineJsonEndpoint<[], GetInstanceConfigResponse>(
+  "GET", () => `${SYSTEM_CONFIG_PATH}/instance`,
+);
+export const updateInstanceConfig = defineJsonEndpoint<[payload: UpdateInstanceConfigRequest], UpdateInstanceConfigResponse>(
+  "PATCH", () => `${SYSTEM_CONFIG_PATH}/instance`, (payload) => payload,
+);

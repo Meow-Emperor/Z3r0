@@ -9,46 +9,42 @@ export type ResourceMetric = {
   value: ReactNode;
 };
 
-type ResourcePageShellProps = {
-  searchPlaceholder: string;
-  keyword: string;
-  loading: boolean;
-  metrics: ResourceMetric[];
-  empty: boolean;
-  emptyIcon: ReactNode;
-  emptyTitle: string;
+export type ResourcePagerState = {
   page: number;
   rangeStart: number;
   rangeEnd: number;
   total: number;
+  loading: boolean;
   canGoBack: boolean;
   canGoNext: boolean;
+  previous: () => void;
+  next: () => void;
+};
+
+export type ResourcePageState = ResourcePagerState & {
+  keyword: string;
+  setKeyword: (keyword: string) => void;
+  search: () => void;
+};
+
+type ResourcePageShellProps = {
+  searchPlaceholder: string;
+  state: ResourcePageState;
+  metrics: ResourceMetric[];
+  empty: boolean;
+  emptyIcon: ReactNode;
+  emptyTitle: string;
   children: ReactNode;
-  onKeywordChange: (keyword: string) => void;
-  onSearch: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
 };
 
 export function ResourcePageShell({
   searchPlaceholder,
-  keyword,
-  loading,
+  state,
   metrics,
   empty,
   emptyIcon,
   emptyTitle,
-  page,
-  rangeStart,
-  rangeEnd,
-  total,
-  canGoBack,
-  canGoNext,
   children,
-  onKeywordChange,
-  onSearch,
-  onPrevious,
-  onNext,
 }: ResourcePageShellProps) {
   return (
     <section className="resource-page">
@@ -56,29 +52,17 @@ export function ResourcePageShell({
       <ResourcePanel
         toolbar={(
           <ResourceSearchForm
-            value={keyword}
+            value={state.keyword}
             placeholder={searchPlaceholder}
-            onChange={onKeywordChange}
-            onSearch={onSearch}
+            onChange={state.setKeyword}
+            onSearch={state.search}
           />
         )}
-        loading={loading}
+        loading={state.loading}
         empty={empty}
         emptyIcon={emptyIcon}
         emptyTitle={emptyTitle}
-        footer={(
-          <ResourcePager
-            page={page}
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            total={total}
-            loading={loading}
-            canGoBack={canGoBack}
-            canGoNext={canGoNext}
-            onPrevious={onPrevious}
-            onNext={onNext}
-          />
-        )}
+        footer={<ResourcePager state={state} />}
       >
         {children}
       </ResourcePanel>
@@ -131,33 +115,21 @@ export function ResourceSearchForm({ value, placeholder, onChange, onSearch }: {
   );
 }
 
-export function ResourcePager({
-  page, rangeStart, rangeEnd, total, loading, canGoBack, canGoNext, onPrevious, onNext,
-}: {
-  page: number;
-  rangeStart: number;
-  rangeEnd: number;
-  total: number;
-  loading: boolean;
-  canGoBack: boolean;
-  canGoNext: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-}) {
+export function ResourcePager({ state }: { state: ResourcePagerState }) {
   return (
     <div className="pager-row">
       <div className="pager-summary">
-        <span>Page {String(page).padStart(2, "0")}</span>
-        <strong>{rangeStart}-{rangeEnd}</strong>
-        <small>of {total}</small>
+        <span>Page {String(state.page).padStart(2, "0")}</span>
+        <strong>{state.rangeStart}-{state.rangeEnd}</strong>
+        <small>of {state.total}</small>
       </div>
       <div className="pager-actions">
         <Tooltip content="Previous page">
           <Button
             type="tertiary"
             icon={<ChevronLeft size={16} />}
-            disabled={!canGoBack || loading}
-            onClick={onPrevious}
+            disabled={!state.canGoBack || state.loading}
+            onClick={state.previous}
             aria-label="Previous page"
           />
         </Tooltip>
@@ -165,8 +137,8 @@ export function ResourcePager({
           <Button
             type="tertiary"
             icon={<ChevronRight size={16} />}
-            disabled={!canGoNext || loading}
-            onClick={onNext}
+            disabled={!state.canGoNext || state.loading}
+            onClick={state.next}
             aria-label="Next page"
           />
         </Tooltip>

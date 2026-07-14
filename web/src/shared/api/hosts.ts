@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { buildAuthenticatedWebSocketUrl, defineJsonEndpoint } from "./client";
 import { buildQuery } from "./query";
 import type {
   CreateManagedHostRequest,
@@ -18,33 +18,27 @@ import type {
 
 const HOSTS_PATH = "/api/hosts";
 
-export function queryManagedHosts(params: QueryManagedHostsParams) {
-  return apiGet<QueryManagedHostsResponse>(`${HOSTS_PATH}${buildQuery(params)}`);
-}
-
-export function createManagedHost(payload: CreateManagedHostRequest) {
-  return apiPost<CreateManagedHostResponse>(HOSTS_PATH, payload);
-}
-
-export function updateManagedHost(id: ManagedHostPathParams["id"], payload: UpdateManagedHostRequest) {
-  return apiPatch<UpdateManagedHostResponse>(`${HOSTS_PATH}/${id}`, payload);
-}
-
-export function deleteManagedHost(id: ManagedHostPathParams["id"]) {
-  return apiDelete<DeleteManagedHostResponse>(`${HOSTS_PATH}/${id}`);
-}
-
-export function listManagedHostImages(id: ManagedHostPathParams["id"]) {
-  return apiGet<ListManagedHostImagesResponse>(`${HOSTS_PATH}/${id}/images`);
-}
-
-export function pullManagedHostImages(id: ManagedHostPathParams["id"], payload: PullManagedHostImagesRequest) {
-  return apiPost<PullManagedHostImagesResponse>(`${HOSTS_PATH}/${id}/images/pull`, payload);
-}
-
-export function removeManagedHostImage(id: ManagedHostPathParams["id"], payload: DeleteManagedHostImageRequest) {
-  return apiPost<DeleteManagedHostImageResponse>(`${HOSTS_PATH}/${id}/images/remove`, payload);
-}
+export const queryManagedHosts = defineJsonEndpoint<[params: QueryManagedHostsParams], QueryManagedHostsResponse>(
+  "GET", (params) => `${HOSTS_PATH}${buildQuery(params)}`,
+);
+export const createManagedHost = defineJsonEndpoint<[payload: CreateManagedHostRequest], CreateManagedHostResponse>(
+  "POST", () => HOSTS_PATH, (payload) => payload,
+);
+export const updateManagedHost = defineJsonEndpoint<
+  [id: ManagedHostPathParams["id"], payload: UpdateManagedHostRequest], UpdateManagedHostResponse
+>("PATCH", (id) => `${HOSTS_PATH}/${id}`, (_, payload) => payload);
+export const deleteManagedHost = defineJsonEndpoint<[id: ManagedHostPathParams["id"]], DeleteManagedHostResponse>(
+  "DELETE", (id) => `${HOSTS_PATH}/${id}`,
+);
+export const listManagedHostImages = defineJsonEndpoint<[id: ManagedHostPathParams["id"]], ListManagedHostImagesResponse>(
+  "GET", (id) => `${HOSTS_PATH}/${id}/images`,
+);
+export const pullManagedHostImages = defineJsonEndpoint<
+  [id: ManagedHostPathParams["id"], payload: PullManagedHostImagesRequest], PullManagedHostImagesResponse
+>("POST", (id) => `${HOSTS_PATH}/${id}/images/pull`, (_, payload) => payload);
+export const removeManagedHostImage = defineJsonEndpoint<
+  [id: ManagedHostPathParams["id"], payload: DeleteManagedHostImageRequest], DeleteManagedHostImageResponse
+>("POST", (id) => `${HOSTS_PATH}/${id}/images/remove`, (_, payload) => payload);
 
 export function buildHostShellUrl(id: ManagedHostPathParams["id"]) {
   return buildAuthenticatedWebSocketUrl(`${HOSTS_PATH}/${id}/shell`);

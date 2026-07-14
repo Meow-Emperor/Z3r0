@@ -2,6 +2,7 @@ import { Input, InputNumber, Select, TextArea } from "@douyinfe/semi-ui";
 import { KeyRound, Network, PlugZap, Server, ShieldCheck, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateManagedHostRequest, ManagedHost, UpdateManagedHostRequest } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 
 type HostFormValues = CreateManagedHostRequest;
@@ -131,64 +132,57 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
       onSubmit={submit}
     >
       <div className="host-form-row">
-        <label>
-          <span>IP Address</span>
+        <FormField label="IP Address">
           <Input prefix={<Server size={16} />} value={values.ip_address} maxLength={255} required
             autoComplete="off"
             disabled={isLocalHostEdit}
             onChange={(value) => setValue("ip_address", value)}
           />
-        </label>
-        <label>
-          <span>SSH Port</span>
+        </FormField>
+        <FormField label="SSH Port">
           <InputNumber prefix={<Network size={16} />} value={values.ssh_port} min={1} max={65535}
             disabled={isLocalHostEdit}
             onChange={(value) => typeof value === "number" && setValue("ssh_port", value)}
           />
-        </label>
+        </FormField>
       </div>
       <div className="host-form-row">
-        <label>
-          <span>Host Account</span>
+        <FormField label="Host Account">
           <Input prefix={<User size={16} />} value={values.host_account} maxLength={128} required
             autoComplete="off"
             disabled={isLocalHostEdit}
             onChange={(value) => setValue("host_account", value)}
           />
-        </label>
-        <label>
-          <span>Host Password</span>
+        </FormField>
+        <FormField label="Host Password">
           <Input mode="password" prefix={<KeyRound size={16} />} value={values.host_password} maxLength={512} required
             autoComplete="new-password"
             disabled={isLocalHostEdit}
             onChange={(value) => setValue("host_password", value)}
           />
-        </label>
+        </FormField>
       </div>
       <div className="host-form-row">
-        <label>
-          <span>Docker Management Port</span>
+        <FormField label="Docker Management Port">
           <InputNumber prefix={<PlugZap size={16} />} value={values.docker_management_port} min={1} max={65535}
             onChange={(value) => typeof value === "number" && setValue("docker_management_port", value)}
           />
-        </label>
-        <label>
-          <span>Docker TLS Mode</span>
+        </FormField>
+        <FormField label="Docker TLS Mode">
           <Select
             prefix={<ShieldCheck size={16} />}
             value={values.docker_tls_enabled ? "tls" : "plain"}
             optionList={TLS_OPTIONS}
             onChange={setTlsMode}
           />
-        </label>
+        </FormField>
       </div>
       {values.docker_tls_enabled ? CERT_FIELDS.map(({ field, label }) => (
-        <label key={field}>
-          <span>{label}</span>
+        <FormField key={field} label={label}>
           <TextArea className="host-cert-textarea" value={values[field]} rows={4} resize="none" required
             onChange={(value) => setValue(field, value)}
           />
-        </label>
+        </FormField>
       )) : null}
     </ResourceModal>
   );

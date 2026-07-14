@@ -144,21 +144,11 @@ function PagedRecordView({ state, emptyTitle, children }: {
         empty={state.items.length === 0}
         emptyIcon={<FileText size={42} />}
         emptyTitle={emptyTitle}
-        wrapperClassName="project-record-spin"
+        wrapperClassName="project-record-list-scroll"
       >
         {children}
       </AsyncContent>
-      <ResourcePager
-        page={state.page}
-        rangeStart={state.rangeStart}
-        rangeEnd={state.rangeEnd}
-        total={state.total}
-        loading={state.loading}
-        canGoBack={state.canGoBack}
-        canGoNext={state.canGoNext}
-        onPrevious={state.previous}
-        onNext={state.next}
-      />
+      <ResourcePager state={state} />
     </div>
   );
 }

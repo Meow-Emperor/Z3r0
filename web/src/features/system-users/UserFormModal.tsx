@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getSystemUserRoles, isSystemUserRole } from "../../shared/api/contract";
 import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import type { CreateSystemUserRequest, SystemUser, SystemUserRole, UpdateSystemUserRequest } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import { SYSTEM_USER_ROLE_LABEL } from "../../shared/lib/labels";
 
@@ -66,33 +67,29 @@ export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: 
       onCancel={onCancel}
       onSubmit={submit}
     >
-      <label>
-        <span>Username</span>
+      <FormField label="Username">
         <Input prefix={<User size={16} />} value={values.username} maxLength={64} required
           onChange={(username) => setValues((v) => ({ ...v, username }))}
         />
-      </label>
-      <label>
-        <span>Email</span>
+      </FormField>
+      <FormField label="Email">
         <Input type="email" prefix={<Mail size={16} />} value={values.email} maxLength={255}
           onChange={(email) => setValues((v) => ({ ...v, email }))}
         />
-      </label>
-      <label>
-        <span>Role</span>
+      </FormField>
+      <FormField label="Role">
         <Select prefix={<Shield size={16} />} value={values.role}
           onChange={(role) => isSystemUserRole(role) && setValues((v) => ({ ...v, role }))}
           optionList={roles.map((role) => ({ label: SYSTEM_USER_ROLE_LABEL[role], value: role }))}
         />
-      </label>
-      <label>
-        <span>Password</span>
+      </FormField>
+      <FormField label="Password">
         <Input mode="password" prefix={<KeyRound size={16} />} value={values.password} maxLength={128}
           required={mode === "create"}
           placeholder={mode === "create" ? "Password" : "Leave blank to keep current password"}
           onChange={(password) => setValues((v) => ({ ...v, password }))}
         />
-      </label>
+      </FormField>
     </ResourceModal>
   );
 }

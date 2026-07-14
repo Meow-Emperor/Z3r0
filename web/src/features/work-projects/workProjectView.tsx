@@ -55,7 +55,7 @@ export function WorkProjectTasks({
   project: WorkProject;
   mode?: WorkProjectViewMode;
 }) {
-  const listClassName = mode === "info" ? "project-info-scroll-list" : "work-project-task-list";
+  const listClassName = mode === "info" ? "project-info-list" : "work-project-task-list";
   const rowClassName = mode === "info" ? "project-info-task-row" : "work-project-task-row";
   const showIcon = mode === "expanded";
   return (
@@ -79,7 +79,7 @@ export function WorkProjectSummaries({
   project: WorkProject;
   mode?: WorkProjectViewMode;
 }) {
-  const listClassName = mode === "info" ? "project-info-scroll-list" : "work-project-summary-list";
+  const listClassName = mode === "info" ? "project-info-list" : "work-project-summary-list";
   const rowClassName = mode === "info" ? "project-info-summary" : "work-project-summary-row";
   const progressClassName = mode === "info" ? "project-info-summary-task" : "work-project-summary-progress";
   const blockClassName = mode === "info" ? "project-info-summary-block" : "work-project-summary-block";

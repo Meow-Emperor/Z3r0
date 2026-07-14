@@ -28,7 +28,9 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
       open={open}
       title={project?.name ?? "Work Project"}
       titleIcon={<FolderKanban size={17} />}
+      className="work-project-info-modal"
       width="min(1440px, calc(100vw - 24px))"
+      height="min(820px, calc(100dvh - 32px))"
       onCancel={onClose}
     >
       <AsyncContent
@@ -36,54 +38,57 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
         empty={project === null}
         emptyIcon={<FileText size={42} />}
         emptyTitle="No project selected."
+        wrapperClassName="project-record-spin"
       >
         {project ? (
           <div className="project-info-content project-record-content">
-            <section className="project-info-main">
-              <section className="project-info-meta">
-                <div>
-                  <span>Type</span>
-                  <WorkProjectTypeTag project={project} />
-                </div>
-                <div>
-                  <span>Status</span>
-                  <WorkProjectStatusTag project={project} />
-                </div>
-                <div>
-                  <span>Owners</span>
-                  <strong>{workProjectOwnerNames(project)}</strong>
-                </div>
-                <div>
-                  <span>Sandbox</span>
-                  <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
-                </div>
-              </section>
+            <aside className="project-info-sidebar">
+              <div className="project-info-sidebar-scroll">
+                <section className="project-info-meta">
+                  <div>
+                    <span>Type</span>
+                    <WorkProjectTypeTag project={project} />
+                  </div>
+                  <div>
+                    <span>Status</span>
+                    <WorkProjectStatusTag project={project} />
+                  </div>
+                  <div>
+                    <span>Owners</span>
+                    <strong>{workProjectOwnerNames(project)}</strong>
+                  </div>
+                  <div>
+                    <span>Sandbox</span>
+                    <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
+                  </div>
+                </section>
 
-              {project.description ? <div className="project-info-description">{project.description}</div> : null}
+                {project.description ? <div className="project-info-description">{project.description}</div> : null}
 
-              <section className="project-info-progress">
-                <span>Task Progress</span>
-                <Progress percent={project.progress} size="small" showInfo />
-              </section>
+                <section className="project-info-progress">
+                  <span>Task Progress</span>
+                  <Progress percent={project.progress} size="small" showInfo />
+                </section>
 
-              <WorkProjectPanel
-                title="Tasks"
-                icon={<FileText size={15} />}
-                empty={!project.tasks.length ? "No data." : ""}
-                mode="info"
-              >
-                <WorkProjectTasks project={project} mode="info" />
-              </WorkProjectPanel>
+                <WorkProjectPanel
+                  title="Tasks"
+                  icon={<FileText size={15} />}
+                  empty={!project.tasks.length ? "No data." : ""}
+                  mode="info"
+                >
+                  <WorkProjectTasks project={project} mode="info" />
+                </WorkProjectPanel>
 
-              <WorkProjectPanel
-                title="Agent Summaries"
-                icon={<UserRound size={15} />}
-                empty={!project.agent_summaries.length ? "No data." : ""}
-                mode="info"
-              >
-                <WorkProjectSummaries project={project} mode="info" />
-              </WorkProjectPanel>
-            </section>
+                <WorkProjectPanel
+                  title="Agent Summaries"
+                  icon={<UserRound size={15} />}
+                  empty={!project.agent_summaries.length ? "No data." : ""}
+                  mode="info"
+                >
+                  <WorkProjectSummaries project={project} mode="info" />
+                </WorkProjectPanel>
+              </div>
+            </aside>
 
             <section className="project-record-panel">
               <WorkProjectRecordTabs

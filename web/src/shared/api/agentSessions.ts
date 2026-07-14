@@ -1,4 +1,4 @@
-import { apiBlob, apiDelete, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { apiBlob, buildAuthenticatedWebSocketUrl, defineJsonEndpoint } from "./client";
 import { buildQuery } from "./query";
 import type {
   AgentTurnRequest,
@@ -20,64 +20,42 @@ import type {
 
 const AGENT_SESSIONS_PATH = "/api/agent-sessions";
 
-export function listAgentSessions(params: ListAgentSessionsParams) {
-  return apiGet<ListAgentSessionsResponse>(`${AGENT_SESSIONS_PATH}${buildQuery(params)}`);
-}
-
-export function createAgentSessionTurn(payload: AgentTurnRequest) {
-  return apiPost<CreateAgentSessionTurnResponse>(`${AGENT_SESSIONS_PATH}/turns`, payload);
-}
-
-export function submitAgentSessionTurn(sessionId: string, payload: AgentTurnRequest) {
-  return apiPost<SubmitAgentSessionTurnResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/turns`,
-    payload,
-  );
-}
-
-export function interruptAgentSession(sessionId: string) {
-  return apiPost<InterruptAgentSessionResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/interrupt`,
-  );
-}
-
-export function cancelAllAgentSessionTasks(sessionId: string) {
-  return apiPost<CancelAllAgentSessionTasksResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/cancel-all`,
-  );
-}
+export const listAgentSessions = defineJsonEndpoint<[params: ListAgentSessionsParams], ListAgentSessionsResponse>(
+  "GET", (params) => `${AGENT_SESSIONS_PATH}${buildQuery(params)}`,
+);
+export const createAgentSessionTurn = defineJsonEndpoint<[payload: AgentTurnRequest], CreateAgentSessionTurnResponse>(
+  "POST", () => `${AGENT_SESSIONS_PATH}/turns`, (payload) => payload,
+);
+export const submitAgentSessionTurn = defineJsonEndpoint<
+  [sessionId: string, payload: AgentTurnRequest], SubmitAgentSessionTurnResponse
+>("POST", (sessionId) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/turns`, (_, payload) => payload);
+export const interruptAgentSession = defineJsonEndpoint<[sessionId: string], InterruptAgentSessionResponse>(
+  "POST", (sessionId) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/interrupt`,
+);
+export const cancelAllAgentSessionTasks = defineJsonEndpoint<[sessionId: string], CancelAllAgentSessionTasksResponse>(
+  "POST", (sessionId) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/cancel-all`,
+);
 
 export function listAgentEvents(
   sessionId: string,
   params: ListAgentEventsParams = {},
 ) {
-  return apiGet<ListAgentEventsResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/events${buildQuery(params)}`,
-  );
+  return listAgentEventsEndpoint(sessionId, params);
 }
 
-export function updateAgentSessionTitle(sessionId: string, payload: UpdateAgentSessionTitleRequest) {
-  return apiPatch<UpdateAgentSessionTitleResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/title`,
-    payload,
-  );
-}
+const listAgentEventsEndpoint = defineJsonEndpoint<
+  [sessionId: string, params: ListAgentEventsParams], ListAgentEventsResponse
+>("GET", (sessionId, params) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/events${buildQuery(params)}`);
 
-export function updateAgentSessionSandboxContainer(
-  sessionId: string,
-  payload: UpdateAgentSessionSandboxContainerRequest,
-) {
-  return apiPatch<UpdateAgentSessionSandboxContainerResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/sandbox-container`,
-    payload,
-  );
-}
-
-export function deleteAgentSession(sessionId: string) {
-  return apiDelete<DeleteAgentSessionResponse>(
-    `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}`,
-  );
-}
+export const updateAgentSessionTitle = defineJsonEndpoint<
+  [sessionId: string, payload: UpdateAgentSessionTitleRequest], UpdateAgentSessionTitleResponse
+>("PATCH", (sessionId) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/title`, (_, payload) => payload);
+export const updateAgentSessionSandboxContainer = defineJsonEndpoint<
+  [sessionId: string, payload: UpdateAgentSessionSandboxContainerRequest], UpdateAgentSessionSandboxContainerResponse
+>("PATCH", (sessionId) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}/sandbox-container`, (_, payload) => payload);
+export const deleteAgentSession = defineJsonEndpoint<[sessionId: string], DeleteAgentSessionResponse>(
+  "DELETE", (sessionId) => `${AGENT_SESSIONS_PATH}/${encodeURIComponent(sessionId)}`,
+);
 
 export function downloadAgentReport(reportId: DownloadAgentReportPathParams["report_id"]) {
   return apiBlob(`${AGENT_SESSIONS_PATH}/reports/${encodeURIComponent(reportId)}/download`);

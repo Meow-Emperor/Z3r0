@@ -5,8 +5,8 @@ import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressPro
 import { showApiError } from "../../shared/api/feedback";
 import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPE_VALUES } from "../../shared/api/generated/constants";
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
-import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
-import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
+import type { ResourceColumn } from "../../shared/components/ResourceTable";
 import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
@@ -20,40 +20,37 @@ import { EgressProxyFormModal } from "./EgressProxyFormModal";
 type ModalState = { mode: "create" } | { mode: "edit"; proxy: EgressProxy } | null;
 
 export function EgressProxiesPage() {
-  const {
-    items: proxies, page, keyword, loading, loadItems: loadProxies, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<EgressProxy>({ query: queryEgressProxies });
+  const proxies = usePagedResourceList<EgressProxy>({ query: queryEgressProxies });
   const [modal, setModal] = useState<ModalState>(null);
-  const secrets = useVisibleResourceIds(proxies);
+  const secrets = useVisibleResourceIds(proxies.items);
   const [testingId, setTestingId] = useState<number | null>(null);
   const testingRef = useRef(false);
 
   const { run: deleteProxy, busyId: deletingId } = useResourceAction<EgressProxy>(
-    (proxy) => deleteEgressProxy(proxy.id), loadProxies,
+    (proxy) => deleteEgressProxy(proxy.id), proxies.loadItems,
   );
 
   useAdminResourceHeader({
     createLabel: "Create Egress Proxy",
     refreshLabel: "Refresh egress proxies",
-    loading,
+    loading: proxies.loading,
     onCreate: () => setModal({ mode: "create" }),
-    onRefresh: loadProxies,
+    onRefresh: proxies.loadItems,
   });
 
   const { saving, submit } = useResourceSubmit({
     onSuccess: async () => {
       setModal(null);
-      await loadProxies();
+      await proxies.loadItems();
     },
   });
 
   const summary = useMemo(
-    () => proxies.reduce((acc, proxy) => ({
+    () => proxies.items.reduce((acc, proxy) => ({
       ...acc,
       [proxy.proxy_type]: (acc[proxy.proxy_type] ?? 0) + 1,
     }), Object.fromEntries(EGRESS_PROXY_TYPE_VALUES.map((type) => [type, 0])) as Record<EgressProxy["proxy_type"], number>),
-    [proxies],
+    [proxies.items],
   );
 
   const testProxy = async (proxy: EgressProxy) => {
@@ -127,35 +124,20 @@ export function EgressProxiesPage() {
 
   return (
     <>
-      <ResourcePageShell
+      <PagedResourceTable
+        ariaLabel="Egress proxies"
+        columns={columns}
+        rows={proxies.items}
+        rowKey={(proxy) => proxy.id}
         searchPlaceholder="Search host, account, type, or port"
-        keyword={keyword}
-        loading={loading}
+        state={proxies}
         metrics={[
-          { label: "Total", value: total },
+          { label: "Total", value: proxies.total },
           ...EGRESS_PROXY_TYPE_VALUES.map((type) => ({ label: type.toUpperCase(), value: summary[type] ?? 0 })),
         ]}
-        empty={proxies.length === 0}
         emptyIcon={<Network size={42} />}
         emptyTitle="No egress proxies found"
-        page={page}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={total}
-        canGoBack={canGoBack}
-        canGoNext={canGoNext}
-        onKeywordChange={setKeyword}
-        onSearch={search}
-        onPrevious={previous}
-        onNext={next}
-      >
-        <ResourceTable<EgressProxy>
-          ariaLabel="Egress proxies"
-          columns={columns}
-          rows={proxies}
-          rowKey={(proxy) => proxy.id}
-        />
-      </ResourcePageShell>
+      />
 
       {modal?.mode === "edit" ? (
         <EgressProxyFormModal

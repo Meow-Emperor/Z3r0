@@ -14,6 +14,7 @@ import type {
   SandboxContainerHostOption,
   SandboxImage,
 } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import { useOptionList } from "../../shared/hooks/useOptionList";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
@@ -89,8 +90,7 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
       onCancel={onCancel}
       onSubmit={submit}
     >
-      <label>
-        <span>Host</span>
+      <FormField label="Host">
         <Select
           prefix={<Server size={16} />}
           value={hostId}
@@ -104,10 +104,9 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
           onListScroll={hostOptions.onListScroll}
           onChange={(value) => typeof value === "number" && setHostId(value)}
         />
-      </label>
+      </FormField>
 
-      <label>
-        <span>Image</span>
+      <FormField label="Image">
         <Select
           prefix={<Boxes size={16} />}
           value={imageId}
@@ -128,10 +127,9 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
             }
           }}
         />
-      </label>
+      </FormField>
 
-      <label>
-        <span>Egress Mode</span>
+      <FormField label="Egress Mode">
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
@@ -140,7 +138,7 @@ export function PlaygroundSandboxCreateModal({ open, onCancel, onCreated }: Play
             if (typeof value === "string") setEgressMode(value as SandboxContainerEgressMode);
           }}
         />
-      </label>
+      </FormField>
     </ResourceModal>
   );
 }

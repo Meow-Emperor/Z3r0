@@ -33,9 +33,10 @@ import { querySandboxImages } from "../../shared/api/sandboxImages";
 import { querySystemUsers } from "../../shared/api/systemUsers";
 import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
 import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
-import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
+import { FormField } from "../../shared/components/FormField";
+import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
 import { ResourceModal } from "../../shared/components/ResourceModal";
-import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import type { ResourceColumn } from "../../shared/components/ResourceTable";
 import { OwnerCell, ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { useOptionList, type OptionListResult } from "../../shared/hooks/useOptionList";
@@ -52,10 +53,7 @@ import { SandboxContainerFormModal } from "./SandboxContainerFormModal";
 
 export function SandboxContainersPage() {
   const { user } = useAuth();
-  const {
-    items: containers, page, keyword, loading, loadItems: loadContainers, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<SandboxContainer>({ query: querySandboxContainers });
+  const containers = usePagedResourceList<SandboxContainer>({ query: querySandboxContainers });
   const [modalOpen, setModalOpen] = useState(false);
   const imageOptions = useOptionList<SandboxImage>({ query: querySandboxImages });
   const hostOptions = useOptionList<ManagedHost>({ query: queryManagedHosts });
@@ -65,33 +63,33 @@ export function SandboxContainersPage() {
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
 
   const refreshAll = useCallback(async () => {
-    await loadContainers();
+    await containers.loadItems();
     await imageOptions.load();
     await hostOptions.load();
     await userOptions.load();
     await egressProxyOptions.load();
-  }, [egressProxyOptions.load, hostOptions.load, imageOptions.load, loadContainers, userOptions.load]);
+  }, [containers.loadItems, egressProxyOptions.load, hostOptions.load, imageOptions.load, userOptions.load]);
 
   const { run: startContainer, busyId: startingId } = useResourceAction<SandboxContainer>(
-    (container) => startSandboxContainer(container.id), loadContainers,
+    (container) => startSandboxContainer(container.id), containers.loadItems,
   );
   const { run: stopContainer, busyId: stoppingId } = useResourceAction<SandboxContainer>(
-    (container) => stopSandboxContainer(container.id), loadContainers,
+    (container) => stopSandboxContainer(container.id), containers.loadItems,
   );
   const { run: pauseContainer, busyId: pausingId } = useResourceAction<SandboxContainer>(
-    (container) => pauseSandboxContainer(container.id), loadContainers,
+    (container) => pauseSandboxContainer(container.id), containers.loadItems,
   );
   const { run: resumeContainer, busyId: resumingId } = useResourceAction<SandboxContainer>(
-    (container) => resumeSandboxContainer(container.id), loadContainers,
+    (container) => resumeSandboxContainer(container.id), containers.loadItems,
   );
   const { run: deleteContainer, busyId: deletingId } = useResourceAction<SandboxContainer>(
-    (container) => deleteSandboxContainer(container.id), loadContainers,
+    (container) => deleteSandboxContainer(container.id), containers.loadItems,
   );
 
   useAdminResourceHeader({
     createLabel: "Create Container",
     refreshLabel: "Refresh sandbox containers",
-    loading: loading || imageOptions.loading || hostOptions.loading || userOptions.loading || egressProxyOptions.loading,
+    loading: containers.loading || imageOptions.loading || hostOptions.loading || userOptions.loading || egressProxyOptions.loading,
     onCreate: () => setModalOpen(true),
     onRefresh: refreshAll,
   });
@@ -99,12 +97,12 @@ export function SandboxContainersPage() {
   const { saving, submit } = useResourceSubmit({
     onSuccess: async () => {
       setModalOpen(false);
-      await loadContainers();
+      await containers.loadItems();
     },
   });
 
   const summary = useMemo(
-    () => containers.reduce(
+    () => containers.items.reduce(
       (acc, container) => ({
         running: acc.running + (container.status === SANDBOX_CONTAINER_STATUS.RUNNING ? 1 : 0),
         paused: acc.paused + (container.status === SANDBOX_CONTAINER_STATUS.PAUSED ? 1 : 0),
@@ -113,7 +111,7 @@ export function SandboxContainersPage() {
       }),
       { running: 0, paused: 0, created: 0, stopped: 0 },
     ),
-    [containers],
+    [containers.items],
   );
 
   const handleCreate = (payload: CreateSandboxContainerRequest) => submit(() => createSandboxContainer(payload));
@@ -210,39 +208,24 @@ export function SandboxContainersPage() {
 
   return (
     <>
-      <ResourcePageShell
+      <PagedResourceTable
+        ariaLabel="Sandbox containers"
+        className="sandbox-containers-table"
+        columns={columns}
+        rows={containers.items}
+        rowKey={(container) => container.id}
         searchPlaceholder="Search container, image, owner, ports, or status"
-        keyword={keyword}
-        loading={loading}
+        state={containers}
         metrics={[
-          { label: "Total", value: total },
+          { label: "Total", value: containers.total },
           { label: "Running", value: summary.running },
           { label: "Paused", value: summary.paused },
           { label: "Created", value: summary.created },
           { label: "Stopped", value: summary.stopped },
         ]}
-        empty={containers.length === 0}
         emptyIcon={<Boxes size={42} />}
         emptyTitle="No containers found"
-        page={page}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={total}
-        canGoBack={canGoBack}
-        canGoNext={canGoNext}
-        onKeywordChange={setKeyword}
-        onSearch={search}
-        onPrevious={previous}
-        onNext={next}
-      >
-        <ResourceTable<SandboxContainer>
-          ariaLabel="Sandbox containers"
-          className="sandbox-containers-table"
-          columns={columns}
-          rows={containers}
-          rowKey={(container) => container.id}
-        />
-      </ResourcePageShell>
+      />
 
       <SandboxContainerFormModal
         open={modalOpen}
@@ -261,7 +244,7 @@ export function SandboxContainersPage() {
         onClose={() => setEgressModalContainer(null)}
         onSaved={async () => {
           setEgressModalContainer(null);
-          await loadContainers();
+          await containers.loadItems();
         }}
       />
     </>
@@ -307,8 +290,7 @@ function ContainerEgressModal({
       onSubmit={save}
       onCancel={onClose}
     >
-      <label>
-        <span>Egress Mode</span>
+      <FormField label="Egress Mode">
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
@@ -320,10 +302,9 @@ function ContainerEgressModal({
             if (next !== SANDBOX_CONTAINER_EGRESS_MODE.PROXY) setSelectedProxyId(undefined);
           }}
         />
-      </label>
+      </FormField>
       {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
-        <label>
-          <span>Managed Proxy</span>
+        <FormField label="Managed Proxy">
           <Select
             prefix={<Network size={16} />}
             value={selectedProxyId}
@@ -336,7 +317,7 @@ function ContainerEgressModal({
             onListScroll={egressProxyOptions.onListScroll}
             onChange={(value) => setSelectedProxyId(typeof value === "number" ? value : undefined)}
           />
-        </label>
+        </FormField>
       ) : null}
     </ResourceModal>
   );

@@ -31,6 +31,7 @@ import {
   ResourcePager,
   ResourcePanel,
   ResourceSearchForm,
+  type ResourcePagerState,
 } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { TabLabel } from "../../shared/components/TabLabel";
@@ -338,20 +339,15 @@ export function KnowledgesPage() {
           <DocumentsTab
             items={documents.items}
             status={status}
-            loading={documents.loading || uploading || deletingDocumentId !== null}
+            pager={{
+              ...documents,
+              loading: documents.loading || uploading || deletingDocumentId !== null,
+            }}
             deletingId={deletingDocumentId}
-            page={documents.page}
-            rangeStart={documents.rangeStart}
-            rangeEnd={documents.rangeEnd}
-            total={documents.total}
-            canGoBack={documents.canGoBack}
-            canGoNext={documents.canGoNext}
             onStatus={(next) => {
               setStatus(next);
               documents.goToFirstPage();
             }}
-            onPrevious={documents.previous}
-            onNext={documents.next}
             onView={(document) => setDetailTarget({
               kind: "document",
               id: document.id,
@@ -438,21 +434,10 @@ function mergeKnowledgeGraphs(current: KnowledgeGraph, incoming: KnowledgeGraph,
   };
 }
 
-type PageProps = {
-  page: number;
-  rangeStart: number;
-  rangeEnd: number;
-  total: number;
-  canGoBack: boolean;
-  canGoNext: boolean;
-  loading: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-};
-
-function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, ...page }: PageProps & {
+function DocumentsTab({ items, status, pager, deletingId, onStatus, onView, onDelete }: {
   items: KnowledgeDocument[];
   status?: KnowledgeDocumentStatus;
+  pager: ResourcePagerState;
   deletingId: string | null;
   onStatus: (status?: KnowledgeDocumentStatus) => void;
   onView: (document: KnowledgeDocument) => void;
@@ -507,11 +492,11 @@ function DocumentsTab({ items, status, deletingId, onStatus, onView, onDelete, .
           onChange={(value) => onStatus(value as KnowledgeDocumentStatus | undefined)}
         />
       )}
-      loading={page.loading}
+      loading={pager.loading}
       empty={items.length === 0}
       emptyTitle="No documents found"
       emptyIcon={<FileText size={42} />}
-      footer={<ResourcePager {...page} />}
+      footer={<ResourcePager state={pager} />}
     >
       <ResourceTable ariaLabel="Knowledge documents" columns={columns} rows={items} rowKey={(item) => item.id} />
     </ResourcePanel>
@@ -554,19 +539,7 @@ function VectorsTab({
       empty={vectors.items.length === 0}
       emptyTitle="No vectors found"
       emptyIcon={<DatabaseZap size={42} />}
-      footer={(
-        <ResourcePager
-          page={vectors.page}
-          rangeStart={vectors.rangeStart}
-          rangeEnd={vectors.rangeEnd}
-          total={vectors.total}
-          loading={vectors.loading}
-          canGoBack={vectors.canGoBack}
-          canGoNext={vectors.canGoNext}
-          onPrevious={vectors.previous}
-          onNext={vectors.next}
-        />
-      )}
+      footer={<ResourcePager state={vectors} />}
     >
       <ResourceTable ariaLabel="Knowledge vectors" columns={columns} rows={vectors.items} rowKey={(item) => item.id} />
     </ResourcePanel>

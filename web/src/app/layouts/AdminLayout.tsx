@@ -1,5 +1,5 @@
 import { Avatar, Button } from "@douyinfe/semi-ui";
-import { Activity, BookOpenText, Box, Boxes, FolderKanban, LogOut, MessageSquareCode, Network, Server, Settings, Users } from "lucide-react";
+import { Activity, LogOut } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { SessionList } from "../../features/playground/SessionList";
@@ -8,6 +8,8 @@ import { useAuth } from "../../shared/auth/AuthProvider";
 import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import { cx } from "../../shared/lib/className";
 import z3r0Logo from "../../assets/z3r0-logo.png";
+import { adminNavigationRoutes } from "../routeManifest";
+import { DEFAULT_ADMIN_PATH, LOGIN_PATH } from "../routePaths";
 import { preloadAdminRoute } from "../routePreload";
 
 type AdminLayoutContext = {
@@ -22,18 +24,6 @@ export function useAdminHeaderActions() {
 export function useRefreshWorkProjects() {
   return useOutletContext<AdminLayoutContext>().refreshWorkProjects;
 }
-
-const navItems = [
-  { path: "/playground", label: "Playground", eyebrow: "Agent Workbench", icon: MessageSquareCode },
-  { path: "/work-projects", label: "Work Projects", eyebrow: "Project Operations", icon: FolderKanban, adminOnly: true },
-  { path: "/knowledges", label: "Knowledges", eyebrow: "Retrieval Context", icon: BookOpenText, adminOnly: true },
-  { path: "/hosts", label: "Host Management", eyebrow: "Infrastructure Access", icon: Server, adminOnly: true },
-  { path: "/egress-proxies", label: "Egress Proxies", eyebrow: "Network Egress", icon: Network, adminOnly: true },
-  { path: "/sandbox-images", label: "Sandbox Images", eyebrow: "Execution Baseline", icon: Boxes, adminOnly: true },
-  { path: "/sandbox-containers", label: "Sandbox Containers", eyebrow: "Runtime Instances", icon: Box, adminOnly: true },
-  { path: "/system-users", label: "System Users", eyebrow: "Access Control", icon: Users, adminOnly: true },
-  { path: "/system-config", label: "System Config", eyebrow: "Runtime Configuration", icon: Settings, adminOnly: true },
-];
 
 export function AdminLayout() {
   const { signOut, user } = useAuth();
@@ -65,8 +55,8 @@ export function AdminLayout() {
 
   const handleSelectAgentSession = useCallback((sessionId: string) => {
     selectSession(sessionId);
-    if (!location.pathname.startsWith("/playground")) {
-      navigate("/playground");
+    if (!location.pathname.startsWith(DEFAULT_ADMIN_PATH)) {
+      navigate(DEFAULT_ADMIN_PATH);
     }
   }, [location.pathname, navigate, selectSession]);
 
@@ -77,14 +67,16 @@ export function AdminLayout() {
 
   const handleSignOut = () => {
     signOut();
-    navigate("/login", { replace: true });
+    navigate(LOGIN_PATH, { replace: true });
   };
 
   const isAdmin = user?.role === SYSTEM_USER_ROLE.ADMIN;
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNavItems = adminNavigationRoutes.filter((item) => !item.adminOnly || isAdmin);
+  const playgroundItem = adminNavigationRoutes.find((item) => item.path === DEFAULT_ADMIN_PATH) ?? adminNavigationRoutes[0];
+  const PlaygroundIcon = playgroundItem.icon;
   const activeItem = visibleNavItems.find((item) => location.pathname.startsWith(item.path));
   const ActiveIcon = activeItem?.icon ?? Activity;
-  const contentMode = location.pathname.startsWith("/playground") ? "fixed" : "scroll";
+  const contentMode = location.pathname.startsWith(DEFAULT_ADMIN_PATH) ? "fixed" : "scroll";
 
   return (
     <div className="admin-shell">
@@ -100,16 +92,16 @@ export function AdminLayout() {
         <div className="admin-sidebar-body">
           <div className="admin-sidebar-top">
             <NavLink
-              to="/playground"
+              to={playgroundItem.path}
               className="admin-nav-link"
-              onFocus={() => preloadAdminRoute("/playground")}
-              onPointerDown={() => preloadAdminRoute("/playground")}
-              onPointerEnter={() => preloadAdminRoute("/playground")}
+              onFocus={() => preloadAdminRoute(playgroundItem.path)}
+              onPointerDown={() => preloadAdminRoute(playgroundItem.path)}
+              onPointerEnter={() => preloadAdminRoute(playgroundItem.path)}
             >
-              <MessageSquareCode size={18} />
+              <PlaygroundIcon size={18} />
               <div className="admin-nav-copy">
-                <span>Playground</span>
-                <small>Agent Workbench</small>
+                <span>{playgroundItem.label}</span>
+                <small>{playgroundItem.eyebrow}</small>
               </div>
             </NavLink>
             <div className="admin-sidebar-secondary">
@@ -131,7 +123,7 @@ export function AdminLayout() {
           </div>
 
           <nav className="admin-nav admin-nav-bottom" aria-label="Primary navigation">
-            {visibleNavItems.slice(1).map((item) => {
+            {visibleNavItems.filter((item) => item !== playgroundItem).map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink

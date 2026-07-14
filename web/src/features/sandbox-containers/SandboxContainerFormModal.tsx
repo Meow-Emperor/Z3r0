@@ -3,6 +3,7 @@ import { Boxes, Network, Route, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SANDBOX_CONTAINER_EGRESS_MODE } from "../../shared/api/generated/constants";
 import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import type { OptionListResult } from "../../shared/hooks/useOptionList";
 import {
@@ -120,8 +121,7 @@ export function SandboxContainerFormModal({
       onCancel={onCancel}
       onSubmit={submit}
     >
-      <label>
-        <span>Host</span>
+      <FormField label="Host">
         <Select
           prefix={<Server size={16} />}
           value={hostId}
@@ -134,10 +134,9 @@ export function SandboxContainerFormModal({
           onChange={(value) => typeof value === "number" && setHostId(value)}
           optionList={hosts.map(sandboxHostOption)}
         />
-      </label>
+      </FormField>
 
-      <label>
-        <span>Image</span>
+      <FormField label="Image">
         <Select
           prefix={<Boxes size={16} />}
           value={imageId}
@@ -150,10 +149,9 @@ export function SandboxContainerFormModal({
           onChange={selectImage}
           optionList={images.map(sandboxImageOption)}
         />
-      </label>
+      </FormField>
 
-      <label>
-        <span>Owner</span>
+      <FormField label="Owner">
         <Select
           prefix={<User size={16} />}
           value={ownerId}
@@ -165,10 +163,9 @@ export function SandboxContainerFormModal({
           onChange={(value) => typeof value === "number" && setOwnerId(value)}
           optionList={users.map((u) => ({ label: u.username, value: u.id }))}
         />
-      </label>
+      </FormField>
 
-      <label>
-        <span>Egress Mode</span>
+      <FormField label="Egress Mode">
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
@@ -180,11 +177,10 @@ export function SandboxContainerFormModal({
             if (next !== SANDBOX_CONTAINER_EGRESS_MODE.PROXY) setEgressProxyId(undefined);
           }}
         />
-      </label>
+      </FormField>
 
       {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
-        <label>
-          <span>Managed Proxy</span>
+        <FormField label="Managed Proxy">
           <Select
             prefix={<Network size={16} />}
             value={egressProxyId}
@@ -197,7 +193,7 @@ export function SandboxContainerFormModal({
             onChange={(value) => setEgressProxyId(typeof value === "number" ? value : undefined)}
             optionList={egressProxies.map(egressProxyOption)}
           />
-        </label>
+        </FormField>
       ) : null}
 
       <PortMappingEditor

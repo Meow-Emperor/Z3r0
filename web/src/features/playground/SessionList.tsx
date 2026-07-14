@@ -12,6 +12,7 @@ import {
 } from "../../shared/api/workProjects";
 import type { AgentSessionSummary, WorkProjectSummary } from "../../shared/api/types";
 import { AsyncContent } from "../../shared/components/AsyncContent";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { mergeByKey } from "../../shared/lib/array";
@@ -390,15 +391,14 @@ export function SessionList({
         onSubmit={saveRename}
         onCancel={() => setRenameTarget(null)}
       >
-        <label>
-          <span>Session Title</span>
+        <FormField label="Session Title">
           <Input
             autoFocus
             maxLength={80}
             value={renameTitle}
             onChange={setRenameTitle}
           />
-        </label>
+        </FormField>
       </ResourceModal>
     </div>
   );

@@ -56,6 +56,7 @@ export function WorkProjectWorkspacePage() {
         empty={project === null}
         emptyIcon={<FileText size={42} />}
         emptyTitle="Project is unavailable"
+        wrapperClassName="project-record-spin"
       >
         {project ? <WorkProjectRecordTabs projectId={project.id} className="workspace-tabs" /> : null}
       </AsyncContent>

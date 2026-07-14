@@ -3,8 +3,8 @@ import { Boxes, Network, Route, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createSandboxImage, deleteSandboxImage, querySandboxImages } from "../../shared/api/sandboxImages";
 import type { CreateSandboxImageRequest, SandboxImage } from "../../shared/api/types";
-import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
-import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
+import type { ResourceColumn } from "../../shared/components/ResourceTable";
 import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
@@ -15,39 +15,36 @@ import { UI_TEXT } from "../../shared/lib/uiText";
 import { SandboxImageFormModal } from "./SandboxImageFormModal";
 
 export function SandboxImagesPage() {
-  const {
-    items: images, page, keyword, loading, loadItems: loadImages, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<SandboxImage>({ query: querySandboxImages });
+  const images = usePagedResourceList<SandboxImage>({ query: querySandboxImages });
   const [modalOpen, setModalOpen] = useState(false);
 
   const { run: deleteImage, busyId: deletingId } = useResourceAction<SandboxImage>(
-    (image) => deleteSandboxImage(image.id), loadImages,
+    (image) => deleteSandboxImage(image.id), images.loadItems,
   );
 
   useAdminResourceHeader({
     createLabel: "Create Image",
     refreshLabel: "Refresh sandbox images",
-    loading,
+    loading: images.loading,
     onCreate: () => setModalOpen(true),
-    onRefresh: loadImages,
+    onRefresh: images.loadItems,
   });
 
   const { saving, submit } = useResourceSubmit({
     onSuccess: async () => {
       setModalOpen(false);
-      await loadImages();
+      await images.loadItems();
     },
   });
 
   const summary = useMemo(
-    () => images.reduce(
+    () => images.items.reduce(
       (acc, image) => ({
         tor: acc.tor + (image.supports_tor ? 1 : 0),
       }),
       { tor: 0 },
     ),
-    [images],
+    [images.items],
   );
 
   const handleCreate = (payload: CreateSandboxImageRequest) => submit(() => createSandboxImage(payload));
@@ -91,35 +88,20 @@ export function SandboxImagesPage() {
 
   return (
     <>
-      <ResourcePageShell
+      <PagedResourceTable
+        ariaLabel="Sandbox images"
+        columns={columns}
+        rows={images.items}
+        rowKey={(image) => image.id}
         searchPlaceholder="Search image name"
-        keyword={keyword}
-        loading={loading}
+        state={images}
         metrics={[
-          { label: "Total", value: total },
+          { label: "Total", value: images.total },
           { label: "Tor", value: summary.tor },
         ]}
-        empty={images.length === 0}
         emptyIcon={<Boxes size={42} />}
         emptyTitle="No images found"
-        page={page}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={total}
-        canGoBack={canGoBack}
-        canGoNext={canGoNext}
-        onKeywordChange={setKeyword}
-        onSearch={search}
-        onPrevious={previous}
-        onNext={next}
-      >
-        <ResourceTable<SandboxImage>
-          ariaLabel="Sandbox images"
-          columns={columns}
-          rows={images}
-          rowKey={(image) => image.id}
-        />
-      </ResourcePageShell>
+      />
 
       <SandboxImageFormModal
         open={modalOpen}

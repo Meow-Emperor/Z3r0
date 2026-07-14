@@ -8,6 +8,8 @@ type RequestOptions = {
   auth?: boolean;
 };
 
+type JsonRequestMethod = NonNullable<RequestOptions["method"]>;
+
 type RawRequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   headers?: HeadersInit;
@@ -80,20 +82,17 @@ export async function apiRequest<ResponsePayload>(path: string, options: Request
   return parsed as ResponsePayload;
 }
 
-export function apiGet<ResponsePayload>(path: string) {
-  return apiRequest<ResponsePayload>(path);
-}
-
-export function apiPost<ResponsePayload>(path: string, body?: unknown, auth?: boolean) {
-  return apiRequest<ResponsePayload>(path, { method: "POST", body, auth });
-}
-
-export function apiPatch<ResponsePayload>(path: string, body: unknown) {
-  return apiRequest<ResponsePayload>(path, { method: "PATCH", body });
-}
-
-export function apiDelete<ResponsePayload>(path: string) {
-  return apiRequest<ResponsePayload>(path, { method: "DELETE" });
+export function defineJsonEndpoint<Args extends unknown[], ResponsePayload>(
+  method: JsonRequestMethod,
+  path: (...args: Args) => string,
+  body?: (...args: Args) => unknown,
+  auth?: boolean,
+) {
+  return (...args: Args) => apiRequest<ResponsePayload>(path(...args), {
+    method,
+    body: body?.(...args),
+    auth,
+  });
 }
 
 async function rawApiRequest(path: string, options: RawRequestOptions = {}) {

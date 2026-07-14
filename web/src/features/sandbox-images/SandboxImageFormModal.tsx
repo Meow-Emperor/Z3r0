@@ -2,6 +2,7 @@ import { Input, InputNumber, Select } from "@douyinfe/semi-ui";
 import { Network, Package, Route } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateSandboxImageRequest } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 
 type SandboxImageFormModalProps = {
@@ -39,15 +40,13 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
         supports_tor: values.supports_tor,
       })}
     >
-      <label>
-        <span>Image Name</span>
+      <FormField label="Image Name">
         <Input prefix={<Package size={16} />} value={values.image_name}
           placeholder="ghcr.io/org/image:latest" maxLength={255} required
           onChange={(image_name) => setValues((current) => ({ ...current, image_name }))}
         />
-      </label>
-      <label>
-        <span>Control Port</span>
+      </FormField>
+      <FormField label="Control Port">
         <InputNumber
           prefix={<Network size={16} />}
           value={values.control_proxy_port}
@@ -57,9 +56,8 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
             if (typeof control_proxy_port === "number") setValues((current) => ({ ...current, control_proxy_port }));
           }}
         />
-      </label>
-      <label>
-        <span>Tor</span>
+      </FormField>
+      <FormField label="Tor">
         <Select
           prefix={<Route size={16} />}
           value={values.supports_tor ? "supported" : "unsupported"}
@@ -73,7 +71,7 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
             }
           }}
         />
-      </label>
+      </FormField>
     </ResourceModal>
   );
 }

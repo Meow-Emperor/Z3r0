@@ -10,10 +10,8 @@ import {
   lazy,
   MutableRefObject,
   useMemo,
-  useLayoutEffect,
   PointerEvent as ReactPointerEvent,
   useRef,
-  useState,
   Suspense,
 } from "react";
 import type { FitAddon } from "@xterm/addon-fit";
@@ -25,10 +23,6 @@ import { showApiError } from "../../shared/api/feedback";
 import type { ManagedHost, SandboxContainer } from "../../shared/api/types";
 import { cx } from "../../shared/lib/className";
 import {
-  animateWindowFlight,
-  buildFlight,
-  buildWindowFlightStyle,
-  cancelFlightFrame,
   clamp,
   clampWindowToViewport,
   DEFAULT_WINDOW_HEIGHT,
@@ -47,6 +41,7 @@ import {
   type ResizeState,
   type WindowStateBase,
 } from "./floatingWindow";
+import { useFloatingWindowController } from "./useFloatingWindowController";
 
 const ContainerFileManager = lazy(() => import("./ContainerFileManager").then((module) => ({ default: module.ContainerFileManager })));
 
@@ -151,6 +146,10 @@ type FitTerminalOptions = {
 
 const SHELL_OUTPUT_DECODER = new TextDecoder();
 
+function shellFlightMeta(state: ShellWindowState) {
+  return state.status;
+}
+
 async function loadXterm() {
   const [{ Terminal }, { FitAddon }] = await Promise.all([
     import("@xterm/xterm"),
@@ -169,45 +168,13 @@ export function useContainerShell() {
 }
 
 export function ContainerShellProvider({ children }: { children: ReactNode }) {
-  const [shell, setShell] = useState<ShellWindowState | null>(null);
-  const [shellFlight, setShellFlight] = useState<FlightState | null>(null);
-  const [noVNC, setNoVNC] = useState<NoVNCWindowState | null>(null);
-  const [noVNCFlight, setNoVNCFlight] = useState<FlightState | null>(null);
-  const [fileManager, setFileManager] = useState<FileManagerWindowState | null>(null);
-  const [fileManagerFlight, setFileManagerFlight] = useState<FlightState | null>(null);
-  const shellRef = useRef<ShellWindowState | null>(null);
-  const noVNCRef = useRef<NoVNCWindowState | null>(null);
-  const fileManagerRef = useRef<FileManagerWindowState | null>(null);
   const terminalHostRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
-  const shellFlightRef = useRef<HTMLDivElement | null>(null);
-  const shellFlightFrameRef = useRef<number | null>(null);
-  const noVNCFlightRef = useRef<HTMLDivElement | null>(null);
-  const noVNCFlightFrameRef = useRef<number | null>(null);
-  const fileManagerFlightRef = useRef<HTMLDivElement | null>(null);
-  const fileManagerFlightFrameRef = useRef<number | null>(null);
-  const dragRef = useRef<DragState | null>(null);
-  const noVNCDragRef = useRef<DragState | null>(null);
-  const fileManagerDragRef = useRef<DragState | null>(null);
   const resizeRef = useRef<ResizeState | null>(null);
   const fitWithoutSnapRef = useRef(false);
   const connectionKeyRef = useRef(0);
-  const activeShellUrl = shell?.shellUrl ?? null;
-  const activeConnectionKey = shell?.connectionKey ?? null;
-
-  useLayoutEffect(() => {
-    shellRef.current = shell;
-  }, [shell]);
-
-  useLayoutEffect(() => {
-    noVNCRef.current = noVNC;
-  }, [noVNC]);
-
-  useLayoutEffect(() => {
-    fileManagerRef.current = fileManager;
-  }, [fileManager]);
 
   const disposeShellResources = useCallback(() => {
     closeSocket(socketRef.current);
@@ -217,13 +184,62 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     fitRef.current = null;
   }, []);
 
-  const closeShell = useCallback(() => {
-    cancelFlightFrame(shellFlightFrameRef);
-    setShellFlight(null);
-    disposeShellResources();
-    shellRef.current = null;
-    setShell(null);
-  }, [disposeShellResources]);
+  const prepareShellRestore = useCallback(() => {
+    fitWithoutSnapRef.current = true;
+  }, []);
+
+  const {
+    state: shell,
+    setState: setShell,
+    stateRef: shellRef,
+    flight: shellFlight,
+    flightRef: shellFlightRef,
+    flightStyle: shellFlightStyle,
+    dragRef,
+    cancelFlight: cancelShellFlight,
+    close: closeShell,
+    minimize: minimizeShell,
+    restore: restoreShell,
+  } = useFloatingWindowController<ShellWindowState>({
+    dockSlot: "shell",
+    flightMeta: shellFlightMeta,
+    onClose: disposeShellResources,
+    onRestore: prepareShellRestore,
+  });
+  const {
+    state: noVNC,
+    setState: setNoVNC,
+    stateRef: noVNCRef,
+    flight: noVNCFlight,
+    flightRef: noVNCFlightRef,
+    flightStyle: noVNCFlightStyle,
+    dragRef: noVNCDragRef,
+    cancelFlight: cancelNoVNCFlight,
+    close: closeNoVNC,
+    minimize: minimizeNoVNC,
+    restore: restoreNoVNC,
+  } = useFloatingWindowController<NoVNCWindowState>({
+    dockSlot: "novnc",
+    flightMeta: "screen",
+  });
+  const {
+    state: fileManager,
+    setState: setFileManager,
+    stateRef: fileManagerRef,
+    flight: fileManagerFlight,
+    flightRef: fileManagerFlightRef,
+    flightStyle: fileManagerFlightStyle,
+    dragRef: fileManagerDragRef,
+    cancelFlight: cancelFileManagerFlight,
+    close: closeFileManager,
+    minimize: minimizeFileManager,
+    restore: restoreFileManager,
+  } = useFloatingWindowController<FileManagerWindowState>({
+    dockSlot: "filemanager",
+    flightMeta: "files",
+  });
+  const activeShellUrl = shell?.shellUrl ?? null;
+  const activeConnectionKey = shell?.connectionKey ?? null;
 
   const sendResize = useCallback(() => {
     const terminal = terminalRef.current;
@@ -242,10 +258,9 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
   }, [sendResize]);
 
   const toggleMaximizeShell = useCallback(() => {
-    cancelFlightFrame(shellFlightFrameRef);
+    cancelShellFlight();
     dragRef.current = null;
     resizeRef.current = null;
-    setShellFlight(null);
     fitWithoutSnapRef.current = true;
     setShell((current) => {
       if (!current) return current;
@@ -261,27 +276,13 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         restoreRect: getWindowRect(current),
       };
     });
-  }, []);
-
-  const minimizeShell = useCallback(() => {
-    if (!shell) return;
-    cancelFlightFrame(shellFlightFrameRef);
-    setShellFlight(buildFlight(shell, "minimize", "shell", shell.status));
-    setShell((current) => current ? { ...current, dockState: "minimized" } : current);
-  }, [shell]);
-
-  const restoreShell = useCallback(() => {
-    if (!shell) return;
-    cancelFlightFrame(shellFlightFrameRef);
-    setShellFlight(buildFlight(shell, "restore", "shell", shell.status));
-  }, [shell]);
+  }, [cancelShellFlight, dragRef, setShell]);
 
   const openShellTarget = useCallback((target: ShellTarget) => {
     const currentShell = shellRef.current;
     if (currentShell?.targetKey === target.key && isSocketActive(socketRef.current)) {
       const preserveGeometry = currentShell.dockState === "minimized";
-      cancelFlightFrame(shellFlightFrameRef);
-      setShellFlight(null);
+      cancelShellFlight();
       fitWithoutSnapRef.current = preserveGeometry;
       setShell((current) => {
         const next: ShellWindowState | null = current ? {
@@ -300,8 +301,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    cancelFlightFrame(shellFlightFrameRef);
-    setShellFlight(null);
+    cancelShellFlight();
     disposeShellResources();
 
     const nextShell: ShellWindowState = {
@@ -321,7 +321,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     shellRef.current = nextShell;
     setShell(nextShell);
     connectionKeyRef.current += 1;
-  }, [disposeShellResources, fitTerminal]);
+  }, [cancelShellFlight, disposeShellResources, fitTerminal, setShell, shellRef]);
 
   const openShell = useCallback((container: SandboxContainer) => {
     if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
@@ -341,32 +341,10 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     });
   }, [openShellTarget]);
 
-  const closeNoVNC = useCallback(() => {
-    cancelFlightFrame(noVNCFlightFrameRef);
-    noVNCDragRef.current = null;
-    setNoVNCFlight(null);
-    noVNCRef.current = null;
-    setNoVNC(null);
-  }, []);
-
-  const minimizeNoVNC = useCallback(() => {
-    if (!noVNC) return;
-    cancelFlightFrame(noVNCFlightFrameRef);
-    setNoVNCFlight(buildFlight(noVNC, "minimize", "novnc", "screen"));
-    setNoVNC((current) => current ? { ...current, dockState: "minimized" } : current);
-  }, [noVNC]);
-
-  const restoreNoVNC = useCallback(() => {
-    if (!noVNC) return;
-    cancelFlightFrame(noVNCFlightFrameRef);
-    setNoVNCFlight(buildFlight(noVNC, "restore", "novnc", "screen"));
-  }, [noVNC]);
-
   const openNoVNC = useCallback((container: SandboxContainer) => {
     try {
       const url = buildContainerNoVNCUrl(container);
-      cancelFlightFrame(noVNCFlightFrameRef);
-      setNoVNCFlight(null);
+      cancelNoVNCFlight();
       setNoVNC((current) => {
         if (current?.containerId === container.id && current.url === url) {
           const next: NoVNCWindowState = { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
@@ -388,34 +366,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       showApiError(error);
     }
-  }, []);
-
-  const closeFileManager = useCallback(() => {
-    cancelFlightFrame(fileManagerFlightFrameRef);
-    fileManagerDragRef.current = null;
-    setFileManagerFlight(null);
-    fileManagerRef.current = null;
-    setFileManager(null);
-  }, []);
-
-  const minimizeFileManager = useCallback(() => {
-    if (!fileManager) return;
-    cancelFlightFrame(fileManagerFlightFrameRef);
-    setFileManagerFlight(buildFlight(fileManager, "minimize", "filemanager", "files"));
-    setFileManager((current) => current ? { ...current, dockState: "minimized" } : current);
-  }, [fileManager]);
-
-  const restoreFileManager = useCallback(() => {
-    if (!fileManager) return;
-    cancelFlightFrame(fileManagerFlightFrameRef);
-    setFileManagerFlight(buildFlight(fileManager, "restore", "filemanager", "files"));
-  }, [fileManager]);
+  }, [cancelNoVNCFlight, noVNCRef, setNoVNC]);
 
   const toggleMaximizeFileManager = useCallback(() => {
-    cancelFlightFrame(fileManagerFlightFrameRef);
+    cancelFileManagerFlight();
     fileManagerDragRef.current = null;
     resizeRef.current = null;
-    setFileManagerFlight(null);
     setFileManager((current) => {
       if (!current) return current;
       if (current.isMaximized) {
@@ -430,13 +386,12 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
         restoreRect: getWindowRect(current),
       };
     });
-  }, []);
+  }, [cancelFileManagerFlight, fileManagerDragRef, setFileManager]);
 
   const openFileManager = useCallback((container: SandboxContainer) => {
     if (container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0) return;
 
-    cancelFlightFrame(fileManagerFlightFrameRef);
-    setFileManagerFlight(null);
+    cancelFileManagerFlight();
     setFileManager((current) => {
       if (current?.containerId === container.id) {
         const next: FileManagerWindowState = { ...current, title: container.container_name, containerName: container.container_name, dockState: "normal" };
@@ -456,7 +411,7 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
       fileManagerRef.current = next;
       return next;
     });
-  }, []);
+  }, [cancelFileManagerFlight, fileManagerRef, setFileManager]);
 
   const syncContainerWindows = useCallback((container: SandboxContainer | null) => {
     const currentShell = shellRef.current;
@@ -595,49 +550,6 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     };
   }, [activeConnectionKey, activeShellUrl, fitTerminal]);
 
-  useEffect(() => () => closeShell(), [closeShell]);
-
-  useEffect(() => () => closeNoVNC(), [closeNoVNC]);
-
-  useEffect(() => () => closeFileManager(), [closeFileManager]);
-
-  useEffect(() => () => {
-    cancelFlightFrame(shellFlightFrameRef);
-    cancelFlightFrame(noVNCFlightFrameRef);
-    cancelFlightFrame(fileManagerFlightFrameRef);
-  }, []);
-
-  useEffect(() => {
-    if (!shellFlight || !shellFlightRef.current) return;
-    return animateWindowFlight(shellFlightRef.current, shellFlight, shellFlightFrameRef, () => {
-      if (shellFlight.direction === "restore") {
-        fitWithoutSnapRef.current = true;
-        setShell((current) => current ? { ...current, dockState: "normal" } : current);
-      }
-      setShellFlight(null);
-    });
-  }, [shellFlight]);
-
-  useEffect(() => {
-    if (!noVNCFlight || !noVNCFlightRef.current) return;
-    return animateWindowFlight(noVNCFlightRef.current, noVNCFlight, noVNCFlightFrameRef, () => {
-      if (noVNCFlight.direction === "restore") {
-        setNoVNC((current) => current ? { ...current, dockState: "normal" } : current);
-      }
-      setNoVNCFlight(null);
-    });
-  }, [noVNCFlight]);
-
-  useEffect(() => {
-    if (!fileManagerFlight || !fileManagerFlightRef.current) return;
-    return animateWindowFlight(fileManagerFlightRef.current, fileManagerFlight, fileManagerFlightFrameRef, () => {
-      if (fileManagerFlight.direction === "restore") {
-        setFileManager((current) => current ? { ...current, dockState: "normal" } : current);
-      }
-      setFileManagerFlight(null);
-    });
-  }, [fileManagerFlight]);
-
   useEffect(() => {
     if (!shell || shell.dockState !== "normal") return;
     const snapHeight = !fitWithoutSnapRef.current;
@@ -723,10 +635,6 @@ export function ContainerShellProvider({ children }: { children: ReactNode }) {
     () => ({ openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows }),
     [openFileManager, openHostShell, openNoVNC, openShell, syncContainerWindows],
   );
-  const shellFlightStyle = shellFlight ? buildWindowFlightStyle(shellFlight) : undefined;
-  const noVNCFlightStyle = noVNCFlight ? buildWindowFlightStyle(noVNCFlight) : undefined;
-  const fileManagerFlightStyle = fileManagerFlight ? buildWindowFlightStyle(fileManagerFlight) : undefined;
-
   return (
     <ContainerShellContext.Provider value={contextValue}>
       {children}

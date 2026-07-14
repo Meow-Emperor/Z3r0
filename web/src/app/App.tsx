@@ -2,20 +2,12 @@ import { lazy, Suspense, type ComponentType } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useOutletContext } from "react-router-dom";
 import { AuthProvider, useAuth } from "../shared/auth/AuthProvider";
 import { SYSTEM_USER_ROLE } from "../shared/api/generated/constants";
+import { adminRoutes } from "./routeManifest";
+import { DEFAULT_ADMIN_PATH, LOGIN_PATH } from "./routePaths";
 import {
   loadLandingPage,
-  loadEgressProxiesPage,
-  loadHostsPage,
-  loadKnowledgesPage,
   loadLoginPage,
-  loadPlaygroundPage,
   loadProtectedAdminShell,
-  loadSandboxContainersPage,
-  loadSandboxImagesPage,
-  loadSystemConfigPage,
-  loadSystemUsersPage,
-  loadWorkProjectWorkspacePage,
-  loadWorkProjectsPage,
 } from "./routePreload";
 
 function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends keyof TModule>(
@@ -28,22 +20,12 @@ function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends key
 const LandingPage = lazyRoute(loadLandingPage, "LandingPage");
 const LoginPage = lazyRoute(loadLoginPage, "LoginPage");
 const ProtectedAdminShell = lazyRoute(loadProtectedAdminShell, "ProtectedAdminShell");
-const EgressProxiesPage = lazyRoute(loadEgressProxiesPage, "EgressProxiesPage");
-const HostsPage = lazyRoute(loadHostsPage, "HostsPage");
-const KnowledgesPage = lazyRoute(loadKnowledgesPage, "KnowledgesPage");
-const PlaygroundPage = lazyRoute(loadPlaygroundPage, "PlaygroundPage");
-const WorkProjectWorkspacePage = lazyRoute(loadWorkProjectWorkspacePage, "WorkProjectWorkspacePage");
-const SandboxContainersPage = lazyRoute(loadSandboxContainersPage, "SandboxContainersPage");
-const SandboxImagesPage = lazyRoute(loadSandboxImagesPage, "SandboxImagesPage");
-const SystemUsersPage = lazyRoute(loadSystemUsersPage, "SystemUsersPage");
-const SystemConfigPage = lazyRoute(loadSystemConfigPage, "SystemConfigPage");
-const WorkProjectsPage = lazyRoute(loadWorkProjectsPage, "WorkProjectsPage");
 
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to={LOGIN_PATH} replace state={{ from: location }} />;
   }
   return <Outlet />;
 }
@@ -52,7 +34,7 @@ function AdminOnlyRoute() {
   const { user } = useAuth();
   const outletContext = useOutletContext();
   if (user?.role !== SYSTEM_USER_ROLE.ADMIN) {
-    return <Navigate to="/playground" replace />;
+    return <Navigate to={DEFAULT_ADMIN_PATH} replace />;
   }
   return <Outlet context={outletContext} />;
 }
@@ -60,7 +42,7 @@ function AdminOnlyRoute() {
 function PublicOnlyRoute() {
   const { isAuthenticated } = useAuth();
   if (isAuthenticated) {
-    return <Navigate to="/playground" replace />;
+    return <Navigate to={DEFAULT_ADMIN_PATH} replace />;
   }
   return <Outlet />;
 }
@@ -73,25 +55,23 @@ export function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route element={<PublicOnlyRoute />}>
-              <Route path="/login" element={<LoginPage />} />
+              <Route path={LOGIN_PATH} element={<LoginPage />} />
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<ProtectedAdminShell />}>
-                <Route path="/playground" element={<PlaygroundPage />} />
+                {adminRoutes.filter((route) => !route.adminOnly).map((route) => {
+                  const Page = route.component;
+                  return <Route key={route.path} path={route.path} element={<Page />} />;
+                })}
                 <Route element={<AdminOnlyRoute />}>
-                  <Route path="/hosts" element={<HostsPage />} />
-                  <Route path="/knowledges" element={<KnowledgesPage />} />
-                  <Route path="/egress-proxies" element={<EgressProxiesPage />} />
-                  <Route path="/work-projects" element={<WorkProjectsPage />} />
-                  <Route path="/work-projects/:projectId" element={<WorkProjectWorkspacePage />} />
-                  <Route path="/sandbox-images" element={<SandboxImagesPage />} />
-                  <Route path="/sandbox-containers" element={<SandboxContainersPage />} />
-                  <Route path="/system-users" element={<SystemUsersPage />} />
-                  <Route path="/system-config" element={<SystemConfigPage />} />
+                  {adminRoutes.filter((route) => route.adminOnly).map((route) => {
+                    const Page = route.component;
+                    return <Route key={route.path} path={route.path} element={<Page />} />;
+                  })}
                 </Route>
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/playground" replace />} />
+            <Route path="*" element={<Navigate to={DEFAULT_ADMIN_PATH} replace />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

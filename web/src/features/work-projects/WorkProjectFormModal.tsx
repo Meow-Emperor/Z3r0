@@ -18,6 +18,7 @@ import type {
   WorkProject,
   WorkProjectAssetRequest,
 } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import { useOptionList } from "../../shared/hooks/useOptionList";
 import {
@@ -150,21 +151,18 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
       onSubmit={submit}
     >
       <div className="project-form-grid">
-        <label>
-          <span>Name</span>
+        <FormField label="Name">
           <Input prefix={<FolderKanban size={16} />} value={values.name} maxLength={255} required
             onChange={(name) => setValues((v) => ({ ...v, name }))}
           />
-        </label>
-        <label>
-          <span>Type</span>
+        </FormField>
+        <FormField label="Type">
           <Select prefix={<ScanSearch size={16} />} value={values.type}
             onChange={(type) => isWorkProjectType(type) && setValues((v) => ({ ...v, type }))}
             optionList={projectTypes.map((type) => ({ label: WORK_PROJECT_TYPE_LABEL[type], value: type }))}
           />
-        </label>
-        <label>
-          <span>Owners</span>
+        </FormField>
+        <FormField label="Owners">
           <Select
             prefix={<UserRound size={16} />}
             value={values.owner_user_ids}
@@ -187,9 +185,8 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
               owner_user_ids: Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [],
             }))}
           />
-        </label>
-        <label>
-          <span>Sandbox Container</span>
+        </FormField>
+        <FormField label="Sandbox Container">
           <Select
             prefix={<Server size={16} />}
             value={values.sandbox_container_id ?? undefined}
@@ -210,15 +207,14 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
               sandbox_container_id: typeof value === "number" ? value : null,
             }))}
           />
-        </label>
+        </FormField>
       </div>
 
-      <label>
-        <span>Description</span>
+      <FormField label="Description">
         <TextArea value={values.description} maxLength={2000} autosize={{ minRows: 3, maxRows: 6 }}
           onChange={(description) => setValues((v) => ({ ...v, description }))}
         />
-      </label>
+      </FormField>
 
       <section className="project-assets-editor">
         <header>
@@ -236,36 +232,32 @@ export function WorkProjectFormModal({ open, saving, project, onCancel, onSubmit
         <div className="project-assets-rows">
           {values.assets.map((asset, index) => (
             <article key={index} className="project-asset-row">
-              <label>
-                <span>Type</span>
+              <FormField label="Type">
                 <Select
                   value={asset.type}
                   disabled={Boolean(asset.existingId)}
                   optionList={assetTypes.map((type) => ({ label: WORK_PROJECT_ASSET_TYPE_LABEL[type], value: type }))}
                   onChange={(type) => isWorkProjectAssetType(type) && updateAsset(index, resetAssetForType(type))}
                 />
-              </label>
+              </FormField>
               {asset.type === WORK_PROJECT_ASSET_TYPE.BINARY ? (
-                <label>
-                  <span>Path</span>
+                <FormField label="Path">
                   <Input
                     value={asset.path}
                     maxLength={500}
                     required
                     onChange={(path) => updateAsset(index, { path })}
                   />
-                </label>
+                </FormField>
               ) : (
                 <>
-                  <label>
-                    <span>{ASSET_HOST_FIELD_LABEL[asset.type]}</span>
+                  <FormField label={ASSET_HOST_FIELD_LABEL[asset.type]}>
                     <Input value={asset.host} maxLength={255} onChange={(host) => updateAsset(index, { host })} />
-                  </label>
+                  </FormField>
                   {asset.type === WORK_PROJECT_ASSET_TYPE.SERVICE ? (
-                    <label>
-                      <span>Port</span>
+                    <FormField label="Port">
                       <InputNumber value={asset.port ?? undefined} min={1} max={65535} onChange={(port) => updateAsset(index, { port: typeof port === "number" ? port : null })} />
-                    </label>
+                    </FormField>
                   ) : null}
                 </>
               )}

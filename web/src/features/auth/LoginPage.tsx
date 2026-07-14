@@ -2,10 +2,13 @@ import { Button, Input } from "@douyinfe/semi-ui";
 import { Crosshair, KeyRound, Mail } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { DEFAULT_ADMIN_PATH } from "../../app/routePaths";
 import { login } from "../../shared/api/systemUsers";
 import { showApiError } from "../../shared/api/feedback";
 import { useAuth } from "../../shared/auth/AuthProvider";
+import { FormField } from "../../shared/components/FormField";
 import z3r0Logo from "../../assets/z3r0-logo.png";
+import "../../app/styles/login.css";
 
 type LoginLocationState = {
   from?: { pathname?: string };
@@ -19,7 +22,7 @@ export function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as LoginLocationState | null)?.from?.pathname || "/playground";
+  const from = (location.state as LoginLocationState | null)?.from?.pathname || DEFAULT_ADMIN_PATH;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,8 +57,7 @@ export function LoginPage() {
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <label>
-            <span>Email</span>
+          <FormField label="Email">
             <Input
               size="large"
               type="email"
@@ -66,9 +68,8 @@ export function LoginPage() {
               placeholder="<your email>"
               required
             />
-          </label>
-          <label>
-            <span>Password</span>
+          </FormField>
+          <FormField label="Password">
             <Input
               size="large"
               mode="password"
@@ -79,7 +80,7 @@ export function LoginPage() {
               placeholder="<your password>"
               required
             />
-          </label>
+          </FormField>
           <Button
             htmlType="submit"
             theme="solid"

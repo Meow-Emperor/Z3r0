@@ -3,6 +3,7 @@ import { KeyRound, Network, Server, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPE_VALUES } from "../../shared/api/generated/constants";
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
+import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 
 type EgressProxyFormValues = CreateEgressProxyRequest;
@@ -78,8 +79,7 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
       onCancel={onCancel}
       onSubmit={submit}
     >
-      <label>
-        <span>Proxy Type</span>
+      <FormField label="Proxy Type">
         <Select
           prefix={<Network size={16} />}
           value={values.proxy_type}
@@ -88,34 +88,30 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
             if (typeof proxy_type === "string") setValues((current) => ({ ...current, proxy_type }));
           }}
         />
-      </label>
-      <label>
-        <span>Proxy Host</span>
+      </FormField>
+      <FormField label="Proxy Host">
         <Input prefix={<Server size={16} />} value={values.proxy_host} maxLength={255} required
           autoComplete="off"
           onChange={(proxy_host) => setValues((current) => ({ ...current, proxy_host }))}
         />
-      </label>
-      <label>
-        <span>Proxy Port</span>
+      </FormField>
+      <FormField label="Proxy Port">
         <InputNumber prefix={<Network size={16} />} value={values.proxy_port} min={1} max={65535}
           onChange={(proxy_port) => typeof proxy_port === "number" && setValues((current) => ({ ...current, proxy_port }))}
         />
-      </label>
-      <label>
-        <span>Proxy Account</span>
+      </FormField>
+      <FormField label="Proxy Account">
         <Input prefix={<User size={16} />} value={values.proxy_account} maxLength={255}
           autoComplete="off"
           onChange={(proxy_account) => setValues((current) => ({ ...current, proxy_account }))}
         />
-      </label>
-      <label>
-        <span>Proxy Password</span>
+      </FormField>
+      <FormField label="Proxy Password">
         <Input mode="password" prefix={<KeyRound size={16} />} value={values.proxy_password} maxLength={512}
           autoComplete="new-password"
           onChange={(proxy_password) => setValues((current) => ({ ...current, proxy_password }))}
         />
-      </label>
+      </FormField>
     </ResourceModal>
   );
 }

@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { createSystemUser, deleteSystemUser, querySystemUsers, updateSystemUser } from "../../shared/api/systemUsers";
 import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import type { CreateSystemUserRequest, SystemUser, UpdateSystemUserRequest } from "../../shared/api/types";
-import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
-import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
+import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
+import type { ResourceColumn } from "../../shared/components/ResourceTable";
 import { ResourceIdentity, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
@@ -19,40 +19,37 @@ import { UserFormModal } from "./UserFormModal";
 type ModalState = { mode: "create" } | { mode: "edit"; user: SystemUser } | null;
 
 export function SystemUsersPage() {
-  const {
-    items: users, page, keyword, loading, loadItems: loadUsers, total, rangeStart, rangeEnd,
-    setKeyword, search, previous, next, canGoBack, canGoNext,
-  } = usePagedResourceList<SystemUser>({ query: querySystemUsers });
+  const users = usePagedResourceList<SystemUser>({ query: querySystemUsers });
   const [modal, setModal] = useState<ModalState>(null);
   const { run: deleteUser, busyId: deletingUserId } = useResourceAction<SystemUser>(
     (user) => deleteSystemUser(user.id),
-    loadUsers,
+    users.loadItems,
   );
 
   useAdminResourceHeader({
     createLabel: "Create User",
     refreshLabel: "Refresh users",
-    loading,
+    loading: users.loading,
     onCreate: () => setModal({ mode: "create" }),
-    onRefresh: loadUsers,
+    onRefresh: users.loadItems,
   });
 
   const { saving, submit } = useResourceSubmit({
     onSuccess: async () => {
       setModal(null);
-      await loadUsers();
+      await users.loadItems();
     },
   });
 
   const summary = useMemo(
-    () => users.reduce(
+    () => users.items.reduce(
       (acc, user) => ({
         admin: acc.admin + (user.role === SYSTEM_USER_ROLE.ADMIN ? 1 : 0),
         user: acc.user + (user.role === SYSTEM_USER_ROLE.USER ? 1 : 0),
       }),
       { admin: 0, user: 0 },
     ),
-    [users],
+    [users.items],
   );
 
   const columns: ResourceColumn<SystemUser>[] = [
@@ -87,36 +84,21 @@ export function SystemUsersPage() {
 
   return (
     <>
-      <ResourcePageShell
+      <PagedResourceTable
+        ariaLabel="System users"
+        columns={columns}
+        rows={users.items}
+        rowKey={(user) => user.id}
         searchPlaceholder="Search username or email"
-        keyword={keyword}
-        loading={loading}
+        state={users}
         metrics={[
-          { label: "Total", value: total },
+          { label: "Total", value: users.total },
           { label: "Admins", value: summary.admin },
           { label: "Users", value: summary.user },
         ]}
-        empty={users.length === 0}
         emptyIcon={<Users size={42} />}
         emptyTitle="No users found"
-        page={page}
-        rangeStart={rangeStart}
-        rangeEnd={rangeEnd}
-        total={total}
-        canGoBack={canGoBack}
-        canGoNext={canGoNext}
-        onKeywordChange={setKeyword}
-        onSearch={search}
-        onPrevious={previous}
-        onNext={next}
-      >
-        <ResourceTable<SystemUser>
-          ariaLabel="System users"
-          columns={columns}
-          rows={users}
-          rowKey={(user) => user.id}
-        />
-      </ResourcePageShell>
+      />
 
       {modal?.mode === "edit" ? (
         <UserFormModal

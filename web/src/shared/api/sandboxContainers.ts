@@ -1,4 +1,4 @@
-import { apiBlob, apiDelete, apiForm, apiGet, apiPatch, apiPost, buildAuthenticatedWebSocketUrl } from "./client";
+import { apiBlob, apiForm, buildAuthenticatedWebSocketUrl, defineJsonEndpoint } from "./client";
 import { SANDBOX_CONTAINER_STATUS } from "./generated/constants";
 import { getStoredAccessToken } from "../auth/session";
 import { buildQuery } from "./query";
@@ -49,56 +49,40 @@ import type {
 const SANDBOX_CONTAINERS_PATH = "/api/sandbox-containers";
 type SandboxContainerId = SandboxContainerPathParams["id"];
 
-export function querySandboxContainers(params: QuerySandboxContainersParams) {
-  return apiGet<QuerySandboxContainersResponse>(`${SANDBOX_CONTAINERS_PATH}${buildQuery(params)}`);
-}
-
-export function queryAvailableSandboxContainers(params: QueryAvailableSandboxContainersParams) {
-  return apiGet<QueryAvailableSandboxContainersResponse>(`${SANDBOX_CONTAINERS_PATH}/available${buildQuery(params)}`);
-}
-
-export function createSandboxContainer(payload: CreateSandboxContainerRequest) {
-  return apiPost<CreateSandboxContainerResponse>(SANDBOX_CONTAINERS_PATH, payload);
-}
-
-export function querySandboxContainerHostOptions(params: QuerySandboxContainerHostOptionsParams) {
-  return apiGet<QuerySandboxContainerHostOptionsResponse>(
-    `${SANDBOX_CONTAINERS_PATH}/create-options/hosts${buildQuery(params)}`,
-  );
-}
-
-export function querySandboxContainerImageOptions(params: QuerySandboxContainerImageOptionsParams) {
-  return apiGet<QuerySandboxContainerImageOptionsResponse>(
-    `${SANDBOX_CONTAINERS_PATH}/create-options/images${buildQuery(params)}`,
-  );
-}
-
-export function startSandboxContainer(id: StartSandboxContainerPathParams["id"]) {
-  return apiPost<StartSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/start`);
-}
-
-export function stopSandboxContainer(id: StopSandboxContainerPathParams["id"]) {
-  return apiPost<StopSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/stop`);
-}
-
-export function pauseSandboxContainer(id: PauseSandboxContainerPathParams["id"]) {
-  return apiPost<PauseSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/pause`);
-}
-
-export function resumeSandboxContainer(id: ResumeSandboxContainerPathParams["id"]) {
-  return apiPost<ResumeSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/resume`);
-}
-
-export function updateSandboxContainerEgress(
-  id: UpdateSandboxContainerEgressPathParams["id"],
-  payload: UpdateSandboxContainerEgressRequest,
-) {
-  return apiPatch<UpdateSandboxContainerEgressResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/egress`, payload);
-}
-
-export function deleteSandboxContainer(id: SandboxContainerPathParams["id"]) {
-  return apiDelete<DeleteSandboxContainerResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}`);
-}
+export const querySandboxContainers = defineJsonEndpoint<
+  [params: QuerySandboxContainersParams], QuerySandboxContainersResponse
+>("GET", (params) => `${SANDBOX_CONTAINERS_PATH}${buildQuery(params)}`);
+export const queryAvailableSandboxContainers = defineJsonEndpoint<
+  [params: QueryAvailableSandboxContainersParams], QueryAvailableSandboxContainersResponse
+>("GET", (params) => `${SANDBOX_CONTAINERS_PATH}/available${buildQuery(params)}`);
+export const createSandboxContainer = defineJsonEndpoint<
+  [payload: CreateSandboxContainerRequest], CreateSandboxContainerResponse
+>("POST", () => SANDBOX_CONTAINERS_PATH, (payload) => payload);
+export const querySandboxContainerHostOptions = defineJsonEndpoint<
+  [params: QuerySandboxContainerHostOptionsParams], QuerySandboxContainerHostOptionsResponse
+>("GET", (params) => `${SANDBOX_CONTAINERS_PATH}/create-options/hosts${buildQuery(params)}`);
+export const querySandboxContainerImageOptions = defineJsonEndpoint<
+  [params: QuerySandboxContainerImageOptionsParams], QuerySandboxContainerImageOptionsResponse
+>("GET", (params) => `${SANDBOX_CONTAINERS_PATH}/create-options/images${buildQuery(params)}`);
+export const startSandboxContainer = defineJsonEndpoint<
+  [id: StartSandboxContainerPathParams["id"]], StartSandboxContainerResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/start`);
+export const stopSandboxContainer = defineJsonEndpoint<
+  [id: StopSandboxContainerPathParams["id"]], StopSandboxContainerResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/stop`);
+export const pauseSandboxContainer = defineJsonEndpoint<
+  [id: PauseSandboxContainerPathParams["id"]], PauseSandboxContainerResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/pause`);
+export const resumeSandboxContainer = defineJsonEndpoint<
+  [id: ResumeSandboxContainerPathParams["id"]], ResumeSandboxContainerResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/resume`);
+export const updateSandboxContainerEgress = defineJsonEndpoint<
+  [id: UpdateSandboxContainerEgressPathParams["id"], payload: UpdateSandboxContainerEgressRequest],
+  UpdateSandboxContainerEgressResponse
+>("PATCH", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/egress`, (_, payload) => payload);
+export const deleteSandboxContainer = defineJsonEndpoint<[id: SandboxContainerId], DeleteSandboxContainerResponse>(
+  "DELETE", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}`,
+);
 
 export function buildContainerShellUrl(containerId: SandboxContainerId) {
   return buildAuthenticatedWebSocketUrl(`${SANDBOX_CONTAINERS_PATH}/${containerId}/shell`);
@@ -131,17 +115,15 @@ export function buildContainerNoVNCUrl(container: SandboxContainer) {
   return url.toString();
 }
 
-export function listContainerFiles(id: SandboxContainerId, params: ListContainerFilesParams) {
-  return apiGet<ListContainerFilesResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files${buildQuery(params)}`);
-}
-
-export function readContainerFile(id: SandboxContainerId, params: ReadContainerFileParams) {
-  return apiGet<ReadContainerFileResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/read${buildQuery(params)}`);
-}
-
-export function writeContainerFile(id: SandboxContainerId, payload: ContainerFileWriteRequest) {
-  return apiPost<ContainerFileWriteResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/write`, payload);
-}
+export const listContainerFiles = defineJsonEndpoint<
+  [id: SandboxContainerId, params: ListContainerFilesParams], ListContainerFilesResponse
+>("GET", (id, params) => `${SANDBOX_CONTAINERS_PATH}/${id}/files${buildQuery(params)}`);
+export const readContainerFile = defineJsonEndpoint<
+  [id: SandboxContainerId, params: ReadContainerFileParams], ReadContainerFileResponse
+>("GET", (id, params) => `${SANDBOX_CONTAINERS_PATH}/${id}/files/read${buildQuery(params)}`);
+export const writeContainerFile = defineJsonEndpoint<
+  [id: SandboxContainerId, payload: ContainerFileWriteRequest], ContainerFileWriteResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/files/write`, (_, payload) => payload);
 
 export function uploadContainerFiles(
   id: SandboxContainerId,
@@ -162,18 +144,15 @@ export function downloadContainerFiles(id: SandboxContainerId, params: DownloadC
   return apiBlob(`${SANDBOX_CONTAINERS_PATH}/${id}/files/download?${query.toString()}`);
 }
 
-export function copyContainerFiles(id: SandboxContainerId, payload: ContainerFileCopyRequest) {
-  return apiPost<ContainerFileCopyResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/copy`, payload);
-}
-
-export function moveContainerFiles(id: SandboxContainerId, payload: ContainerFileMoveRequest) {
-  return apiPost<ContainerFileMoveResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/move`, payload);
-}
-
-export function deleteContainerFiles(id: SandboxContainerId, payload: ContainerFileDeleteRequest) {
-  return apiPost<ContainerFileDeleteResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/delete`, payload);
-}
-
-export function createContainerDirectory(id: SandboxContainerId, payload: ContainerFileMkdirRequest) {
-  return apiPost<ContainerFileMkdirResponse>(`${SANDBOX_CONTAINERS_PATH}/${id}/files/mkdir`, payload);
-}
+export const copyContainerFiles = defineJsonEndpoint<
+  [id: SandboxContainerId, payload: ContainerFileCopyRequest], ContainerFileCopyResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/files/copy`, (_, payload) => payload);
+export const moveContainerFiles = defineJsonEndpoint<
+  [id: SandboxContainerId, payload: ContainerFileMoveRequest], ContainerFileMoveResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/files/move`, (_, payload) => payload);
+export const deleteContainerFiles = defineJsonEndpoint<
+  [id: SandboxContainerId, payload: ContainerFileDeleteRequest], ContainerFileDeleteResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/files/delete`, (_, payload) => payload);
+export const createContainerDirectory = defineJsonEndpoint<
+  [id: SandboxContainerId, payload: ContainerFileMkdirRequest], ContainerFileMkdirResponse
+>("POST", (id) => `${SANDBOX_CONTAINERS_PATH}/${id}/files/mkdir`, (_, payload) => payload);

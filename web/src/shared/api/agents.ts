@@ -1,8 +1,6 @@
-import { apiGet } from "./client";
+import { defineJsonEndpoint } from "./client";
 import type { ListAgentsResponse } from "./types";
 
 const AGENTS_PATH = "/api/agents";
 
-export function listAgents() {
-  return apiGet<ListAgentsResponse>(AGENTS_PATH);
-}
+export const listAgents = defineJsonEndpoint<[], ListAgentsResponse>("GET", () => AGENTS_PATH);
