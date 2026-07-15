@@ -29,6 +29,7 @@ class AgentSubordinateTaskSnapshot(BaseModel):
     result: str = ""
     error: str = ""
     progress: str = ""
+    work_item_id: int | None = None
     nested_call_id: str = ""
     created_at: datetime
     updated_at: datetime
@@ -51,6 +52,7 @@ class AgentSubordinateTaskToolItem(BaseModel):
     error_chars: int = 0
     next_offset: int | None = None
     progress: str = ""
+    work_item_id: int | None = None
 
 
 class AgentSubordinateTaskToolResult(BaseModel):

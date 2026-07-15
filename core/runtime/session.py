@@ -30,6 +30,7 @@ from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
 from core.runtime.timeline import TimelineLogWriter, is_persistable, timeline_item_key
 from core.sandbox.command_jobs import cancel_sandbox_async_commands, cancel_session_async_sandbox_commands
 from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, replace_trigger, run_until_idle
+from core.work_project_context import activate_work_project_context
 from database import get_engine
 from logger import get_logger
 from schema.agent.events import (
@@ -326,13 +327,14 @@ class AgentSession:
             current_retrieval_text,
         )
         async with activate_lightrag_context(turn_context, retrieval_query):
-            return await self._execute_turn_with_context(
-                trigger=trigger,
-                turn_agent_code=turn_agent_code,
-                turn_context=turn_context,
-                tag=_tag,
-                memory_session=memory_session,
-            )
+            async with activate_work_project_context(turn_context):
+                return await self._execute_turn_with_context(
+                    trigger=trigger,
+                    turn_agent_code=turn_agent_code,
+                    turn_context=turn_context,
+                    tag=_tag,
+                    memory_session=memory_session,
+                )
 
     async def _execute_turn_with_context(
         self,
@@ -993,7 +995,16 @@ def _context_for_notification(
         sandbox_container_generation=sandbox_generation,
         sandbox_skill_metadata=sandbox_skill_metadata,
         work_project_id=base.work_project_id,
+        work_item_id=_notification_work_item_id(base, notification),
     )
+
+
+def _notification_work_item_id(
+    base: AgentRuntimeContext,
+    notification: AgentNotificationSnapshot,
+) -> int | None:
+    value = notification.payload.get("work_item_id")
+    return value if isinstance(value, int) and value > 0 else base.work_item_id
 
 
 def _notification_sandbox_scope(

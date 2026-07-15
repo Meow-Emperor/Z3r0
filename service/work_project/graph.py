@@ -1,448 +1,324 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import delete as sa_delete
-from sqlalchemy import func, or_, update
+from sqlalchemy import String, cast, delete as sa_delete, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
+from core.agent.constants import DEFAULT_AGENT_CODE
 from database import get_async_session
 from model.work_project.assets import WorkProjectAsset
-from model.work_project.findings import WorkProjectFinding
-from model.work_project.graph import (
-    WorkProjectAttackPath,
-    WorkProjectAttackPathStep,
-    WorkProjectGraphEdge,
-)
+from model.work_project.evidence import WorkProjectAttackPathStepEvidence, WorkProjectRelationEvidence
+from model.work_project.findings import WorkProjectFinding, WorkProjectFindingAsset
+from model.work_project.graph import WorkProjectAttackPath, WorkProjectAttackPathStep, WorkProjectRelation
 from schema.work_project.graph import (
     WorkProjectAttackPathRequest,
     WorkProjectAttackPathSchema,
-    WorkProjectAttackPathStepRequest,
     WorkProjectAttackPathStepSchema,
-    WorkProjectGraphEdgeRequest,
-    WorkProjectGraphEdgeSchema,
+    WorkProjectAttackStepStatus,
+    WorkProjectAssertionStatus,
+    WorkProjectRelationRequest,
+    WorkProjectRelationSchema,
 )
-from service.common.pagination import page_offset
+from schema.work_project.findings import WorkProjectFindingVerification
+from service.common.pagination import Page, paginate_statement
+from service.work_project.evidence import validate_active_evidence_ids
 from service.work_project.locking import lock_active_work_project
 
 
 @dataclass(frozen=True, slots=True)
-class WorkProjectGraphPage:
-    page: int
-    size: int
-    edge_total: int
-    attack_path_total: int
-    attack_path_step_total: int
-    edges: list[WorkProjectGraphEdgeSchema]
+class WorkProjectGraphSnapshot:
+    relations: list[WorkProjectRelationSchema]
     attack_paths: list[WorkProjectAttackPathSchema]
     attack_path_steps: list[WorkProjectAttackPathStepSchema]
 
 
-async def query_work_project_graph(
+async def query_work_project_graph(project_id: int) -> WorkProjectGraphSnapshot:
+    async with get_async_session() as session:
+        relations = list((await session.exec(
+            select(WorkProjectRelation).where(WorkProjectRelation.project_id == project_id).order_by(WorkProjectRelation.id)
+        )).all())
+        paths = list((await session.exec(
+            select(WorkProjectAttackPath).where(WorkProjectAttackPath.project_id == project_id).order_by(WorkProjectAttackPath.id)
+        )).all())
+        steps = list((await session.exec(
+            select(WorkProjectAttackPathStep)
+            .where(WorkProjectAttackPathStep.project_id == project_id)
+            .order_by(WorkProjectAttackPathStep.path_id, WorkProjectAttackPathStep.sequence)
+        )).all())
+    return WorkProjectGraphSnapshot(
+        relations=[WorkProjectRelationSchema.model_validate(item) for item in relations],
+        attack_paths=[WorkProjectAttackPathSchema.model_validate(item) for item in paths],
+        attack_path_steps=[WorkProjectAttackPathStepSchema.model_validate(item) for item in steps],
+    )
+
+
+async def query_work_project_relations(
     project_id: int,
     *,
     page: int,
     size: int,
-) -> WorkProjectGraphPage:
-    offset = page_offset(page, size)
-    edge_filter = WorkProjectGraphEdge.project_id == project_id
-    path_filter = WorkProjectAttackPath.project_id == project_id
-    step_filter = WorkProjectAttackPathStep.project_id == project_id
-
-    counts_statement = select(
-        select(func.count()).select_from(WorkProjectGraphEdge).where(edge_filter).scalar_subquery(),
-        select(func.count()).select_from(WorkProjectAttackPath).where(path_filter).scalar_subquery(),
-        select(func.count()).select_from(WorkProjectAttackPathStep).where(step_filter).scalar_subquery(),
-    )
-    async with get_async_session() as session:
-        edge_total, path_total, step_total = (await session.exec(counts_statement)).one()
-        edges = (await session.exec(
-            select(WorkProjectGraphEdge)
-            .where(edge_filter)
-            .order_by(WorkProjectGraphEdge.id)
-            .offset(offset)
-            .limit(size)
-        )).all()
-        attack_paths = (await session.exec(
-            select(WorkProjectAttackPath)
-            .where(path_filter)
-            .order_by(WorkProjectAttackPath.id)
-            .offset(offset)
-            .limit(size)
-        )).all()
-        attack_path_steps = (await session.exec(
-            select(WorkProjectAttackPathStep)
-            .where(step_filter)
-            .order_by(WorkProjectAttackPathStep.path_id, WorkProjectAttackPathStep.sequence)
-            .offset(offset)
-            .limit(size)
-        )).all()
-
-    return WorkProjectGraphPage(
-        page=page,
-        size=size,
-        edge_total=int(edge_total),
-        attack_path_total=int(path_total),
-        attack_path_step_total=int(step_total),
-        edges=[WorkProjectGraphEdgeSchema.model_validate(item) for item in edges],
-        attack_paths=[WorkProjectAttackPathSchema.model_validate(item) for item in attack_paths],
-        attack_path_steps=[WorkProjectAttackPathStepSchema.model_validate(item) for item in attack_path_steps],
+    keyword: str,
+    status: WorkProjectAssertionStatus | None = None,
+) -> Page[WorkProjectRelationSchema]:
+    statement = select(WorkProjectRelation).where(WorkProjectRelation.project_id == project_id)
+    if status is not None:
+        statement = statement.where(WorkProjectRelation.status == status)
+    if keyword := keyword.strip():
+        pattern = f"%{keyword}%"
+        statement = statement.where(or_(
+            WorkProjectRelation.summary.ilike(pattern),
+            cast(WorkProjectRelation.type, String).ilike(pattern),
+            cast(WorkProjectRelation.status, String).ilike(pattern),
+        ))
+    result = await paginate_statement(statement.order_by(WorkProjectRelation.id), page=page, size=size)
+    return Page(
+        page=result.page,
+        size=result.size,
+        total=result.total,
+        items=[WorkProjectRelationSchema.model_validate(item) for item in result.items],
     )
 
 
-# ---------------------------------------------------------------------------
-# Graph edges (asset -> asset relationships)
-# ---------------------------------------------------------------------------
-async def upsert_work_project_graph_edge(
+async def query_work_project_attack_paths(
     project_id: int,
-    request: WorkProjectGraphEdgeRequest,
     *,
+    page: int,
+    size: int,
+    keyword: str,
+) -> Page[WorkProjectAttackPathSchema]:
+    statement = select(WorkProjectAttackPath).where(WorkProjectAttackPath.project_id == project_id)
+    if keyword := keyword.strip():
+        pattern = f"%{keyword}%"
+        statement = statement.where(or_(
+            WorkProjectAttackPath.title.ilike(pattern),
+            WorkProjectAttackPath.objective.ilike(pattern),
+            WorkProjectAttackPath.summary.ilike(pattern),
+        ))
+    result = await paginate_statement(statement.order_by(WorkProjectAttackPath.id.desc()), page=page, size=size)
+    return Page(
+        page=result.page,
+        size=result.size,
+        total=result.total,
+        items=[WorkProjectAttackPathSchema.model_validate(item) for item in result.items],
+    )
+
+
+async def upsert_work_project_relation(
+    project_id: int,
+    request: WorkProjectRelationRequest,
+    *,
+    relation_id: int | None = None,
     created_by_agent_code: str = "",
     created_from_session_id: str = "",
-) -> tuple[WorkProjectGraphEdgeSchema | None, str]:
+) -> tuple[WorkProjectRelationSchema | None, str]:
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
-        error = await _validate_edge_assets(session, project_id, request)
+        error = await _validate_relation_request(session, project_id, request)
         if error:
             return None, error
-        edge = await _get_edge_by_relation(session, project_id, request)
+        relation = None
+        if relation_id is not None:
+            relation = (await session.exec(select(WorkProjectRelation).where(WorkProjectRelation.id == relation_id).with_for_update())).one_or_none()
+            if relation is None or relation.project_id != project_id:
+                return None, "relation not found"
+        else:
+            relation = (await session.exec(select(WorkProjectRelation).where(
+                WorkProjectRelation.project_id == project_id,
+                WorkProjectRelation.source_asset_id == request.source_asset_id,
+                WorkProjectRelation.target_asset_id == request.target_asset_id,
+                WorkProjectRelation.type == request.type,
+            ).with_for_update())).one_or_none()
+        actor_code = created_by_agent_code.strip()
+        if relation is not None and actor_code != DEFAULT_AGENT_CODE and relation.created_by_agent_code != actor_code:
+            return None, "specialist agents can only update relations they created"
+        if relation is not None:
+            linked_steps = list((await session.exec(select(WorkProjectAttackPathStep).where(
+                WorkProjectAttackPathStep.relation_id == relation.id
+            ))).all())
+            for step in linked_steps:
+                if (request.source_asset_id, request.target_asset_id) != (
+                    step.source_asset_id,
+                    step.target_asset_id,
+                ):
+                    return None, "relation endpoints must continue to match every attack path step that references it"
+                if request.status == WorkProjectAssertionStatus.REFUTED and step.status != WorkProjectAttackStepStatus.REFUTED:
+                    return None, "revise non-refuted attack path steps before refuting their linked relation"
+                if step.status == WorkProjectAttackStepStatus.VALIDATED and request.status not in {
+                    WorkProjectAssertionStatus.OBSERVED,
+                    WorkProjectAssertionStatus.VALIDATED,
+                }:
+                    return None, "validated attack path steps require an observed or validated linked relation"
         now = datetime.now()
-        if edge is None:
-            edge = WorkProjectGraphEdge(
+        if relation is None:
+            relation = WorkProjectRelation(
                 project_id=project_id,
-                source_asset_id=request.source_asset_id,
-                target_asset_id=request.target_asset_id,
-                type=request.type,
-                label=request.label,
+                created_by_agent_code=actor_code,
+                created_from_session_id=created_from_session_id.strip(),
+                created_at=now,
+            )
+        relation.source_asset_id = request.source_asset_id
+        relation.target_asset_id = request.target_asset_id
+        relation.type = request.type
+        relation.status = request.status
+        relation.summary = request.summary
+        relation.updated_at = now
+        session.add(relation)
+        try:
+            await session.flush()
+        except IntegrityError:
+            await session.rollback()
+            return None, "relation already exists"
+        relation_id_value = relation.id or 0
+        await session.execute(sa_delete(WorkProjectRelationEvidence).where(WorkProjectRelationEvidence.relation_id == relation_id_value))
+        session.add_all([
+            WorkProjectRelationEvidence(relation_id=relation_id_value, evidence_id=evidence_id)
+            for evidence_id in request.evidence_ids
+        ])
+        await session.commit()
+        await session.refresh(relation)
+    return WorkProjectRelationSchema.model_validate(relation), ""
+
+
+async def save_work_project_attack_path(
+    project_id: int,
+    request: WorkProjectAttackPathRequest,
+    *,
+    path_id: int | None = None,
+    created_by_agent_code: str = "",
+    created_from_session_id: str = "",
+) -> tuple[WorkProjectAttackPathSchema | None, list[WorkProjectAttackPathStepSchema], str]:
+    async with get_async_session() as session:
+        if error := await lock_active_work_project(session, project_id):
+            return None, [], error
+        error = await _validate_path_request(session, project_id, request)
+        if error:
+            return None, [], error
+        path = None
+        if path_id is not None:
+            path = (await session.exec(select(WorkProjectAttackPath).where(WorkProjectAttackPath.id == path_id).with_for_update())).one_or_none()
+            if path is None or path.project_id != project_id:
+                return None, [], "attack path not found"
+            actor_code = created_by_agent_code.strip()
+            if actor_code != DEFAULT_AGENT_CODE and path.created_by_agent_code != actor_code:
+                return None, [], "specialist agents can only update attack paths they created"
+        now = datetime.now()
+        if path is None:
+            path = WorkProjectAttackPath(
+                project_id=project_id,
                 created_by_agent_code=created_by_agent_code.strip(),
                 created_from_session_id=created_from_session_id.strip(),
                 created_at=now,
-                updated_at=now,
             )
-        else:
-            edge.label = request.label
-            edge.updated_at = now
-        session.add(edge)
-        try:
-            await session.commit()
-        except IntegrityError:
-            # Lost a concurrent create race: re-read the winning edge and apply the label.
-            await session.rollback()
-            if error := await lock_active_work_project(session, project_id):
-                return None, error
-            error = await _validate_edge_assets(session, project_id, request)
-            if error:
-                return None, error
-            edge = await _get_edge_by_relation(session, project_id, request)
-            if edge is None:
-                return None, "graph edge already exists"
-            edge.label = request.label
-            edge.updated_at = datetime.now()
-            session.add(edge)
-            try:
-                await session.commit()
-            except IntegrityError:
-                await session.rollback()
-                return None, "graph edge already exists"
-        await session.refresh(edge)
-    return WorkProjectGraphEdgeSchema.model_validate(edge), ""
-
-
-async def update_work_project_graph_edge(
-    project_id: int,
-    edge_id: int,
-    request: WorkProjectGraphEdgeRequest,
-) -> tuple[WorkProjectGraphEdgeSchema | None, str]:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return None, error
-        edge = (await session.exec(
-            select(WorkProjectGraphEdge).where(WorkProjectGraphEdge.id == edge_id).with_for_update()
-        )).one_or_none()
-        if edge is None or edge.project_id != project_id:
-            return None, "graph edge not found"
-        error = await _validate_edge_assets(session, project_id, request)
-        if error:
-            return None, error
-        duplicate = await _get_edge_by_relation(session, project_id, request)
-        if duplicate is not None and duplicate.id != edge_id:
-            return None, "graph edge already exists"
-        edge.source_asset_id = request.source_asset_id
-        edge.target_asset_id = request.target_asset_id
-        edge.type = request.type
-        edge.label = request.label
-        edge.updated_at = datetime.now()
-        session.add(edge)
-        try:
-            await session.commit()
-        except IntegrityError:
-            await session.rollback()
-            error = await _validate_edge_assets(session, project_id, request)
-            if error:
-                return None, error
-            return None, "graph edge already exists"
-        await session.refresh(edge)
-    return WorkProjectGraphEdgeSchema.model_validate(edge), ""
-
-
-async def delete_work_project_graph_edge(project_id: int, edge_id: int) -> str:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return error
-        edge = (await session.exec(
-            select(WorkProjectGraphEdge).where(WorkProjectGraphEdge.id == edge_id).with_for_update()
-        )).one_or_none()
-        if edge is None or edge.project_id != project_id:
-            return "graph edge not found"
-        await _purge_edge(session, edge_id)
-        await session.commit()
-    return ""
-
-
-async def purge_edges_touching_asset(session, project_id: int, asset_id: int) -> None:
-    """Detach and delete every edge that has the asset as an endpoint. No commit."""
-    edge_ids = (
-        select(WorkProjectGraphEdge.id).where(
-            WorkProjectGraphEdge.project_id == project_id,
-            or_(
-                WorkProjectGraphEdge.source_asset_id == asset_id,
-                WorkProjectGraphEdge.target_asset_id == asset_id,
-            ),
-        )
-    ).scalar_subquery()
-    await session.execute(
-        sa_delete(WorkProjectAttackPathStep).where(WorkProjectAttackPathStep.edge_id.in_(edge_ids))
-    )
-    await session.execute(
-        update(WorkProjectFinding)
-        .where(WorkProjectFinding.edge_id.in_(edge_ids))
-        .values(edge_id=None)
-    )
-    await session.execute(
-        sa_delete(WorkProjectGraphEdge).where(WorkProjectGraphEdge.id.in_(edge_ids))
-    )
-
-
-# ---------------------------------------------------------------------------
-# Attack paths
-# ---------------------------------------------------------------------------
-async def create_work_project_attack_path(
-    project_id: int,
-    request: WorkProjectAttackPathRequest,
-    *,
-    created_by_agent_code: str = "",
-    created_from_session_id: str = "",
-) -> tuple[WorkProjectAttackPathSchema | None, str]:
-    now = datetime.now()
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return None, error
-        path = WorkProjectAttackPath(
-            project_id=project_id,
-            title=request.title,
-            status=request.status,
-            summary=request.summary,
-            created_by_agent_code=created_by_agent_code.strip(),
-            created_from_session_id=created_from_session_id.strip(),
-            created_at=now,
-            updated_at=now,
-        )
-        session.add(path)
-        await session.commit()
-        await session.refresh(path)
-    return WorkProjectAttackPathSchema.model_validate(path), ""
-
-
-async def update_work_project_attack_path(
-    project_id: int,
-    path_id: int,
-    request: WorkProjectAttackPathRequest,
-) -> tuple[WorkProjectAttackPathSchema | None, str]:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return None, error
-        path = (await session.exec(
-            select(WorkProjectAttackPath).where(WorkProjectAttackPath.id == path_id).with_for_update()
-        )).one_or_none()
-        if path is None or path.project_id != project_id:
-            return None, "attack path not found"
         path.title = request.title
-        path.status = request.status
+        path.objective = request.objective
+        path.entry_asset_id = request.entry_asset_id
+        path.target_asset_id = request.target_asset_id
         path.summary = request.summary
-        path.updated_at = datetime.now()
+        path.archived_at = now if request.archived else None
+        path.archive_reason = request.archive_reason if request.archived else ""
+        path.updated_at = now
         session.add(path)
+        await session.flush()
+        path_id_value = path.id or 0
+        existing_steps = list((await session.exec(
+            select(WorkProjectAttackPathStep)
+            .where(WorkProjectAttackPathStep.path_id == path_id_value)
+            .with_for_update()
+        )).all())
+        existing_by_sequence = {step.sequence: step for step in existing_steps}
+        requested_sequences = {item.sequence for item in request.steps}
+        for step in existing_steps:
+            if step.sequence not in requested_sequences:
+                await session.delete(step)
+        saved_steps: list[WorkProjectAttackPathStep] = []
+        for item in request.steps:
+            step = existing_by_sequence.get(item.sequence)
+            if step is None:
+                step = WorkProjectAttackPathStep(
+                    project_id=project_id,
+                    path_id=path_id_value,
+                    sequence=item.sequence,
+                    created_by_agent_code=created_by_agent_code.strip(),
+                    created_from_session_id=created_from_session_id.strip(),
+                    created_at=now,
+                )
+            for field_name in (
+                "source_asset_id", "target_asset_id", "action", "description", "preconditions",
+                "result", "status", "relation_id", "finding_id", "attack_technique_id", "blocker_reason",
+            ):
+                setattr(step, field_name, getattr(item, field_name))
+            step.updated_at = now
+            session.add(step)
+            await session.flush()
+            await session.execute(sa_delete(WorkProjectAttackPathStepEvidence).where(
+                WorkProjectAttackPathStepEvidence.step_id == step.id
+            ))
+            session.add_all([
+                WorkProjectAttackPathStepEvidence(step_id=step.id or 0, evidence_id=evidence_id)
+                for evidence_id in item.evidence_ids
+            ])
+            saved_steps.append(step)
         await session.commit()
         await session.refresh(path)
-    return WorkProjectAttackPathSchema.model_validate(path), ""
-
-
-async def delete_work_project_attack_path(project_id: int, path_id: int) -> str:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return error
-        path = (await session.exec(
-            select(WorkProjectAttackPath).where(WorkProjectAttackPath.id == path_id).with_for_update()
-        )).one_or_none()
-        if path is None or path.project_id != project_id:
-            return "attack path not found"
-        await session.execute(
-            sa_delete(WorkProjectAttackPathStep).where(WorkProjectAttackPathStep.path_id == path_id)
-        )
-        await session.delete(path)
-        await session.commit()
-    return ""
-
-
-# ---------------------------------------------------------------------------
-# Attack path steps (ordered edges)
-# ---------------------------------------------------------------------------
-async def create_work_project_attack_path_step(
-    project_id: int,
-    path_id: int,
-    request: WorkProjectAttackPathStepRequest,
-    *,
-    created_by_agent_code: str = "",
-    created_from_session_id: str = "",
-) -> tuple[WorkProjectAttackPathStepSchema | None, str]:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return None, error
-        error = await _validate_step_refs(session, project_id, path_id, request)
-        if error:
-            return None, error
-        if await _get_step_by_sequence(session, project_id, path_id, request.sequence) is not None:
-            return None, "attack path step already exists"
-        now = datetime.now()
-        step = WorkProjectAttackPathStep(
-            project_id=project_id,
-            path_id=path_id,
-            sequence=request.sequence,
-            edge_id=request.edge_id,
-            created_by_agent_code=created_by_agent_code.strip(),
-            created_from_session_id=created_from_session_id.strip(),
-            created_at=now,
-            updated_at=now,
-        )
-        session.add(step)
-        try:
-            await session.commit()
-        except IntegrityError:
-            await session.rollback()
-            error = await _validate_step_refs(session, project_id, path_id, request)
-            if error:
-                return None, error
-            return None, "attack path step already exists"
-        await session.refresh(step)
-    return WorkProjectAttackPathStepSchema.model_validate(step), ""
-
-
-async def update_work_project_attack_path_step(
-    project_id: int,
-    path_id: int,
-    step_id: int,
-    request: WorkProjectAttackPathStepRequest,
-) -> tuple[WorkProjectAttackPathStepSchema | None, str]:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return None, error
-        step = (await session.exec(
-            select(WorkProjectAttackPathStep)
-            .where(WorkProjectAttackPathStep.id == step_id)
-            .with_for_update()
-        )).one_or_none()
-        if step is None or step.project_id != project_id or step.path_id != path_id:
-            return None, "attack path step not found"
-        error = await _validate_step_refs(session, project_id, path_id, request)
-        if error:
-            return None, error
-        existing = await _get_step_by_sequence(session, project_id, path_id, request.sequence)
-        if existing is not None and existing.id != step_id:
-            return None, "attack path step already exists"
-        step.sequence = request.sequence
-        step.edge_id = request.edge_id
-        step.updated_at = datetime.now()
-        session.add(step)
-        try:
-            await session.commit()
-        except IntegrityError:
-            await session.rollback()
-            error = await _validate_step_refs(session, project_id, path_id, request)
-            if error:
-                return None, error
-            return None, "attack path step already exists"
-        await session.refresh(step)
-    return WorkProjectAttackPathStepSchema.model_validate(step), ""
-
-
-async def delete_work_project_attack_path_step(project_id: int, path_id: int, step_id: int) -> str:
-    async with get_async_session() as session:
-        if error := await lock_active_work_project(session, project_id):
-            return error
-        step = (await session.exec(
-            select(WorkProjectAttackPathStep)
-            .where(WorkProjectAttackPathStep.id == step_id)
-            .with_for_update()
-        )).one_or_none()
-        if step is None or step.project_id != project_id or step.path_id != path_id:
-            return "attack path step not found"
-        await session.delete(step)
-        await session.commit()
-    return ""
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-async def _purge_edge(session, edge_id: int) -> None:
-    await session.execute(
-        sa_delete(WorkProjectAttackPathStep).where(WorkProjectAttackPathStep.edge_id == edge_id)
+        for step in saved_steps:
+            await session.refresh(step)
+    return (
+        WorkProjectAttackPathSchema.model_validate(path),
+        [WorkProjectAttackPathStepSchema.model_validate(step) for step in saved_steps],
+        "",
     )
-    await session.execute(
-        update(WorkProjectFinding).where(WorkProjectFinding.edge_id == edge_id).values(edge_id=None)
-    )
-    edge = await session.get(WorkProjectGraphEdge, edge_id)
-    if edge is not None:
-        await session.delete(edge)
 
 
-async def _get_edge_by_relation(session, project_id: int, request: WorkProjectGraphEdgeRequest) -> WorkProjectGraphEdge | None:
-    return (await session.exec(
-        select(WorkProjectGraphEdge).where(
-            WorkProjectGraphEdge.project_id == project_id,
-            WorkProjectGraphEdge.source_asset_id == request.source_asset_id,
-            WorkProjectGraphEdge.target_asset_id == request.target_asset_id,
-            WorkProjectGraphEdge.type == request.type,
-        ).with_for_update()
-    )).first()
+async def _validate_relation_request(session, project_id: int, request: WorkProjectRelationRequest) -> str:
+    if error := await _validate_assets(session, project_id, [request.source_asset_id, request.target_asset_id]):
+        return error
+    _, error = await validate_active_evidence_ids(session, project_id, request.evidence_ids)
+    return error
 
 
-async def _get_step_by_sequence(session, project_id: int, path_id: int, sequence: int) -> WorkProjectAttackPathStep | None:
-    return (await session.exec(
-        select(WorkProjectAttackPathStep).where(
-            WorkProjectAttackPathStep.project_id == project_id,
-            WorkProjectAttackPathStep.path_id == path_id,
-            WorkProjectAttackPathStep.sequence == sequence,
-        ).with_for_update()
-    )).first()
-
-
-async def _validate_edge_assets(session, project_id: int, request: WorkProjectGraphEdgeRequest) -> str:
-    for asset_id, label in (
-        (request.source_asset_id, "source asset"),
-        (request.target_asset_id, "target asset"),
-    ):
-        asset = await session.get(WorkProjectAsset, asset_id)
-        if asset is None or asset.project_id != project_id:
-            return f"{label} not found"
+async def _validate_path_request(session, project_id: int, request: WorkProjectAttackPathRequest) -> str:
+    asset_ids = {request.entry_asset_id, request.target_asset_id}
+    for step in request.steps:
+        asset_ids.update((step.source_asset_id, step.target_asset_id))
+    if error := await _validate_assets(session, project_id, list(asset_ids)):
+        return error
+    for step in request.steps:
+        if step.relation_id is not None:
+            relation = await session.get(WorkProjectRelation, step.relation_id)
+            if relation is None or relation.project_id != project_id:
+                return "relation not found"
+            if (relation.source_asset_id, relation.target_asset_id) != (step.source_asset_id, step.target_asset_id):
+                return "attack path step relation endpoints do not match the step"
+            if relation.status == WorkProjectAssertionStatus.REFUTED and step.status != WorkProjectAttackStepStatus.REFUTED:
+                return "non-refuted attack path step cannot reference a refuted relation"
+            if step.status == WorkProjectAttackStepStatus.VALIDATED and relation.status not in {
+                WorkProjectAssertionStatus.OBSERVED,
+                WorkProjectAssertionStatus.VALIDATED,
+            }:
+                return "validated attack path step requires an observed or validated linked relation"
+        if step.finding_id is not None:
+            finding = await session.get(WorkProjectFinding, step.finding_id)
+            if finding is None or finding.project_id != project_id:
+                return "finding not found"
+            linked_assets = set((await session.exec(select(WorkProjectFindingAsset.asset_id).where(
+                WorkProjectFindingAsset.finding_id == step.finding_id
+            ))).all())
+            if not ({finding.primary_asset_id, *linked_assets} & {step.source_asset_id, step.target_asset_id}):
+                return "attack path step finding is not linked to either step endpoint"
+            if finding.verification == WorkProjectFindingVerification.REFUTED and step.status != WorkProjectAttackStepStatus.REFUTED:
+                return "non-refuted attack path step cannot reference a refuted finding"
+            if step.status == WorkProjectAttackStepStatus.VALIDATED and finding.verification != WorkProjectFindingVerification.VALIDATED:
+                return "validated attack path step requires a validated linked finding"
+        _, error = await validate_active_evidence_ids(session, project_id, step.evidence_ids)
+        if error:
+            return error
     return ""
 
 
-async def _validate_step_refs(session, project_id: int, path_id: int, request: WorkProjectAttackPathStepRequest) -> str:
-    path = await session.get(WorkProjectAttackPath, path_id)
-    if path is None or path.project_id != project_id:
-        return "attack path not found"
-    edge = await session.get(WorkProjectGraphEdge, request.edge_id)
-    if edge is None or edge.project_id != project_id:
-        return "graph edge not found"
+async def _validate_assets(session, project_id: int, asset_ids: list[int]) -> str:
+    assets = list((await session.exec(select(WorkProjectAsset).where(WorkProjectAsset.id.in_(set(asset_ids))))).all())
+    if len(assets) != len(set(asset_ids)) or any(asset.project_id != project_id for asset in assets):
+        return "asset not found"
     return ""

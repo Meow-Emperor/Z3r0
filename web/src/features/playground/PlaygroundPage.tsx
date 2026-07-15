@@ -37,11 +37,11 @@ import { cx } from "../../shared/lib/className";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
+import { SandboxContainerFormModal } from "../sandbox-containers/SandboxContainerFormModal";
 import { useAgentSessionContext, type AgentSessionConnectionStatus } from "./AgentSessionProvider";
 import { ChatStream } from "./ChatStream";
 import { Composer } from "./Composer";
 import { MessageScrollPanel } from "./MessageScrollPanel";
-import { PlaygroundSandboxCreateModal } from "./PlaygroundSandboxCreateModal";
 import { SandboxSelector } from "./SandboxSelector";
 import { SubagentSidePanel } from "./SubagentSidePanel";
 import { useSubagentPanel } from "./useSubagentPanel";
@@ -103,7 +103,6 @@ export function PlaygroundPage() {
   const sandboxOptions = useOptionList<SandboxContainer>({ query: querySandboxOptions });
   const availableSandboxContainers = sandboxOptions.items;
   const knownSandboxContainers = sandboxOptions.knownItems;
-  const sandboxLoading = sandboxOptions.busy;
   const currentProjectSandboxContainer = useMemo(() => {
     if (!activeProjectId) return null;
     if (projectSandboxContainerId === null) return projectSandboxContainer;
@@ -318,12 +317,10 @@ export function PlaygroundPage() {
     <>
       <SandboxSelector
         containers={selectableSandboxContainers}
-        loading={sandboxLoading}
+        source={sandboxOptions}
         value={sandboxContainerId}
         className="sandbox-selector-topbar"
         disabled={Boolean(activeProjectId) || sandboxOperationBusy}
-        onSearch={sandboxOptions.search}
-        onListScroll={sandboxOptions.onListScroll}
         onChange={(id) => void changeSandboxContainer(id)}
       />
       <div className="sandbox-container-actions" aria-label="Selected sandbox actions">
@@ -449,9 +446,7 @@ export function PlaygroundPage() {
     sandboxOperationBusy,
     sandboxContainerId,
     selectableSandboxContainers,
-    sandboxLoading,
-    sandboxOptions.onListScroll,
-    sandboxOptions.search,
+    sandboxOptions,
     screenUnavailableReason,
     selectSession,
     selectedSandboxActionId,
@@ -532,10 +527,9 @@ export function PlaygroundPage() {
       <WorkProjectInfoModal
         open={projectRecordsOpen && Boolean(activeProjectId)}
         projectId={activeProjectId}
-        initialTab="assets"
         onClose={() => setProjectRecordsOpen(false)}
       />
-      <PlaygroundSandboxCreateModal
+      <SandboxContainerFormModal
         open={createSandboxOpen}
         onCancel={() => setCreateSandboxOpen(false)}
         onCreated={handleSandboxCreated}

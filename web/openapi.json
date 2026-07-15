@@ -514,6 +514,18 @@
           },
           "status": {
             "$ref": "#/components/schemas/AgentSubordinateStatus"
+          },
+          "work_item_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Work Item Id"
           }
         },
         "required": [
@@ -1684,6 +1696,32 @@
         "title": "CommonResponse[QuerySystemUsersResponse]",
         "type": "object"
       },
+      "CommonResponse_QueryWorkProjectActivityResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryWorkProjectActivityResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryWorkProjectActivityResponse]",
+        "type": "object"
+      },
       "CommonResponse_QueryWorkProjectAssetsResponse_": {
         "properties": {
           "code": {
@@ -1736,6 +1774,32 @@
         "title": "CommonResponse[QueryWorkProjectAttackPathsResponse]",
         "type": "object"
       },
+      "CommonResponse_QueryWorkProjectEvidenceResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryWorkProjectEvidenceResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryWorkProjectEvidenceResponse]",
+        "type": "object"
+      },
       "CommonResponse_QueryWorkProjectFindingsResponse_": {
         "properties": {
           "code": {
@@ -1760,6 +1824,32 @@
           }
         },
         "title": "CommonResponse[QueryWorkProjectFindingsResponse]",
+        "type": "object"
+      },
+      "CommonResponse_QueryWorkProjectWorkItemsResponse_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/QueryWorkProjectWorkItemsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[QueryWorkProjectWorkItemsResponse]",
         "type": "object"
       },
       "CommonResponse_QueryWorkProjectsResponse_": {
@@ -1994,6 +2084,32 @@
           }
         },
         "title": "CommonResponse[WorkProjectGraphViewSchema]",
+        "type": "object"
+      },
+      "CommonResponse_WorkProjectOverviewSchema_": {
+        "properties": {
+          "code": {
+            "default": 200,
+            "title": "Code",
+            "type": "integer"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkProjectOverviewSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "default": "success",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "title": "CommonResponse[WorkProjectOverviewSchema]",
         "type": "object"
       },
       "CommonResponse_WorkProjectSchema_": {
@@ -2468,6 +2584,7 @@
         "type": "object"
       },
       "CreateWorkProjectRequest": {
+        "additionalProperties": false,
         "properties": {
           "assets": {
             "items": {
@@ -4028,6 +4145,37 @@
         "title": "QuerySystemUsersResponse",
         "type": "object"
       },
+      "QueryWorkProjectActivityResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectWorkLogSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryWorkProjectActivityResponse",
+        "type": "object"
+      },
       "QueryWorkProjectAssetsResponse": {
         "properties": {
           "items": {
@@ -4090,6 +4238,37 @@
         "title": "QueryWorkProjectAttackPathsResponse",
         "type": "object"
       },
+      "QueryWorkProjectEvidenceResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectEvidenceRecordSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryWorkProjectEvidenceResponse",
+        "type": "object"
+      },
       "QueryWorkProjectFindingsResponse": {
         "properties": {
           "items": {
@@ -4119,6 +4298,37 @@
           "items"
         ],
         "title": "QueryWorkProjectFindingsResponse",
+        "type": "object"
+      },
+      "QueryWorkProjectWorkItemsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectWorkItemRecordSchema"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "size",
+          "total",
+          "items"
+        ],
+        "title": "QueryWorkProjectWorkItemsResponse",
         "type": "object"
       },
       "QueryWorkProjectsResponse": {
@@ -5583,6 +5793,7 @@
         "type": "object"
       },
       "UpdateWorkProjectMetadataRequest": {
+        "additionalProperties": false,
         "properties": {
           "assets": {
             "items": {
@@ -5727,131 +5938,48 @@
         "title": "UserMessageEvent",
         "type": "object"
       },
-      "WorkProjectAgentSummaryContentSchema": {
-        "properties": {
-          "blockers": {
-            "description": "Current blockers or unresolved risks.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 64,
-            "title": "Blockers",
-            "type": "array"
-          },
-          "decisions": {
-            "description": "Decisions or scope changes made by this agent.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 64,
-            "title": "Decisions",
-            "type": "array"
-          },
-          "findings": {
-            "description": "Confirmed findings or valuable negative results.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 64,
-            "title": "Findings",
-            "type": "array"
-          },
-          "next_steps": {
-            "description": "Concrete next actions.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 64,
-            "title": "Next Steps",
-            "type": "array"
-          },
-          "notes": {
-            "default": "",
-            "description": "Brief extra context that does not fit other fields.",
-            "maxLength": 4000,
-            "title": "Notes",
-            "type": "string"
-          },
-          "progress": {
-            "default": 0,
-            "description": "This agent's subtask progress from 0 to 100 with at most two decimals.",
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Progress",
-            "type": "number"
-          },
-          "status": {
-            "default": "",
-            "description": "Current live status of this agent's work.",
-            "maxLength": 2000,
-            "title": "Status",
-            "type": "string"
-          },
-          "task_id": {
-            "default": "",
-            "description": "Related WorkProject task id when known.",
-            "maxLength": 64,
-            "title": "Task Id",
-            "type": "string"
-          },
-          "task_title": {
-            "default": "",
-            "description": "Related task title when task_id is unavailable.",
-            "maxLength": 255,
-            "title": "Task Title",
-            "type": "string"
-          }
-        },
-        "title": "WorkProjectAgentSummaryContentSchema",
-        "type": "object"
-      },
-      "WorkProjectAgentSummarySchema": {
-        "properties": {
-          "agent_code": {
-            "maxLength": 32,
-            "minLength": 1,
-            "title": "Agent Code",
-            "type": "string"
-          },
-          "summary": {
-            "$ref": "#/components/schemas/WorkProjectAgentSummaryContentSchema"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          }
-        },
-        "required": [
-          "agent_code"
+      "WorkProjectAssertionStatus": {
+        "enum": [
+          "hypothesized",
+          "observed",
+          "validated",
+          "refuted"
         ],
-        "title": "WorkProjectAgentSummarySchema",
-        "type": "object"
+        "title": "WorkProjectAssertionStatus",
+        "type": "string"
       },
-      "WorkProjectAssetExtraSchema": {
-        "additionalProperties": false,
-        "description": "Recon metadata attached to an asset. Kept small on purpose.",
-        "properties": {
-          "banner": {
-            "default": "",
-            "maxLength": 512,
-            "title": "Banner",
-            "type": "string"
-          }
-        },
-        "title": "WorkProjectAssetExtraSchema",
-        "type": "object"
+      "WorkProjectAssetCriticality": {
+        "enum": [
+          "unknown",
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ],
+        "title": "WorkProjectAssetCriticality",
+        "type": "string"
+      },
+      "WorkProjectAssetKind": {
+        "enum": [
+          "network",
+          "host",
+          "domain",
+          "service",
+          "application",
+          "endpoint",
+          "repository",
+          "component",
+          "artifact",
+          "identity",
+          "data_store",
+          "cloud_resource"
+        ],
+        "title": "WorkProjectAssetKind",
+        "type": "string"
       },
       "WorkProjectAssetOrigin": {
         "enum": [
-          "scope",
+          "declared",
           "discovered"
         ],
         "title": "WorkProjectAssetOrigin",
@@ -5860,40 +5988,43 @@
       "WorkProjectAssetRequest": {
         "additionalProperties": false,
         "properties": {
-          "extra": {
-            "$ref": "#/components/schemas/WorkProjectAssetExtraSchema"
+          "criticality": {
+            "$ref": "#/components/schemas/WorkProjectAssetCriticality",
+            "default": "unknown"
           },
-          "host": {
+          "kind": {
+            "$ref": "#/components/schemas/WorkProjectAssetKind"
+          },
+          "locator": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Locator",
+            "type": "string"
+          },
+          "name": {
             "default": "",
             "maxLength": 255,
-            "title": "Host",
+            "title": "Name",
             "type": "string"
           },
-          "path": {
+          "scope": {
+            "$ref": "#/components/schemas/WorkProjectAssetScope",
+            "default": "context"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WorkProjectAssetState",
+            "default": "unknown"
+          },
+          "summary": {
             "default": "",
-            "maxLength": 500,
-            "title": "Path",
+            "maxLength": 2000,
+            "title": "Summary",
             "type": "string"
-          },
-          "port": {
-            "anyOf": [
-              {
-                "maximum": 65535.0,
-                "minimum": 1.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Port"
-          },
-          "type": {
-            "$ref": "#/components/schemas/WorkProjectAssetType"
           }
         },
         "required": [
-          "type"
+          "kind",
+          "locator"
         ],
         "title": "WorkProjectAssetRequest",
         "type": "object"
@@ -5915,47 +6046,42 @@
             "title": "Created From Session Id",
             "type": "string"
           },
-          "extra": {
-            "$ref": "#/components/schemas/WorkProjectAssetExtraSchema"
-          },
-          "host": {
-            "default": "",
-            "title": "Host",
-            "type": "string"
+          "criticality": {
+            "$ref": "#/components/schemas/WorkProjectAssetCriticality"
           },
           "id": {
             "title": "Id",
             "type": "integer"
           },
-          "identifier": {
-            "title": "Identifier",
+          "kind": {
+            "$ref": "#/components/schemas/WorkProjectAssetKind"
+          },
+          "locator": {
+            "title": "Locator",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
             "type": "string"
           },
           "origin": {
             "$ref": "#/components/schemas/WorkProjectAssetOrigin"
           },
-          "path": {
-            "default": "",
-            "title": "Path",
-            "type": "string"
-          },
-          "port": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Port"
-          },
           "project_id": {
             "title": "Project Id",
             "type": "integer"
           },
-          "type": {
-            "$ref": "#/components/schemas/WorkProjectAssetType"
+          "scope": {
+            "$ref": "#/components/schemas/WorkProjectAssetScope"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WorkProjectAssetState"
+          },
+          "summary": {
+            "default": "",
+            "title": "Summary",
+            "type": "string"
           },
           "updated_at": {
             "format": "date-time",
@@ -5966,23 +6092,53 @@
         "required": [
           "id",
           "project_id",
-          "type",
+          "kind",
+          "locator",
           "origin",
-          "identifier",
+          "scope",
+          "criticality",
+          "state",
           "created_at",
           "updated_at"
         ],
         "title": "WorkProjectAssetSchema",
         "type": "object"
       },
-      "WorkProjectAssetType": {
+      "WorkProjectAssetScope": {
         "enum": [
-          "service",
-          "domain",
-          "network",
-          "binary"
+          "in_scope",
+          "context",
+          "out_of_scope"
         ],
-        "title": "WorkProjectAssetType",
+        "title": "WorkProjectAssetScope",
+        "type": "string"
+      },
+      "WorkProjectAssetState": {
+        "enum": [
+          "unknown",
+          "active",
+          "inactive",
+          "retired"
+        ],
+        "title": "WorkProjectAssetState",
+        "type": "string"
+      },
+      "WorkProjectAttackAction": {
+        "enum": [
+          "initial_access",
+          "execution",
+          "persistence",
+          "privilege_escalation",
+          "defense_evasion",
+          "credential_access",
+          "discovery",
+          "lateral_movement",
+          "collection",
+          "command_and_control",
+          "exfiltration",
+          "impact"
+        ],
+        "title": "WorkProjectAttackAction",
         "type": "string"
       },
       "WorkProjectAttackPathRecordSchema": {
@@ -5994,15 +6150,18 @@
             "title": "Assets",
             "type": "array"
           },
-          "edges": {
+          "evidence": {
             "items": {
-              "$ref": "#/components/schemas/WorkProjectGraphEdgeSchema"
+              "$ref": "#/components/schemas/WorkProjectEvidenceSchema"
             },
-            "title": "Edges",
+            "title": "Evidence",
             "type": "array"
           },
           "path": {
             "$ref": "#/components/schemas/WorkProjectAttackPathSchema"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkProjectAttackPathStatus"
           },
           "steps": {
             "items": {
@@ -6014,15 +6173,33 @@
         },
         "required": [
           "path",
+          "status",
           "steps",
-          "edges",
-          "assets"
+          "assets",
+          "evidence"
         ],
         "title": "WorkProjectAttackPathRecordSchema",
         "type": "object"
       },
       "WorkProjectAttackPathSchema": {
         "properties": {
+          "archive_reason": {
+            "default": "",
+            "title": "Archive Reason",
+            "type": "string"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6038,21 +6215,29 @@
             "title": "Created From Session Id",
             "type": "string"
           },
+          "entry_asset_id": {
+            "title": "Entry Asset Id",
+            "type": "integer"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
           },
           "project_id": {
             "title": "Project Id",
             "type": "integer"
           },
-          "status": {
-            "$ref": "#/components/schemas/WorkProjectAttackPathStatus"
-          },
           "summary": {
-            "default": "",
             "title": "Summary",
             "type": "string"
+          },
+          "target_asset_id": {
+            "title": "Target Asset Id",
+            "type": "integer"
           },
           "title": {
             "title": "Title",
@@ -6068,7 +6253,10 @@
           "id",
           "project_id",
           "title",
-          "status",
+          "objective",
+          "entry_asset_id",
+          "target_asset_id",
+          "summary",
           "created_at",
           "updated_at"
         ],
@@ -6077,103 +6265,30 @@
       },
       "WorkProjectAttackPathStatus": {
         "enum": [
-          "suspected",
+          "hypothesized",
+          "validating",
           "validated",
           "blocked",
-          "closed"
+          "refuted",
+          "archived"
         ],
         "title": "WorkProjectAttackPathStatus",
         "type": "string"
       },
       "WorkProjectAttackPathStepSchema": {
         "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
+          "action": {
+            "$ref": "#/components/schemas/WorkProjectAttackAction"
           },
-          "created_by_agent_code": {
+          "attack_technique_id": {
             "default": "",
-            "title": "Created By Agent Code",
+            "title": "Attack Technique Id",
             "type": "string"
           },
-          "created_from_session_id": {
+          "blocker_reason": {
             "default": "",
-            "title": "Created From Session Id",
+            "title": "Blocker Reason",
             "type": "string"
-          },
-          "edge_id": {
-            "title": "Edge Id",
-            "type": "integer"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "path_id": {
-            "title": "Path Id",
-            "type": "integer"
-          },
-          "project_id": {
-            "title": "Project Id",
-            "type": "integer"
-          },
-          "sequence": {
-            "title": "Sequence",
-            "type": "integer"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "project_id",
-          "path_id",
-          "sequence",
-          "edge_id",
-          "created_at",
-          "updated_at"
-        ],
-        "title": "WorkProjectAttackPathStepSchema",
-        "type": "object"
-      },
-      "WorkProjectFindingRecordSchema": {
-        "properties": {
-          "asset": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkProjectAssetSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "finding": {
-            "$ref": "#/components/schemas/WorkProjectFindingSchema"
-          }
-        },
-        "required": [
-          "finding"
-        ],
-        "title": "WorkProjectFindingRecordSchema",
-        "type": "object"
-      },
-      "WorkProjectFindingSchema": {
-        "properties": {
-          "asset_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Asset Id"
           },
           "created_at": {
             "format": "date-time",
@@ -6191,11 +6306,10 @@
             "type": "string"
           },
           "description": {
-            "default": "",
             "title": "Description",
             "type": "string"
           },
-          "edge_id": {
+          "finding_id": {
             "anyOf": [
               {
                 "type": "integer"
@@ -6204,26 +6318,410 @@
                 "type": "null"
               }
             ],
-            "title": "Edge Id"
+            "title": "Finding Id"
           },
           "id": {
             "title": "Id",
             "type": "integer"
           },
-          "impact": {
-            "default": "",
-            "title": "Impact",
+          "path_id": {
+            "title": "Path Id",
+            "type": "integer"
+          },
+          "preconditions": {
+            "title": "Preconditions",
             "type": "string"
           },
           "project_id": {
             "title": "Project Id",
             "type": "integer"
           },
-          "severity": {
-            "$ref": "#/components/schemas/WorkProjectFindingSeverity"
+          "relation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Id"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source_asset_id": {
+            "title": "Source Asset Id",
+            "type": "integer"
           },
           "status": {
-            "$ref": "#/components/schemas/WorkProjectFindingStatus"
+            "$ref": "#/components/schemas/WorkProjectAttackStepStatus"
+          },
+          "target_asset_id": {
+            "title": "Target Asset Id",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "path_id",
+          "sequence",
+          "source_asset_id",
+          "target_asset_id",
+          "action",
+          "description",
+          "preconditions",
+          "result",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WorkProjectAttackPathStepSchema",
+        "type": "object"
+      },
+      "WorkProjectAttackStepStatus": {
+        "enum": [
+          "hypothesized",
+          "validating",
+          "validated",
+          "blocked",
+          "refuted"
+        ],
+        "title": "WorkProjectAttackStepStatus",
+        "type": "string"
+      },
+      "WorkProjectEvidenceKind": {
+        "enum": [
+          "observation",
+          "command_output",
+          "http_exchange",
+          "code_location",
+          "artifact",
+          "external_source",
+          "negative_result",
+          "operator_note"
+        ],
+        "title": "WorkProjectEvidenceKind",
+        "type": "string"
+      },
+      "WorkProjectEvidenceRecordSchema": {
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/WorkProjectEvidenceSchema"
+          },
+          "primary_asset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkProjectAssetSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "evidence"
+        ],
+        "title": "WorkProjectEvidenceRecordSchema",
+        "type": "object"
+      },
+      "WorkProjectEvidenceSchema": {
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_agent_code": {
+            "default": "",
+            "title": "Created By Agent Code",
+            "type": "string"
+          },
+          "created_from_session_id": {
+            "default": "",
+            "title": "Created From Session Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invalidation_reason": {
+            "default": "",
+            "title": "Invalidation Reason",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WorkProjectEvidenceKind"
+          },
+          "primary_asset_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Asset Id"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "sha256": {
+            "default": "",
+            "title": "Sha256",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkProjectEvidenceStatus"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "supersedes_evidence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Evidence Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "work_item_id": {
+            "title": "Work Item Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "kind",
+          "title",
+          "summary",
+          "reference",
+          "work_item_id",
+          "status",
+          "captured_at",
+          "created_at"
+        ],
+        "title": "WorkProjectEvidenceSchema",
+        "type": "object"
+      },
+      "WorkProjectEvidenceStatus": {
+        "enum": [
+          "active",
+          "superseded",
+          "invalidated"
+        ],
+        "title": "WorkProjectEvidenceStatus",
+        "type": "string"
+      },
+      "WorkProjectFindingAssetLinkSchema": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "integer"
+          },
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "integer"
+          },
+          "role": {
+            "$ref": "#/components/schemas/WorkProjectFindingAssetRole"
+          }
+        },
+        "required": [
+          "finding_id",
+          "asset_id",
+          "role"
+        ],
+        "title": "WorkProjectFindingAssetLinkSchema",
+        "type": "object"
+      },
+      "WorkProjectFindingAssetRole": {
+        "enum": [
+          "affected",
+          "entry",
+          "impact"
+        ],
+        "title": "WorkProjectFindingAssetRole",
+        "type": "string"
+      },
+      "WorkProjectFindingCategory": {
+        "enum": [
+          "vulnerability",
+          "misconfiguration",
+          "exposure",
+          "credential",
+          "sensitive_data",
+          "security_control_gap"
+        ],
+        "title": "WorkProjectFindingCategory",
+        "type": "string"
+      },
+      "WorkProjectFindingRecordSchema": {
+        "properties": {
+          "affected_assets": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectAssetSchema"
+            },
+            "title": "Affected Assets",
+            "type": "array"
+          },
+          "asset_links": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectFindingAssetLinkSchema"
+            },
+            "title": "Asset Links",
+            "type": "array"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectEvidenceSchema"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "finding": {
+            "$ref": "#/components/schemas/WorkProjectFindingSchema"
+          },
+          "primary_asset": {
+            "$ref": "#/components/schemas/WorkProjectAssetSchema"
+          }
+        },
+        "required": [
+          "finding",
+          "primary_asset",
+          "affected_assets",
+          "asset_links",
+          "evidence"
+        ],
+        "title": "WorkProjectFindingRecordSchema",
+        "type": "object"
+      },
+      "WorkProjectFindingResolution": {
+        "enum": [
+          "open",
+          "accepted",
+          "remediated",
+          "closed"
+        ],
+        "title": "WorkProjectFindingResolution",
+        "type": "string"
+      },
+      "WorkProjectFindingSchema": {
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/WorkProjectFindingCategory"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_agent_code": {
+            "default": "",
+            "title": "Created By Agent Code",
+            "type": "string"
+          },
+          "created_from_session_id": {
+            "default": "",
+            "title": "Created From Session Id",
+            "type": "string"
+          },
+          "cvss_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cvss Score"
+          },
+          "cvss_vector": {
+            "title": "Cvss Vector",
+            "type": "string"
+          },
+          "cwe_id": {
+            "title": "Cwe Id",
+            "type": "string"
+          },
+          "deferral_reason": {
+            "title": "Deferral Reason",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "impact": {
+            "title": "Impact",
+            "type": "string"
+          },
+          "preconditions": {
+            "title": "Preconditions",
+            "type": "string"
+          },
+          "primary_asset_id": {
+            "title": "Primary Asset Id",
+            "type": "integer"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "recommendation": {
+            "title": "Recommendation",
+            "type": "string"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkProjectFindingResolution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "severity": {
+            "$ref": "#/components/schemas/WorkProjectFindingSeverity"
           },
           "title": {
             "title": "Title",
@@ -6245,14 +6743,26 @@
               }
             ],
             "title": "Validated At"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/WorkProjectFindingVerification"
           }
         },
         "required": [
           "id",
           "project_id",
+          "primary_asset_id",
+          "category",
           "title",
+          "verification",
           "severity",
-          "status",
+          "description",
+          "preconditions",
+          "impact",
+          "recommendation",
+          "cwe_id",
+          "cvss_vector",
+          "deferral_reason",
           "created_at",
           "updated_at"
         ],
@@ -6270,90 +6780,25 @@
         "title": "WorkProjectFindingSeverity",
         "type": "string"
       },
-      "WorkProjectFindingStatus": {
+      "WorkProjectFindingVerification": {
         "enum": [
           "suspected",
           "validated",
-          "false_positive"
+          "refuted",
+          "deferred"
         ],
-        "title": "WorkProjectFindingStatus",
-        "type": "string"
-      },
-      "WorkProjectGraphEdgeSchema": {
-        "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by_agent_code": {
-            "default": "",
-            "title": "Created By Agent Code",
-            "type": "string"
-          },
-          "created_from_session_id": {
-            "default": "",
-            "title": "Created From Session Id",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "integer"
-          },
-          "label": {
-            "default": "",
-            "title": "Label",
-            "type": "string"
-          },
-          "project_id": {
-            "title": "Project Id",
-            "type": "integer"
-          },
-          "source_asset_id": {
-            "title": "Source Asset Id",
-            "type": "integer"
-          },
-          "target_asset_id": {
-            "title": "Target Asset Id",
-            "type": "integer"
-          },
-          "type": {
-            "$ref": "#/components/schemas/WorkProjectGraphEdgeType"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "project_id",
-          "source_asset_id",
-          "target_asset_id",
-          "type",
-          "created_at",
-          "updated_at"
-        ],
-        "title": "WorkProjectGraphEdgeSchema",
-        "type": "object"
-      },
-      "WorkProjectGraphEdgeType": {
-        "enum": [
-          "related",
-          "resolves_to",
-          "hosts",
-          "connects_to",
-          "trusts",
-          "exploits",
-          "pivots_to",
-          "leads_to"
-        ],
-        "title": "WorkProjectGraphEdgeType",
+        "title": "WorkProjectFindingVerification",
         "type": "string"
       },
       "WorkProjectGraphViewSchema": {
         "properties": {
+          "active_work_item_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Active Work Item Counts",
+            "type": "object"
+          },
           "assets": {
             "items": {
               "$ref": "#/components/schemas/WorkProjectAssetSchema"
@@ -6361,24 +6806,115 @@
             "title": "Assets",
             "type": "array"
           },
-          "edges": {
-            "items": {
-              "$ref": "#/components/schemas/WorkProjectGraphEdgeSchema"
+          "attack_path_counts": {
+            "additionalProperties": {
+              "type": "integer"
             },
-            "title": "Edges",
-            "type": "array"
+            "title": "Attack Path Counts",
+            "type": "object"
+          },
+          "finding_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Finding Counts",
+            "type": "object"
           },
           "is_truncated": {
             "default": false,
             "title": "Is Truncated",
             "type": "boolean"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectRelationSchema"
+            },
+            "title": "Relations",
+            "type": "array"
           }
         },
         "required": [
           "assets",
-          "edges"
+          "relations",
+          "finding_counts",
+          "active_work_item_counts",
+          "attack_path_counts"
         ],
         "title": "WorkProjectGraphViewSchema",
+        "type": "object"
+      },
+      "WorkProjectOverviewSchema": {
+        "properties": {
+          "asset_total": {
+            "minimum": 0.0,
+            "title": "Asset Total",
+            "type": "integer"
+          },
+          "attack_path_status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Attack Path Status Counts",
+            "type": "object"
+          },
+          "blocked_target_total": {
+            "minimum": 0.0,
+            "title": "Blocked Target Total",
+            "type": "integer"
+          },
+          "covered_target_total": {
+            "minimum": 0.0,
+            "title": "Covered Target Total",
+            "type": "integer"
+          },
+          "evidence_total": {
+            "minimum": 0.0,
+            "title": "Evidence Total",
+            "type": "integer"
+          },
+          "finding_verification_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Finding Verification Counts",
+            "type": "object"
+          },
+          "in_scope_asset_total": {
+            "minimum": 0.0,
+            "title": "In Scope Asset Total",
+            "type": "integer"
+          },
+          "running_agent_count": {
+            "minimum": 0.0,
+            "title": "Running Agent Count",
+            "type": "integer"
+          },
+          "untouched_asset_total": {
+            "minimum": 0.0,
+            "title": "Untouched Asset Total",
+            "type": "integer"
+          },
+          "work_item_status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Work Item Status Counts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "asset_total",
+          "in_scope_asset_total",
+          "untouched_asset_total",
+          "covered_target_total",
+          "blocked_target_total",
+          "work_item_status_counts",
+          "finding_verification_counts",
+          "attack_path_status_counts",
+          "evidence_total",
+          "running_agent_count"
+        ],
+        "title": "WorkProjectOverviewSchema",
         "type": "object"
       },
       "WorkProjectOwnerSchema": {
@@ -6403,19 +6939,100 @@
         "title": "WorkProjectOwnerSchema",
         "type": "object"
       },
+      "WorkProjectRelationSchema": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_agent_code": {
+            "default": "",
+            "title": "Created By Agent Code",
+            "type": "string"
+          },
+          "created_from_session_id": {
+            "default": "",
+            "title": "Created From Session Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "source_asset_id": {
+            "title": "Source Asset Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkProjectAssertionStatus"
+          },
+          "summary": {
+            "default": "",
+            "title": "Summary",
+            "type": "string"
+          },
+          "target_asset_id": {
+            "title": "Target Asset Id",
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WorkProjectRelationType"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "source_asset_id",
+          "target_asset_id",
+          "type",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WorkProjectRelationSchema",
+        "type": "object"
+      },
+      "WorkProjectRelationType": {
+        "enum": [
+          "contains",
+          "resolves_to",
+          "hosts",
+          "exposes",
+          "connects_to",
+          "depends_on",
+          "implements",
+          "authenticates_to",
+          "trusts",
+          "controls",
+          "reads_from",
+          "writes_to",
+          "derived_from"
+        ],
+        "title": "WorkProjectRelationType",
+        "type": "string"
+      },
       "WorkProjectSchema": {
         "properties": {
-          "agent_summaries": {
-            "items": {
-              "$ref": "#/components/schemas/WorkProjectAgentSummarySchema"
-            },
-            "title": "Agent Summaries",
-            "type": "array"
-          },
-          "agent_summary_count": {
+          "active_attack_path_count": {
             "default": 0,
             "minimum": 0.0,
-            "title": "Agent Summary Count",
+            "title": "Active Attack Path Count",
+            "type": "integer"
+          },
+          "active_work_item_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active Work Item Count",
             "type": "integer"
           },
           "asset_count": {
@@ -6431,6 +7048,12 @@
             "title": "Assets",
             "type": "array"
           },
+          "blocked_work_item_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Blocked Work Item Count",
+            "type": "integer"
+          },
           "can_cancel": {
             "default": false,
             "title": "Can Cancel",
@@ -6459,6 +7082,12 @@
             "title": "Id",
             "type": "integer"
           },
+          "in_scope_asset_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "In Scope Asset Count",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -6476,13 +7105,6 @@
             },
             "title": "Owners",
             "type": "array"
-          },
-          "progress": {
-            "default": 0,
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Progress",
-            "type": "number"
           },
           "sandbox_container": {
             "anyOf": [
@@ -6507,32 +7129,38 @@
           },
           "session_count": {
             "default": 0,
+            "minimum": 0.0,
             "title": "Session Count",
             "type": "integer"
           },
           "status": {
             "$ref": "#/components/schemas/WorkProjectStatus"
           },
-          "task_count": {
-            "default": 0,
-            "minimum": 0.0,
-            "title": "Task Count",
-            "type": "integer"
-          },
-          "tasks": {
-            "items": {
-              "$ref": "#/components/schemas/WorkProjectTaskSchema"
-            },
-            "title": "Tasks",
-            "type": "array"
-          },
           "type": {
             "$ref": "#/components/schemas/WorkProjectType"
+          },
+          "untouched_asset_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Untouched Asset Count",
+            "type": "integer"
           },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "validated_finding_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Validated Finding Count",
+            "type": "integer"
+          },
+          "work_item_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Work Item Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -6545,16 +7173,14 @@
           "type",
           "created_at",
           "updated_at",
-          "assets",
-          "tasks",
-          "agent_summaries"
+          "assets"
         ],
         "title": "WorkProjectSchema",
         "type": "object"
       },
       "WorkProjectStatus": {
         "enum": [
-          "working",
+          "active",
           "completed",
           "canceled"
         ],
@@ -6563,16 +7189,28 @@
       },
       "WorkProjectSummarySchema": {
         "properties": {
-          "agent_summary_count": {
+          "active_attack_path_count": {
             "default": 0,
             "minimum": 0.0,
-            "title": "Agent Summary Count",
+            "title": "Active Attack Path Count",
+            "type": "integer"
+          },
+          "active_work_item_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active Work Item Count",
             "type": "integer"
           },
           "asset_count": {
             "default": 0,
             "minimum": 0.0,
             "title": "Asset Count",
+            "type": "integer"
+          },
+          "blocked_work_item_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Blocked Work Item Count",
             "type": "integer"
           },
           "can_cancel": {
@@ -6603,6 +7241,12 @@
             "title": "Id",
             "type": "integer"
           },
+          "in_scope_asset_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "In Scope Asset Count",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -6620,13 +7264,6 @@
             },
             "title": "Owners",
             "type": "array"
-          },
-          "progress": {
-            "default": 0,
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Progress",
-            "type": "number"
           },
           "sandbox_container": {
             "anyOf": [
@@ -6651,25 +7288,38 @@
           },
           "session_count": {
             "default": 0,
+            "minimum": 0.0,
             "title": "Session Count",
             "type": "integer"
           },
           "status": {
             "$ref": "#/components/schemas/WorkProjectStatus"
           },
-          "task_count": {
-            "default": 0,
-            "minimum": 0.0,
-            "title": "Task Count",
-            "type": "integer"
-          },
           "type": {
             "$ref": "#/components/schemas/WorkProjectType"
+          },
+          "untouched_asset_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Untouched Asset Count",
+            "type": "integer"
           },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "validated_finding_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Validated Finding Count",
+            "type": "integer"
+          },
+          "work_item_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Work Item Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -6686,64 +7336,15 @@
         "title": "WorkProjectSummarySchema",
         "type": "object"
       },
-      "WorkProjectTaskSchema": {
-        "properties": {
-          "assignee": {
-            "default": "",
-            "description": "Agent code or owner responsible for this task.",
-            "maxLength": 128,
-            "title": "Assignee",
-            "type": "string"
-          },
-          "id": {
-            "description": "Stable task id.",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Id",
-            "type": "string"
-          },
-          "progress": {
-            "default": 0,
-            "description": "Task progress from 0 to 100 with at most two decimals.",
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Progress",
-            "type": "number"
-          },
-          "status": {
-            "$ref": "#/components/schemas/WorkProjectTaskStatus",
-            "default": "todo",
-            "description": "Task status."
-          },
-          "summary": {
-            "default": "",
-            "description": "Current concise task summary.",
-            "maxLength": 4000,
-            "title": "Summary",
-            "type": "string"
-          },
-          "title": {
-            "description": "Short task title.",
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "title"
-        ],
-        "title": "WorkProjectTaskSchema",
-        "type": "object"
-      },
-      "WorkProjectTaskStatus": {
+      "WorkProjectTargetStatus": {
         "enum": [
-          "todo",
-          "in_progress",
+          "pending",
+          "active",
+          "covered",
           "blocked",
-          "done"
+          "deferred"
         ],
-        "title": "WorkProjectTaskStatus",
+        "title": "WorkProjectTargetStatus",
         "type": "string"
       },
       "WorkProjectType": {
@@ -6753,6 +7354,361 @@
         ],
         "title": "WorkProjectType",
         "type": "string"
+      },
+      "WorkProjectWorkItemPhase": {
+        "enum": [
+          "scope_review",
+          "reconnaissance",
+          "enumeration",
+          "assessment",
+          "validation",
+          "exploitation",
+          "post_exploitation",
+          "code_review",
+          "reverse_engineering",
+          "cryptography_review",
+          "reporting"
+        ],
+        "title": "WorkProjectWorkItemPhase",
+        "type": "string"
+      },
+      "WorkProjectWorkItemPriority": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ],
+        "title": "WorkProjectWorkItemPriority",
+        "type": "string"
+      },
+      "WorkProjectWorkItemRecordSchema": {
+        "properties": {
+          "dependency_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Dependency Ids",
+            "type": "array"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectEvidenceSchema"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "recent_logs": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectWorkLogSchema"
+            },
+            "title": "Recent Logs",
+            "type": "array"
+          },
+          "subordinate_run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Subordinate Run Ids",
+            "type": "array"
+          },
+          "target_assets": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectAssetSchema"
+            },
+            "title": "Target Assets",
+            "type": "array"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/WorkProjectWorkItemTargetSchema"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "work_item": {
+            "$ref": "#/components/schemas/WorkProjectWorkItemSchema"
+          },
+          "work_log_total": {
+            "minimum": 0.0,
+            "title": "Work Log Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "work_item",
+          "targets",
+          "target_assets",
+          "dependency_ids",
+          "evidence",
+          "recent_logs",
+          "work_log_total",
+          "subordinate_run_ids"
+        ],
+        "title": "WorkProjectWorkItemRecordSchema",
+        "type": "object"
+      },
+      "WorkProjectWorkItemSchema": {
+        "properties": {
+          "assignee_agent_code": {
+            "title": "Assignee Agent Code",
+            "type": "string"
+          },
+          "blocker_reason": {
+            "title": "Blocker Reason",
+            "type": "string"
+          },
+          "completion_criteria": {
+            "title": "Completion Criteria",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_agent_code": {
+            "default": "",
+            "title": "Created By Agent Code",
+            "type": "string"
+          },
+          "created_from_session_id": {
+            "default": "",
+            "title": "Created From Session Id",
+            "type": "string"
+          },
+          "execution_scope": {
+            "title": "Execution Scope",
+            "type": "string"
+          },
+          "focus_attack_path_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus Attack Path Id"
+          },
+          "focus_attack_path_step_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus Attack Path Step Id"
+          },
+          "focus_finding_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus Finding Id"
+          },
+          "focus_relation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus Relation Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/WorkProjectWorkItemPhase"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/WorkProjectWorkItemPriority"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "result_summary": {
+            "title": "Result Summary",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkProjectWorkItemStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "title",
+          "phase",
+          "status",
+          "priority",
+          "assignee_agent_code",
+          "objective",
+          "execution_scope",
+          "completion_criteria",
+          "result_summary",
+          "blocker_reason",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WorkProjectWorkItemSchema",
+        "type": "object"
+      },
+      "WorkProjectWorkItemStatus": {
+        "enum": [
+          "queued",
+          "active",
+          "blocked",
+          "review",
+          "completed",
+          "canceled"
+        ],
+        "title": "WorkProjectWorkItemStatus",
+        "type": "string"
+      },
+      "WorkProjectWorkItemTargetSchema": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "integer"
+          },
+          "conclusion": {
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "deferral_reason": {
+            "title": "Deferral Reason",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WorkProjectTargetStatus"
+          },
+          "surface": {
+            "title": "Surface",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "work_item_id": {
+            "title": "Work Item Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "work_item_id",
+          "asset_id",
+          "surface",
+          "status",
+          "conclusion",
+          "deferral_reason",
+          "updated_at"
+        ],
+        "title": "WorkProjectWorkItemTargetSchema",
+        "type": "object"
+      },
+      "WorkProjectWorkLogKind": {
+        "enum": [
+          "state_change",
+          "plan_change",
+          "decision",
+          "blocker",
+          "handoff",
+          "result"
+        ],
+        "title": "WorkProjectWorkLogKind",
+        "type": "string"
+      },
+      "WorkProjectWorkLogSchema": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_agent_code": {
+            "title": "Created By Agent Code",
+            "type": "string"
+          },
+          "created_from_session_id": {
+            "title": "Created From Session Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WorkProjectWorkLogKind"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "work_item_id": {
+            "title": "Work Item Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "work_item_id",
+          "kind",
+          "content",
+          "created_by_agent_code",
+          "created_from_session_id",
+          "created_at"
+        ],
+        "title": "WorkProjectWorkLogSchema",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -12248,6 +13204,96 @@
         ]
       }
     },
+    "/api/work-projects/{id}/activity": {
+      "get": {
+        "operationId": "query_work_project_activity_route_api_work_projects__id__activity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryWorkProjectActivityResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Work Project Activity Route",
+        "tags": [
+          "work-project-records"
+        ]
+      }
+    },
     "/api/work-projects/{id}/assets": {
       "get": {
         "operationId": "query_work_project_assets_route_api_work_projects__id__assets_get",
@@ -12292,6 +13338,38 @@
               "default": "",
               "title": "Keyword",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectAssetKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectAssetScope"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
             }
           }
         ],
@@ -12382,6 +13460,16 @@
               "minimum": 1,
               "title": "Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
             }
           }
         ],
@@ -12525,6 +13613,138 @@
         ]
       }
     },
+    "/api/work-projects/{id}/evidence": {
+      "get": {
+        "operationId": "query_work_project_evidence_route_api_work_projects__id__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectEvidenceKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectEvidenceStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryWorkProjectEvidenceResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Work Project Evidence Route",
+        "tags": [
+          "work-project-records"
+        ]
+      }
+    },
     "/api/work-projects/{id}/findings": {
       "get": {
         "operationId": "query_work_project_findings_route_api_work_projects__id__findings_get",
@@ -12559,6 +13779,48 @@
               "minimum": 1,
               "title": "Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "verification",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectFindingVerification"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectFindingSeverity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
             }
           }
         ],
@@ -12776,6 +14038,73 @@
         "summary": "Update Work Project Metadata Route",
         "tags": [
           "work-projects"
+        ]
+      }
+    },
+    "/api/work-projects/{id}/overview": {
+      "get": {
+        "operationId": "get_work_project_overview_route_api_work_projects__id__overview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_WorkProjectOverviewSchema_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Get Work Project Overview Route",
+        "tags": [
+          "work-project-records"
         ]
       }
     },
@@ -13094,6 +14423,133 @@
         "summary": "Delete Work Project Session Route",
         "tags": [
           "work-projects"
+        ]
+      }
+    },
+    "/api/work-projects/{id}/work-items": {
+      "get": {
+        "operationId": "query_work_project_work_items_route_api_work_projects__id__work_items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Keyword",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/WorkProjectWorkItemStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignee_agent_code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 32,
+              "title": "Assignee Agent Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_QueryWorkProjectWorkItemsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Work project not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse_Any_"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "AccessTokenAuth": []
+          }
+        ],
+        "summary": "Query Work Project Work Items Route",
+        "tags": [
+          "work-project-records"
         ]
       }
     }

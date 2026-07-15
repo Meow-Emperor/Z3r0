@@ -24,10 +24,12 @@ class AgentRuntimeContext:
     nested_for_agent_code: str = ""
     nested_call_id: str = ""
     rag_context: str = ""
+    work_project_context: str = ""
     sandbox_container_id: int | None = None
     sandbox_container_generation: int = 0
     sandbox_skill_metadata: tuple[str, ...] = ()
     work_project_id: int | None = None
+    work_item_id: int | None = None
 
 
 def main_agent_instance_id(session_id: str, user_id: int, agent_code: str) -> str:

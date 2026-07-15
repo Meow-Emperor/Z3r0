@@ -10,6 +10,6 @@ async def lock_active_work_project(session, project_id: int) -> str:
     )).one_or_none()
     if project is None:
         return "work project not found"
-    if project.status == WorkProjectStatus.CANCELED:
-        return "work project is canceled"
+    if project.status != WorkProjectStatus.ACTIVE:
+        return f"work project is {project.status}"
     return ""

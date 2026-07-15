@@ -6,6 +6,7 @@ from dataclasses import replace
 from agents import RunContextWrapper, function_tool
 
 from core.runtime.context import AgentRuntimeContext
+from core.work_project_context import validate_specialist_execution_context
 from core.sandbox import command_output
 from core.sandbox.command_jobs import cancel_async_sandbox_command, start_async_sandbox_command
 from core.sandbox.command_output import COMMAND_TIMEOUT_ERROR
@@ -79,6 +80,8 @@ async def execute_sync_command(
     container_id = ctx.context.sandbox_container_id
     if container_id is None:
         return _error_result("No sandbox container selected.")
+    if error := await validate_specialist_execution_context(ctx.context):
+        return _error_result(error)
     if not command.strip():
         return _error_result("sandbox container command is required")
     timeout = _clamp_timeout(timeout_seconds, _SYNC_COMMAND_TIMEOUT_SECONDS)
@@ -129,6 +132,8 @@ async def execute_async_command(
     container_id = ctx.context.sandbox_container_id
     if container_id is None:
         return _error_result("No sandbox container selected.")
+    if error := await validate_specialist_execution_context(ctx.context):
+        return _error_result(error)
     if not command.strip():
         return _error_result("sandbox container command is required")
     if not ctx.context.agent_instance_id:
@@ -150,7 +155,7 @@ async def execute_async_command(
 
     await start_async_sandbox_command(
         run_id=run_id,
-        context=replace(ctx.context),
+        context=replace(ctx.context, rag_context="", work_project_context=""),
         command=command_text,
         output_file=output_path,
         wrapped_command=command_output.async_command(command_text, output_path),

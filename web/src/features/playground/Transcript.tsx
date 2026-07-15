@@ -9,7 +9,7 @@ import type {
 } from "./chatState";
 import { downloadAgentReport } from "../../shared/api/agentSessions";
 import { showApiError } from "../../shared/api/feedback";
-import { MarkdownRenderer } from "./MarkdownRenderer";
+import { MarkdownContent } from "../../shared/components/MarkdownContent";
 import { normalizeMarkdownForRender } from "./markdown";
 import type { SubagentSelection } from "./subagentView";
 import { cx } from "../../shared/lib/className";
@@ -157,11 +157,7 @@ const MarkdownText = memo(function MarkdownText({ text, streaming }: { text: str
     [renderText, streaming],
   );
   if (!renderText && !streaming) return null;
-  return (
-    <div className="agent-text">
-      <MarkdownRenderer markdown={markdown} />
-    </div>
-  );
+  return <MarkdownContent className="agent-text" content={markdown} mode="document" mermaid />;
 });
 
 function ThinkingGroup({

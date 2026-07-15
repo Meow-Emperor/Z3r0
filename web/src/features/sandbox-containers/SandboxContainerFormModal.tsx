@@ -1,11 +1,29 @@
-import { Select, Spin } from "@douyinfe/semi-ui";
+import { Select } from "@douyinfe/semi-ui";
 import { Boxes, Network, Route, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { SANDBOX_CONTAINER_EGRESS_MODE } from "../../shared/api/generated/constants";
-import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
+import { queryEgressProxies } from "../../shared/api/egressProxies";
+import { SANDBOX_CONTAINER_EGRESS_MODE, SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
+import {
+  createSandboxContainer,
+  querySandboxContainerHostOptions,
+  querySandboxContainerImageOptions,
+} from "../../shared/api/sandboxContainers";
+import { querySystemUsers } from "../../shared/api/systemUsers";
+import type {
+  CreateSandboxContainerResponse,
+  EgressProxy,
+  SandboxContainer,
+  SandboxContainerEgressMode,
+  SandboxContainerHostOption,
+  SandboxImage,
+  SystemUser,
+} from "../../shared/api/types";
+import { useAuth } from "../../shared/auth/AuthProvider";
 import { FormField } from "../../shared/components/FormField";
+import { OptionListSelect } from "../../shared/components/OptionListSelect";
 import { ResourceModal } from "../../shared/components/ResourceModal";
-import type { OptionListResult } from "../../shared/hooks/useOptionList";
+import { useOptionList } from "../../shared/hooks/useOptionList";
+import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import {
   egressProxyOption,
   sandboxEgressModeOptions,
@@ -20,27 +38,28 @@ import {
 
 type SandboxContainerFormModalProps = {
   open: boolean;
-  saving: boolean;
-  imageOptions: OptionListResult<SandboxImage>;
-  hostOptions: OptionListResult<ManagedHost>;
-  userOptions: OptionListResult<SystemUser>;
-  egressProxyOptions: OptionListResult<EgressProxy>;
-  currentUserId: number;
   onCancel: () => void;
-  onSubmit: (payload: CreateSandboxContainerRequest) => Promise<void>;
+  onCreated: (container: SandboxContainer) => unknown | Promise<unknown>;
 };
 
 export function SandboxContainerFormModal({
   open,
-  saving,
-  imageOptions,
-  hostOptions,
-  userOptions,
-  egressProxyOptions,
-  currentUserId,
   onCancel,
-  onSubmit,
+  onCreated,
 }: SandboxContainerFormModalProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === SYSTEM_USER_ROLE.ADMIN;
+  const currentUserId = user?.id ?? 0;
+  const hostOptions = useOptionList<SandboxContainerHostOption>({
+    enabled: open,
+    query: querySandboxContainerHostOptions,
+  });
+  const imageOptions = useOptionList<SandboxImage>({
+    enabled: open,
+    query: querySandboxContainerImageOptions,
+  });
+  const userOptions = useOptionList<SystemUser>({ enabled: open && isAdmin, query: querySystemUsers });
+  const egressProxyOptions = useOptionList<EgressProxy>({ enabled: open && isAdmin, query: queryEgressProxies });
   const images = imageOptions.items;
   const hosts = hostOptions.items;
   const users = userOptions.items;
@@ -55,6 +74,9 @@ export function SandboxContainerFormModal({
     () => imageOptions.knownItems.find((image) => image.id === imageId),
     [imageId, imageOptions.knownItems],
   );
+  const { saving, submit: submitResource } = useResourceSubmit<CreateSandboxContainerResponse>({
+    onSuccess: (response) => response.data ? onCreated(response.data) : undefined,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -66,18 +88,21 @@ export function SandboxContainerFormModal({
     setPortMappings([]);
   }, [open, currentUserId]);
 
-  const submit = () => onSubmit({
-    host_id: hostId || 0,
-    image_id: imageId || 0,
-    egress_mode: egressMode,
-    egress_proxy_id: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? egressProxyId : undefined,
-    owner_id: ownerId !== currentUserId ? ownerId : undefined,
-    port_mappings: portMappings.map(({ container_port, host_port, protocol }) => ({
-      container_port,
-      host_port,
-      protocol,
-    })),
-  });
+  const submit = () => {
+    if (!hostId || !imageId) return;
+    void submitResource(() => createSandboxContainer({
+      host_id: hostId,
+      image_id: imageId,
+      egress_mode: egressMode,
+      egress_proxy_id: egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? egressProxyId : undefined,
+      owner_id: isAdmin && ownerId !== currentUserId ? ownerId : undefined,
+      port_mappings: portMappings.map(({ container_port, host_port, protocol }) => ({
+        container_port,
+        host_port,
+        protocol,
+      })),
+    }));
+  };
 
   const updateMapping = (id: string, patch: Partial<PortMappingFormValue>) => {
     setPortMappings((current) => current.map((mapping) => (
@@ -122,54 +147,48 @@ export function SandboxContainerFormModal({
       onSubmit={submit}
     >
       <FormField label="Host">
-        <Select
+        <OptionListSelect
+          source={hostOptions}
           prefix={<Server size={16} />}
           value={hostId}
-          loading={hostOptions.busy}
           disabled={hosts.length === 0}
           placeholder="Select managed host"
-          remote
-          onSearch={hostOptions.search}
-          onListScroll={hostOptions.onListScroll}
+          emptyContent="No hosts"
           onChange={(value) => typeof value === "number" && setHostId(value)}
           optionList={hosts.map(sandboxHostOption)}
         />
       </FormField>
 
       <FormField label="Image">
-        <Select
+        <OptionListSelect
+          source={imageOptions}
           prefix={<Boxes size={16} />}
           value={imageId}
-          loading={imageOptions.busy}
           disabled={images.length === 0}
           placeholder="Select a sandbox image"
-          remote
-          onSearch={imageOptions.search}
-          onListScroll={imageOptions.onListScroll}
+          emptyContent="No images"
           onChange={selectImage}
           optionList={images.map(sandboxImageOption)}
         />
       </FormField>
 
-      <FormField label="Owner">
-        <Select
+      {isAdmin ? <FormField label="Owner">
+        <OptionListSelect
+          source={userOptions}
           prefix={<User size={16} />}
           value={ownerId}
-          loading={userOptions.busy}
           placeholder="Select container owner"
-          remote
-          onSearch={userOptions.search}
-          onListScroll={userOptions.onListScroll}
+          emptyContent="No users"
           onChange={(value) => typeof value === "number" && setOwnerId(value)}
           optionList={users.map((u) => ({ label: u.username, value: u.id }))}
         />
-      </FormField>
+      </FormField> : null}
 
       <FormField label="Egress Mode">
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
-          optionList={sandboxEgressModeOptions({ includeProxy: true, supportsTor: Boolean(selectedImage?.supports_tor) })}
+          optionList={sandboxEgressModeOptions({ includeProxy: isAdmin, supportsTor: Boolean(selectedImage?.supports_tor) })}
           onChange={(value) => {
             if (typeof value !== "string") return;
             const next = value as SandboxContainerEgressMode;
@@ -181,15 +200,12 @@ export function SandboxContainerFormModal({
 
       {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
         <FormField label="Managed Proxy">
-          <Select
+          <OptionListSelect
+            source={egressProxyOptions}
             prefix={<Network size={16} />}
             value={egressProxyId}
-            loading={egressProxyOptions.busy}
             placeholder="Select an egress proxy"
-            emptyContent={egressProxyOptions.busy ? <Spin size="small" /> : "No egress proxies"}
-            remote
-            onSearch={egressProxyOptions.search}
-            onListScroll={egressProxyOptions.onListScroll}
+            emptyContent="No egress proxies"
             onChange={(value) => setEgressProxyId(typeof value === "number" ? value : undefined)}
             optionList={egressProxies.map(egressProxyOption)}
           />

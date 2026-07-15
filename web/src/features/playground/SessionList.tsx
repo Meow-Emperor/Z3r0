@@ -15,6 +15,7 @@ import { AsyncContent } from "../../shared/components/AsyncContent";
 import { FormField } from "../../shared/components/FormField";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
+import { useMountedRef } from "../../shared/hooks/useMountedRef";
 import { mergeByKey } from "../../shared/lib/array";
 import { cx } from "../../shared/lib/className";
 import { UI_TEXT } from "../../shared/lib/uiText";
@@ -111,7 +112,7 @@ export function SessionList({
   const [infoProjectId, setInfoProjectId] = useState<number | null>(null);
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
-  const mountedRef = useRef(true);
+  const mountedRef = useMountedRef();
   const projectsRequestRef = useRef(0);
   const projectsLoadRequestRef = useRef<number | null>(null);
   const projectsLoadMoreRequestRef = useRef<number | null>(null);
@@ -120,9 +121,7 @@ export function SessionList({
   const { saving: renaming, submit } = useResourceSubmit();
 
   useEffect(() => {
-    mountedRef.current = true;
     return () => {
-      mountedRef.current = false;
       projectsRequestRef.current += 1;
       projectsLoadRequestRef.current = null;
       projectsLoadMoreRequestRef.current = null;

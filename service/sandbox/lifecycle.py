@@ -16,7 +16,7 @@ from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
-from model.work_project.projects import WorkProjectSandboxContainer
+from model.work_project.projects import WorkProject
 from schema.sandbox.containers import (
     SandboxContainerEgressMode,
     SandboxContainerPortMapping,
@@ -567,10 +567,11 @@ async def _rollback_created_container(
 
 
 async def _clear_sandbox_container_references(session, id: int) -> None:
-    for link in (await session.exec(
-        select(WorkProjectSandboxContainer).where(WorkProjectSandboxContainer.sandbox_container_id == id)
-    )).all():
-        await session.delete(link)
+    await session.execute(
+        update(WorkProject)
+        .where(WorkProject.sandbox_container_id == id)
+        .values(sandbox_container_id=None)
+    )
 
     await session.execute(
         update(AgentSessionMeta)

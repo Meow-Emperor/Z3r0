@@ -22,7 +22,7 @@ features:
   - title: Multi-Agent orchestration
     details: A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis.
   - title: Project evidence plane
-    details: WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries.
+    details: WorkProject binds graph-targeted WorkItems to authorized assets, WorkItem-attributed evidence, validated findings, continuous attack paths, retest candidates, and lead review decisions.
   - title: Retrieval context plane
     details: Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs.
   - title: Replayable event timeline
@@ -34,5 +34,5 @@ features:
   - title: Unified egress layer
     details: Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface.
   - title: Operator workbench
-    details: The frontend combines chat, project records, graph review, sandbox selector, terminal, files, and noVNC into one workflow.
+    details: The frontend combines chat, workflow state, graph review, evidence chains, attack paths, sandbox selection, terminal, files, and noVNC.
 ---

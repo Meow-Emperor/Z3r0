@@ -40,6 +40,7 @@ async def create_subagent_task(
     agent_code: str,
     agent_name: str,
     brief: str,
+    work_item_id: int | None,
     nested_call_id: str,
     owner_id: int,
     sandbox_container_id: int | None = None,
@@ -57,6 +58,7 @@ async def create_subagent_task(
         agent_name=agent_name,
         status=AgentSubordinateStatus.RUNNING.value,
         brief=brief,
+        work_item_id=work_item_id,
         nested_call_id=nested_call_id,
         owner_id=owner_id,
         created_at=now,
@@ -79,6 +81,7 @@ async def create_subagent_task(
                     "run_id": run_id,
                     "agent_code": agent_code,
                     "agent_name": agent_name,
+                    "work_item_id": work_item_id,
                 },
                 sandbox_container_id=sandbox_container_id,
                 sandbox_container_generation=sandbox_container_generation,
@@ -304,6 +307,7 @@ def _subagent_obligation_payload(task: AgentSubordinateTask) -> dict[str, object
         "agent_code": task.agent_code,
         "agent_name": task.agent_name,
         "status": _coerce_subagent_status(task.status).value,
+        "work_item_id": task.work_item_id,
     }
 
 
@@ -320,6 +324,7 @@ def snapshot_from_task(task: AgentSubordinateTask) -> AgentSubordinateTaskSnapsh
         result=task.result,
         error=task.error,
         progress=task.progress,
+        work_item_id=task.work_item_id,
         nested_call_id=task.nested_call_id,
         created_at=task.created_at,
         updated_at=task.updated_at,

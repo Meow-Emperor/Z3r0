@@ -28,8 +28,7 @@ export type LoginResponse = JsonResponse<paths["/api/system-users/login"]["post"
 
 export type QuerySystemUsersParams = QueryParameters<paths["/api/system-users"]["get"]>;
 export type QuerySystemUsersResponse = JsonResponse<paths["/api/system-users"]["get"]>;
-export type QuerySystemUsersData = NonNullable<QuerySystemUsersResponse["data"]>;
-export type SystemUser = QuerySystemUsersData["items"][number];
+export type SystemUser = NonNullable<QuerySystemUsersResponse["data"]>["items"][number];
 export type SystemUserRole = components["schemas"]["SystemUserRole"];
 
 export type CreateSystemUserRequest = JsonRequestBody<paths["/api/system-users"]["post"]>;
@@ -42,8 +41,7 @@ export type DeleteSystemUserResponse = JsonResponse<paths["/api/system-users/{id
 
 export type QueryManagedHostsParams = QueryParameters<paths["/api/hosts"]["get"]>;
 export type QueryManagedHostsResponse = JsonResponse<paths["/api/hosts"]["get"]>;
-export type QueryManagedHostsData = NonNullable<QueryManagedHostsResponse["data"]>;
-export type ManagedHost = QueryManagedHostsData["items"][number];
+export type ManagedHost = NonNullable<QueryManagedHostsResponse["data"]>["items"][number];
 
 export type CreateManagedHostRequest = JsonRequestBody<paths["/api/hosts"]["post"]>;
 export type CreateManagedHostResponse = JsonResponse<paths["/api/hosts"]["post"]>;
@@ -58,8 +56,7 @@ export type DeleteManagedHostImageResponse = JsonResponse<paths["/api/hosts/{id}
 
 export type QueryEgressProxiesParams = QueryParameters<paths["/api/egress-proxies"]["get"]>;
 export type QueryEgressProxiesResponse = JsonResponse<paths["/api/egress-proxies"]["get"]>;
-export type QueryEgressProxiesData = NonNullable<QueryEgressProxiesResponse["data"]>;
-export type EgressProxy = QueryEgressProxiesData["items"][number];
+export type EgressProxy = NonNullable<QueryEgressProxiesResponse["data"]>["items"][number];
 export type EgressProxyType = components["schemas"]["EgressProxyType"];
 
 export type CreateEgressProxyRequest = JsonRequestBody<paths["/api/egress-proxies"]["post"]>;
@@ -97,8 +94,7 @@ export type KnowledgeDocumentDetail = NonNullable<GetKnowledgeDocumentResponse["
 export type DeleteKnowledgeDocumentResponse = JsonResponse<paths["/api/knowledges/documents/{document_id}"]["delete"]>;
 export type QueryKnowledgeVectorsParams = QueryParameters<paths["/api/knowledges/vectors"]["get"]>;
 export type QueryKnowledgeVectorsResponse = JsonResponse<paths["/api/knowledges/vectors"]["get"]>;
-export type QueryKnowledgeVectorsData = NonNullable<QueryKnowledgeVectorsResponse["data"]>;
-export type KnowledgeVector = QueryKnowledgeVectorsData["items"][number];
+export type KnowledgeVector = NonNullable<QueryKnowledgeVectorsResponse["data"]>["items"][number];
 export type KnowledgeVectorPathParams = PathParameters<paths["/api/knowledges/vectors/{vector_id}"]["get"]>;
 export type GetKnowledgeVectorResponse = JsonResponse<paths["/api/knowledges/vectors/{vector_id}"]["get"]>;
 export type KnowledgeVectorDetail = NonNullable<GetKnowledgeVectorResponse["data"]>;
@@ -111,8 +107,7 @@ export type KnowledgeGraphNode = KnowledgeGraph["nodes"][number];
 
 export type QuerySandboxImagesParams = QueryParameters<paths["/api/sandbox-images"]["get"]>;
 export type QuerySandboxImagesResponse = JsonResponse<paths["/api/sandbox-images"]["get"]>;
-export type QuerySandboxImagesData = NonNullable<QuerySandboxImagesResponse["data"]>;
-export type SandboxImage = QuerySandboxImagesData["items"][number];
+export type SandboxImage = NonNullable<QuerySandboxImagesResponse["data"]>["items"][number];
 
 export type CreateSandboxImageRequest = JsonRequestBody<paths["/api/sandbox-images"]["post"]>;
 export type CreateSandboxImageResponse = JsonResponse<paths["/api/sandbox-images"]["post"]>;
@@ -127,8 +122,7 @@ export type PullManagedHostImagesResponse = JsonResponse<paths["/api/hosts/{id}/
 
 export type QuerySandboxContainersParams = QueryParameters<paths["/api/sandbox-containers"]["get"]>;
 export type QuerySandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers"]["get"]>;
-export type QuerySandboxContainersData = NonNullable<QuerySandboxContainersResponse["data"]>;
-export type SandboxContainer = QuerySandboxContainersData["items"][number];
+export type SandboxContainer = NonNullable<QuerySandboxContainersResponse["data"]>["items"][number];
 export type QueryAvailableSandboxContainersParams = QueryParameters<paths["/api/sandbox-containers/available"]["get"]>;
 export type QueryAvailableSandboxContainersResponse = JsonResponse<paths["/api/sandbox-containers/available"]["get"]>;
 export type SandboxContainerStatus = components["schemas"]["SandboxContainerStatus"];
@@ -181,29 +175,40 @@ export type ContainerFileMkdirResponse = JsonResponse<paths["/api/sandbox-contai
 
 export type QueryWorkProjectsParams = QueryParameters<paths["/api/work-projects"]["get"]>;
 export type QueryWorkProjectsResponse = JsonResponse<paths["/api/work-projects"]["get"]>;
-export type QueryWorkProjectsData = NonNullable<QueryWorkProjectsResponse["data"]>;
-export type WorkProjectSummary = QueryWorkProjectsData["items"][number];
+export type WorkProjectSummary = NonNullable<QueryWorkProjectsResponse["data"]>["items"][number];
 export type GetWorkProjectResponse = JsonResponse<paths["/api/work-projects/{id}"]["get"]>;
 export type WorkProject = NonNullable<GetWorkProjectResponse["data"]>;
 export type WorkProjectStatus = components["schemas"]["WorkProjectStatus"];
 export type WorkProjectType = components["schemas"]["WorkProjectType"];
-export type WorkProjectTaskStatus = components["schemas"]["WorkProjectTaskStatus"];
-export type WorkProjectAgentSummary = components["schemas"]["WorkProjectAgentSummarySchema"];
 export type WorkProjectAsset = components["schemas"]["WorkProjectAssetSchema"];
-export type WorkProjectAssetExtra = components["schemas"]["WorkProjectAssetExtraSchema"];
 export type WorkProjectAssetRequest = components["schemas"]["WorkProjectAssetRequest"];
-export type WorkProjectAssetType = components["schemas"]["WorkProjectAssetType"];
+export type WorkProjectAssetKind = components["schemas"]["WorkProjectAssetKind"];
 export type WorkProjectAssetOrigin = components["schemas"]["WorkProjectAssetOrigin"];
-export type WorkProjectFinding = components["schemas"]["WorkProjectFindingSchema"];
+export type WorkProjectAssetScope = components["schemas"]["WorkProjectAssetScope"];
+export type WorkProjectAssetCriticality = components["schemas"]["WorkProjectAssetCriticality"];
+export type WorkProjectAssetState = components["schemas"]["WorkProjectAssetState"];
+export type WorkProjectEvidenceKind = components["schemas"]["WorkProjectEvidenceKind"];
+export type WorkProjectEvidenceStatus = components["schemas"]["WorkProjectEvidenceStatus"];
+export type WorkProjectFindingCategory = components["schemas"]["WorkProjectFindingCategory"];
 export type WorkProjectFindingSeverity = components["schemas"]["WorkProjectFindingSeverity"];
-export type WorkProjectFindingStatus = components["schemas"]["WorkProjectFindingStatus"];
-export type WorkProjectGraphEdge = components["schemas"]["WorkProjectGraphEdgeSchema"];
-export type WorkProjectGraphEdgeType = components["schemas"]["WorkProjectGraphEdgeType"];
-export type WorkProjectAttackPath = components["schemas"]["WorkProjectAttackPathSchema"];
+export type WorkProjectFindingVerification = components["schemas"]["WorkProjectFindingVerification"];
+export type WorkProjectFindingResolution = components["schemas"]["WorkProjectFindingResolution"];
+export type WorkProjectRelation = components["schemas"]["WorkProjectRelationSchema"];
+export type WorkProjectRelationType = components["schemas"]["WorkProjectRelationType"];
+export type WorkProjectAssertionStatus = components["schemas"]["WorkProjectAssertionStatus"];
 export type WorkProjectAttackPathStatus = components["schemas"]["WorkProjectAttackPathStatus"];
-export type WorkProjectAttackPathStep = components["schemas"]["WorkProjectAttackPathStepSchema"];
+export type WorkProjectAttackStepStatus = components["schemas"]["WorkProjectAttackStepStatus"];
+export type WorkProjectAttackAction = components["schemas"]["WorkProjectAttackAction"];
+export type WorkProjectWorkItemStatus = components["schemas"]["WorkProjectWorkItemStatus"];
+export type WorkProjectWorkItemPhase = components["schemas"]["WorkProjectWorkItemPhase"];
+export type WorkProjectWorkItemPriority = components["schemas"]["WorkProjectWorkItemPriority"];
+export type WorkProjectTargetStatus = components["schemas"]["WorkProjectTargetStatus"];
+export type WorkProjectWorkLog = components["schemas"]["WorkProjectWorkLogSchema"];
+export type WorkProjectOverview = components["schemas"]["WorkProjectOverviewSchema"];
+export type WorkProjectEvidenceRecord = components["schemas"]["WorkProjectEvidenceRecordSchema"];
 export type WorkProjectFindingRecord = components["schemas"]["WorkProjectFindingRecordSchema"];
 export type WorkProjectAttackPathRecord = components["schemas"]["WorkProjectAttackPathRecordSchema"];
+export type WorkProjectWorkItemRecord = components["schemas"]["WorkProjectWorkItemRecordSchema"];
 export type WorkProjectGraphView = components["schemas"]["WorkProjectGraphViewSchema"];
 
 export type CreateWorkProjectRequest = JsonRequestBody<paths["/api/work-projects"]["post"]>;
@@ -223,10 +228,17 @@ export type CreateWorkProjectSessionResponse = JsonResponse<paths["/api/work-pro
 export type DeleteWorkProjectSessionResponse = JsonResponse<paths["/api/work-projects/{id}/sessions/{session_id}"]["delete"]>;
 export type QueryWorkProjectAssetsParams = QueryParameters<paths["/api/work-projects/{id}/assets"]["get"]>;
 export type QueryWorkProjectAssetsResponse = JsonResponse<paths["/api/work-projects/{id}/assets"]["get"]>;
+export type GetWorkProjectOverviewResponse = JsonResponse<paths["/api/work-projects/{id}/overview"]["get"]>;
+export type QueryWorkProjectEvidenceParams = QueryParameters<paths["/api/work-projects/{id}/evidence"]["get"]>;
+export type QueryWorkProjectEvidenceResponse = JsonResponse<paths["/api/work-projects/{id}/evidence"]["get"]>;
 export type QueryWorkProjectFindingsParams = QueryParameters<paths["/api/work-projects/{id}/findings"]["get"]>;
 export type QueryWorkProjectFindingsResponse = JsonResponse<paths["/api/work-projects/{id}/findings"]["get"]>;
 export type QueryWorkProjectAttackPathsParams = QueryParameters<paths["/api/work-projects/{id}/attack-paths"]["get"]>;
 export type QueryWorkProjectAttackPathsResponse = JsonResponse<paths["/api/work-projects/{id}/attack-paths"]["get"]>;
+export type QueryWorkProjectWorkItemsParams = QueryParameters<paths["/api/work-projects/{id}/work-items"]["get"]>;
+export type QueryWorkProjectWorkItemsResponse = JsonResponse<paths["/api/work-projects/{id}/work-items"]["get"]>;
+export type QueryWorkProjectActivityParams = QueryParameters<paths["/api/work-projects/{id}/activity"]["get"]>;
+export type QueryWorkProjectActivityResponse = JsonResponse<paths["/api/work-projects/{id}/activity"]["get"]>;
 export type GetWorkProjectGraphResponse = JsonResponse<paths["/api/work-projects/{id}/graph"]["get"]>;
 
 export type AgentSessionSummary = components["schemas"]["AgentSessionSummarySchema"];
@@ -234,10 +246,8 @@ export type SessionType = components["schemas"]["SessionType"];
 
 export type AgentInfo = components["schemas"]["AgentInfoSchema"];
 export type ListAgentsResponse = JsonResponse<paths["/api/agents"]["get"]>;
-export type ListAgentsData = NonNullable<ListAgentsResponse["data"]>;
 
 export type ListAgentSessionsResponse = JsonResponse<paths["/api/agent-sessions"]["get"]>;
-export type ListAgentSessionsData = NonNullable<ListAgentSessionsResponse["data"]>;
 export type ListAgentSessionsParams = QueryParameters<paths["/api/agent-sessions"]["get"]>;
 
 export type AgentTurnRequest = JsonRequestBody<paths["/api/agent-sessions/turns"]["post"]>;
@@ -248,7 +258,6 @@ export type InterruptAgentSessionResponse = JsonResponse<paths["/api/agent-sessi
 export type CancelAllAgentSessionTasksResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/cancel-all"]["post"]>;
 
 export type ListAgentEventsResponse = JsonResponse<paths["/api/agent-sessions/{session_id}/events"]["get"]>;
-export type ListAgentEventsData = NonNullable<ListAgentEventsResponse["data"]>;
 export type ListAgentEventsParams = QueryParameters<paths["/api/agent-sessions/{session_id}/events"]["get"]>;
 export type DownloadAgentReportPathParams = PathParameters<paths["/api/agent-sessions/reports/{report_id}/download"]["get"]>;
 export type UpdateAgentSessionTitleRequest = JsonRequestBody<paths["/api/agent-sessions/{session_id}/title"]["patch"]>;
@@ -274,5 +283,5 @@ export type AgentInputPart = components["schemas"]["AgentTextInputPart"] | compo
 export type AgentTextInputPart = components["schemas"]["AgentTextInputPart"];
 export type AgentImageInputPart = components["schemas"]["AgentImageInputPart"];
 
-export type AgentContentEvent = ListAgentEventsData["items"][number];
+export type AgentContentEvent = NonNullable<ListAgentEventsResponse["data"]>["items"][number];
 export type AgentStreamEvent = components["schemas"]["AgentEventSchema"];

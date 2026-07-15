@@ -1,123 +1,120 @@
-import type { WorkProjectGraphEdgeCategory } from "../api/contract";
+import type { WorkProjectRelationCategory } from "../api/contract";
 import {
+  SANDBOX_CONTAINER_STATUS,
   SANDBOX_CONTAINER_EGRESS_MODE_VALUES,
   SANDBOX_CONTAINER_STATUS_VALUES,
+  SYSTEM_USER_ROLE,
   SYSTEM_USER_ROLE_VALUES,
+  WORK_PROJECT_ASSERTION_STATUS_VALUES,
+  WORK_PROJECT_ASSET_CRITICALITY_VALUES,
+  WORK_PROJECT_ASSET_KIND_VALUES,
   WORK_PROJECT_ASSET_ORIGIN_VALUES,
-  WORK_PROJECT_ASSET_TYPE_VALUES,
+  WORK_PROJECT_ASSET_SCOPE,
+  WORK_PROJECT_ASSET_SCOPE_VALUES,
+  WORK_PROJECT_ASSET_STATE_VALUES,
+  WORK_PROJECT_ATTACK_ACTION_VALUES,
+  WORK_PROJECT_ATTACK_PATH_STATUS,
   WORK_PROJECT_ATTACK_PATH_STATUS_VALUES,
+  WORK_PROJECT_ATTACK_STEP_STATUS_VALUES,
+  WORK_PROJECT_EVIDENCE_KIND_VALUES,
+  WORK_PROJECT_EVIDENCE_STATUS,
+  WORK_PROJECT_EVIDENCE_STATUS_VALUES,
+  WORK_PROJECT_FINDING_CATEGORY_VALUES,
+  WORK_PROJECT_FINDING_RESOLUTION_VALUES,
+  WORK_PROJECT_FINDING_SEVERITY,
   WORK_PROJECT_FINDING_SEVERITY_VALUES,
-  WORK_PROJECT_FINDING_STATUS_VALUES,
-  WORK_PROJECT_GRAPH_EDGE_CATEGORY_VALUES,
-  WORK_PROJECT_GRAPH_EDGE_TYPE_VALUES,
+  WORK_PROJECT_FINDING_VERIFICATION,
+  WORK_PROJECT_FINDING_VERIFICATION_VALUES,
+  WORK_PROJECT_RELATION_CATEGORY_VALUES,
+  WORK_PROJECT_RELATION_TYPE_VALUES,
+  WORK_PROJECT_STATUS,
   WORK_PROJECT_STATUS_VALUES,
-  WORK_PROJECT_TASK_STATUS_VALUES,
+  WORK_PROJECT_TARGET_STATUS,
+  WORK_PROJECT_TARGET_STATUS_VALUES,
+  WORK_PROJECT_TYPE,
   WORK_PROJECT_TYPE_VALUES,
+  WORK_PROJECT_WORK_ITEM_PHASE_VALUES,
+  WORK_PROJECT_WORK_ITEM_PRIORITY_VALUES,
+  WORK_PROJECT_WORK_ITEM_STATUS,
+  WORK_PROJECT_WORK_ITEM_STATUS_VALUES,
+  WORK_PROJECT_WORK_LOG_KIND_VALUES,
 } from "../api/generated/constants";
 import type {
   SandboxContainerEgressMode,
   SandboxContainerStatus,
   SystemUserRole,
+  WorkProjectAssertionStatus,
+  WorkProjectAssetCriticality,
+  WorkProjectAssetKind,
   WorkProjectAssetOrigin,
-  WorkProjectAssetType,
+  WorkProjectAssetScope,
+  WorkProjectAssetState,
+  WorkProjectAttackAction,
   WorkProjectAttackPathStatus,
+  WorkProjectAttackStepStatus,
+  WorkProjectEvidenceKind,
+  WorkProjectEvidenceStatus,
+  WorkProjectFindingCategory,
+  WorkProjectFindingResolution,
   WorkProjectFindingSeverity,
-  WorkProjectFindingStatus,
-  WorkProjectGraphEdgeType,
+  WorkProjectFindingVerification,
+  WorkProjectRelationType,
   WorkProjectStatus,
-  WorkProjectTaskStatus,
+  WorkProjectTargetStatus,
   WorkProjectType,
+  WorkProjectWorkItemPhase,
+  WorkProjectWorkItemPriority,
+  WorkProjectWorkItemStatus,
+  WorkProjectWorkLog,
 } from "../api/types";
 
-export type SemiTagColor = "amber" | "green" | "red" | "grey" | "blue" | "cyan";
+type SemiTagColor = "amber" | "green" | "red" | "grey" | "blue" | "cyan";
 
 export const SYSTEM_USER_ROLE_LABEL = labelsFromEnum<SystemUserRole>(SYSTEM_USER_ROLE_VALUES);
-export const WORK_PROJECT_TYPE_LABEL = labelsFromEnum<WorkProjectType>(WORK_PROJECT_TYPE_VALUES, { source_code_audit: "Source Code Audit" });
+export const WORK_PROJECT_TYPE_LABEL = labelsFromEnum<WorkProjectType>(WORK_PROJECT_TYPE_VALUES, { [WORK_PROJECT_TYPE.SOURCE_CODE_AUDIT]: "Source Code Audit" });
 export const WORK_PROJECT_STATUS_LABEL = labelsFromEnum<WorkProjectStatus>(WORK_PROJECT_STATUS_VALUES);
-export const WORK_PROJECT_TASK_STATUS_LABEL = labelsFromEnum<WorkProjectTaskStatus>(WORK_PROJECT_TASK_STATUS_VALUES);
-export const WORK_PROJECT_ASSET_TYPE_LABEL = labelsFromEnum<WorkProjectAssetType>(WORK_PROJECT_ASSET_TYPE_VALUES);
+export const WORK_PROJECT_ASSET_KIND_LABEL = labelsFromEnum<WorkProjectAssetKind>(WORK_PROJECT_ASSET_KIND_VALUES);
 export const WORK_PROJECT_ASSET_ORIGIN_LABEL = labelsFromEnum<WorkProjectAssetOrigin>(WORK_PROJECT_ASSET_ORIGIN_VALUES);
+export const WORK_PROJECT_ASSET_SCOPE_LABEL = labelsFromEnum<WorkProjectAssetScope>(WORK_PROJECT_ASSET_SCOPE_VALUES);
+export const WORK_PROJECT_ASSET_CRITICALITY_LABEL = labelsFromEnum<WorkProjectAssetCriticality>(WORK_PROJECT_ASSET_CRITICALITY_VALUES);
+export const WORK_PROJECT_ASSET_STATE_LABEL = labelsFromEnum<WorkProjectAssetState>(WORK_PROJECT_ASSET_STATE_VALUES);
+export const WORK_PROJECT_ASSERTION_STATUS_LABEL = labelsFromEnum<WorkProjectAssertionStatus>(WORK_PROJECT_ASSERTION_STATUS_VALUES);
+export const WORK_PROJECT_RELATION_TYPE_LABEL = labelsFromEnum<WorkProjectRelationType>(WORK_PROJECT_RELATION_TYPE_VALUES);
+export const WORK_PROJECT_RELATION_CATEGORY_LABEL = labelsFromEnum<WorkProjectRelationCategory>(WORK_PROJECT_RELATION_CATEGORY_VALUES);
+export const WORK_PROJECT_EVIDENCE_KIND_LABEL = labelsFromEnum<WorkProjectEvidenceKind>(WORK_PROJECT_EVIDENCE_KIND_VALUES);
+export const WORK_PROJECT_EVIDENCE_STATUS_LABEL = labelsFromEnum<WorkProjectEvidenceStatus>(WORK_PROJECT_EVIDENCE_STATUS_VALUES);
+export const WORK_PROJECT_FINDING_CATEGORY_LABEL = labelsFromEnum<WorkProjectFindingCategory>(WORK_PROJECT_FINDING_CATEGORY_VALUES);
 export const WORK_PROJECT_FINDING_SEVERITY_LABEL = labelsFromEnum<WorkProjectFindingSeverity>(WORK_PROJECT_FINDING_SEVERITY_VALUES);
-export const WORK_PROJECT_FINDING_STATUS_LABEL = labelsFromEnum<WorkProjectFindingStatus>(WORK_PROJECT_FINDING_STATUS_VALUES);
-export const WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL = labelsFromEnum<WorkProjectGraphEdgeType>(WORK_PROJECT_GRAPH_EDGE_TYPE_VALUES);
-export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL = labelsFromEnum<WorkProjectGraphEdgeCategory>(WORK_PROJECT_GRAPH_EDGE_CATEGORY_VALUES);
+export const WORK_PROJECT_FINDING_VERIFICATION_LABEL = labelsFromEnum<WorkProjectFindingVerification>(WORK_PROJECT_FINDING_VERIFICATION_VALUES);
+export const WORK_PROJECT_FINDING_RESOLUTION_LABEL = labelsFromEnum<WorkProjectFindingResolution>(WORK_PROJECT_FINDING_RESOLUTION_VALUES);
 export const WORK_PROJECT_ATTACK_PATH_STATUS_LABEL = labelsFromEnum<WorkProjectAttackPathStatus>(WORK_PROJECT_ATTACK_PATH_STATUS_VALUES);
+export const WORK_PROJECT_ATTACK_STEP_STATUS_LABEL = labelsFromEnum<WorkProjectAttackStepStatus>(WORK_PROJECT_ATTACK_STEP_STATUS_VALUES);
+export const WORK_PROJECT_ATTACK_ACTION_LABEL = labelsFromEnum<WorkProjectAttackAction>(WORK_PROJECT_ATTACK_ACTION_VALUES);
+export const WORK_PROJECT_WORK_ITEM_STATUS_LABEL = labelsFromEnum<WorkProjectWorkItemStatus>(WORK_PROJECT_WORK_ITEM_STATUS_VALUES);
+export const WORK_PROJECT_WORK_ITEM_PHASE_LABEL = labelsFromEnum<WorkProjectWorkItemPhase>(WORK_PROJECT_WORK_ITEM_PHASE_VALUES);
+export const WORK_PROJECT_WORK_ITEM_PRIORITY_LABEL = labelsFromEnum<WorkProjectWorkItemPriority>(WORK_PROJECT_WORK_ITEM_PRIORITY_VALUES);
+export const WORK_PROJECT_TARGET_STATUS_LABEL = labelsFromEnum<WorkProjectTargetStatus>(WORK_PROJECT_TARGET_STATUS_VALUES);
+export const WORK_PROJECT_WORK_LOG_KIND_LABEL = labelsFromEnum<WorkProjectWorkLog["kind"]>(WORK_PROJECT_WORK_LOG_KIND_VALUES);
 export const SANDBOX_CONTAINER_EGRESS_MODE_LABEL = labelsFromEnum<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE_VALUES);
 export const SANDBOX_CONTAINER_STATUS_LABEL = labelsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUS_VALUES);
 
-export const SYSTEM_USER_ROLE_COLOR = colorsFromEnum<SystemUserRole>(SYSTEM_USER_ROLE_VALUES, {
-  admin: "red",
-  user: "blue",
-});
+export const SYSTEM_USER_ROLE_COLOR = colorsFromEnum<SystemUserRole>(SYSTEM_USER_ROLE_VALUES, { [SYSTEM_USER_ROLE.ADMIN]: "red", [SYSTEM_USER_ROLE.USER]: "blue" });
+export const WORK_PROJECT_STATUS_COLOR = colorsFromEnum<WorkProjectStatus>(WORK_PROJECT_STATUS_VALUES, { [WORK_PROJECT_STATUS.ACTIVE]: "amber", [WORK_PROJECT_STATUS.COMPLETED]: "green", [WORK_PROJECT_STATUS.CANCELED]: "grey" });
+export const WORK_PROJECT_TYPE_COLOR = colorsFromEnum<WorkProjectType>(WORK_PROJECT_TYPE_VALUES, { [WORK_PROJECT_TYPE.PENETRATION_TEST]: "blue", [WORK_PROJECT_TYPE.SOURCE_CODE_AUDIT]: "cyan" });
+export const WORK_PROJECT_ASSET_SCOPE_COLOR = colorsFromEnum<WorkProjectAssetScope>(WORK_PROJECT_ASSET_SCOPE_VALUES, { [WORK_PROJECT_ASSET_SCOPE.IN_SCOPE]: "blue", [WORK_PROJECT_ASSET_SCOPE.CONTEXT]: "cyan", [WORK_PROJECT_ASSET_SCOPE.OUT_OF_SCOPE]: "grey" });
+export const WORK_PROJECT_EVIDENCE_STATUS_COLOR = colorsFromEnum<WorkProjectEvidenceStatus>(WORK_PROJECT_EVIDENCE_STATUS_VALUES, { [WORK_PROJECT_EVIDENCE_STATUS.ACTIVE]: "green", [WORK_PROJECT_EVIDENCE_STATUS.SUPERSEDED]: "amber", [WORK_PROJECT_EVIDENCE_STATUS.INVALIDATED]: "grey" });
+export const WORK_PROJECT_FINDING_SEVERITY_COLOR = colorsFromEnum<WorkProjectFindingSeverity>(WORK_PROJECT_FINDING_SEVERITY_VALUES, { [WORK_PROJECT_FINDING_SEVERITY.INFO]: "grey", [WORK_PROJECT_FINDING_SEVERITY.LOW]: "blue", [WORK_PROJECT_FINDING_SEVERITY.MEDIUM]: "amber", [WORK_PROJECT_FINDING_SEVERITY.HIGH]: "red", [WORK_PROJECT_FINDING_SEVERITY.CRITICAL]: "red" });
+export const WORK_PROJECT_FINDING_VERIFICATION_COLOR = colorsFromEnum<WorkProjectFindingVerification>(WORK_PROJECT_FINDING_VERIFICATION_VALUES, { [WORK_PROJECT_FINDING_VERIFICATION.SUSPECTED]: "amber", [WORK_PROJECT_FINDING_VERIFICATION.VALIDATED]: "red", [WORK_PROJECT_FINDING_VERIFICATION.REFUTED]: "grey", [WORK_PROJECT_FINDING_VERIFICATION.DEFERRED]: "blue" });
+export const WORK_PROJECT_ATTACK_PATH_STATUS_COLOR = colorsFromEnum<WorkProjectAttackPathStatus>(WORK_PROJECT_ATTACK_PATH_STATUS_VALUES, { [WORK_PROJECT_ATTACK_PATH_STATUS.HYPOTHESIZED]: "amber", [WORK_PROJECT_ATTACK_PATH_STATUS.VALIDATING]: "blue", [WORK_PROJECT_ATTACK_PATH_STATUS.VALIDATED]: "red", [WORK_PROJECT_ATTACK_PATH_STATUS.BLOCKED]: "grey", [WORK_PROJECT_ATTACK_PATH_STATUS.REFUTED]: "grey", [WORK_PROJECT_ATTACK_PATH_STATUS.ARCHIVED]: "cyan" });
+export const WORK_PROJECT_WORK_ITEM_STATUS_COLOR = colorsFromEnum<WorkProjectWorkItemStatus>(WORK_PROJECT_WORK_ITEM_STATUS_VALUES, { [WORK_PROJECT_WORK_ITEM_STATUS.QUEUED]: "grey", [WORK_PROJECT_WORK_ITEM_STATUS.ACTIVE]: "blue", [WORK_PROJECT_WORK_ITEM_STATUS.BLOCKED]: "amber", [WORK_PROJECT_WORK_ITEM_STATUS.REVIEW]: "cyan", [WORK_PROJECT_WORK_ITEM_STATUS.COMPLETED]: "green", [WORK_PROJECT_WORK_ITEM_STATUS.CANCELED]: "grey" });
+export const WORK_PROJECT_TARGET_STATUS_COLOR = colorsFromEnum<WorkProjectTargetStatus>(WORK_PROJECT_TARGET_STATUS_VALUES, { [WORK_PROJECT_TARGET_STATUS.PENDING]: "grey", [WORK_PROJECT_TARGET_STATUS.ACTIVE]: "blue", [WORK_PROJECT_TARGET_STATUS.COVERED]: "green", [WORK_PROJECT_TARGET_STATUS.BLOCKED]: "amber", [WORK_PROJECT_TARGET_STATUS.DEFERRED]: "cyan" });
+export const SANDBOX_CONTAINER_STATUS_COLOR = colorsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUS_VALUES, { [SANDBOX_CONTAINER_STATUS.CREATED]: "blue", [SANDBOX_CONTAINER_STATUS.RUNNING]: "green", [SANDBOX_CONTAINER_STATUS.PAUSED]: "amber", [SANDBOX_CONTAINER_STATUS.STOPPED]: "grey", [SANDBOX_CONTAINER_STATUS.ERROR]: "red" });
 
-export const WORK_PROJECT_STATUS_COLOR = colorsFromEnum<WorkProjectStatus>(WORK_PROJECT_STATUS_VALUES, {
-  working: "amber",
-  completed: "green",
-  canceled: "grey",
-});
-
-export const WORK_PROJECT_TYPE_COLOR = colorsFromEnum<WorkProjectType>(WORK_PROJECT_TYPE_VALUES, {
-  penetration_test: "blue",
-  source_code_audit: "cyan",
-});
-
-export const WORK_PROJECT_TASK_STATUS_COLOR = colorsFromEnum<WorkProjectTaskStatus>(WORK_PROJECT_TASK_STATUS_VALUES, {
-  todo: "grey",
-  in_progress: "blue",
-  blocked: "amber",
-  done: "green",
-});
-
-export const WORK_PROJECT_FINDING_SEVERITY_COLOR = colorsFromEnum<WorkProjectFindingSeverity>(WORK_PROJECT_FINDING_SEVERITY_VALUES, {
-  info: "grey",
-  low: "blue",
-  medium: "amber",
-  high: "red",
-  critical: "red",
-});
-
-export const WORK_PROJECT_FINDING_STATUS_COLOR = colorsFromEnum<WorkProjectFindingStatus>(WORK_PROJECT_FINDING_STATUS_VALUES, {
-  suspected: "amber",
-  validated: "red",
-  false_positive: "grey",
-});
-
-export const WORK_PROJECT_ATTACK_PATH_STATUS_COLOR = colorsFromEnum<WorkProjectAttackPathStatus>(WORK_PROJECT_ATTACK_PATH_STATUS_VALUES, {
-  suspected: "amber",
-  validated: "red",
-  blocked: "grey",
-  closed: "green",
-});
-
-export const WORK_PROJECT_ASSET_ORIGIN_COLOR = colorsFromEnum<WorkProjectAssetOrigin>(WORK_PROJECT_ASSET_ORIGIN_VALUES, {
-  scope: "blue",
-  discovered: "cyan",
-});
-
-export const WORK_PROJECT_GRAPH_EDGE_CATEGORY_COLOR: Record<WorkProjectGraphEdgeCategory, SemiTagColor> = {
-  structural: "blue",
-  offensive: "red",
-};
-
-export const SANDBOX_CONTAINER_STATUS_COLOR = colorsFromEnum<SandboxContainerStatus>(SANDBOX_CONTAINER_STATUS_VALUES, {
-  created: "blue",
-  running: "green",
-  paused: "amber",
-  stopped: "grey",
-  error: "red",
-});
-
-function labelsFromEnum<T extends string>(
-  values: readonly T[],
-  overrides: Partial<Record<T, string>> = {},
-): Record<T, string> {
+function labelsFromEnum<T extends string>(values: readonly T[], overrides: Partial<Record<T, string>> = {}): Record<T, string> {
   return Object.fromEntries(values.map((value) => [value, overrides[value] ?? formatEnumLabel(value)])) as Record<T, string>;
 }
 
-function colorsFromEnum<T extends string>(
-  values: readonly T[],
-  colors: Partial<Record<T, SemiTagColor>>,
-): Record<T, SemiTagColor> {
+function colorsFromEnum<T extends string>(values: readonly T[], colors: Partial<Record<T, SemiTagColor>>): Record<T, SemiTagColor> {
   return Object.fromEntries(values.map((value) => [value, colors[value] ?? "grey"])) as Record<T, SemiTagColor>;
 }
 

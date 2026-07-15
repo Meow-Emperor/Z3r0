@@ -34,7 +34,7 @@
 
 Z3r0 is a control-plane-oriented red team workbench. It combines a React operator console, a FastAPI management plane, a session-based multi-Agent runtime, project-scoped evidence records, distributed Docker sandbox resources, and a controlled egress layer.
 
-The design goal is to make Agent-assisted security work operationally bounded and reviewable. Conversations are not treated as the only source of truth. Project scope, assets, findings, relationship graph edges, attack paths, sandbox resources, egress policy, and replayable timeline events are represented as explicit application data.
+Z3r0 brings authorized scope, asset relationships, specialist assignments, evidence, findings, attack paths, workflow decisions, sandbox resources, and session timelines into one shared workspace. Red teams can coordinate execution, follow assessment progress, trace conclusions to supporting material, and review the complete operation without reconstructing state from separate conversations and tools.
 
 ## Architecture
 
@@ -54,8 +54,9 @@ flowchart TB
 
   subgraph Evidence["Evidence Plane"]
     Project["WorkProject"]
-    Records["Assets / Findings / Edges / Paths"]
-    Tasks["Tasks / Agent Summaries"]
+    GraphData["Assets / Environment Relations"]
+    Workflow["WorkItems / Targets / WorkLog"]
+    Conclusions["Evidence / Findings / Attack Paths"]
   end
 
   subgraph Execution["Execution Plane"]
@@ -73,19 +74,23 @@ flowchart TB
   API --> Session --> Graph --> Team
   API --> RAG
   Session --> RAG
-  Team --> Records
+  Team --> Workflow
+  Workflow --> GraphData
+  Workflow --> Conclusions
   Team --> Containers
   Session --> Timeline
-  Project --> Records
-  Project --> Tasks
+  Project --> GraphData
+  Project --> Workflow
+  Project --> Conclusions
   Hosts --> Containers --> ControlProxy --> Egress
   API --> Project
   API --> Hosts
   API --> Containers
   API --> Egress
   Timeline --> Store
-  Records --> Store
-  Tasks --> Store
+  GraphData --> Store
+  Workflow --> Store
+  Conclusions --> Store
   Project --> Store
   Containers --> Store
   RAG --> Store
@@ -97,7 +102,7 @@ Z3r0 separates the system into four architectural planes:
 | --- | --- |
 | Control plane | Users, system configuration, Agents, sessions, WorkProjects, Knowledges, managed hosts, sandbox images, sandbox containers, and egress proxies. |
 | Runtime plane | Multi-Agent session execution, task-input LightRAG retrieval, live event streaming, long-running task continuity, history projection, and timeline replay. |
-| Evidence plane | Project scope, assets, findings, relationship graph, attack paths, task progress, and per-Agent summaries. |
+| Evidence plane | Authorized scope, asset relationships, graph-targeted WorkItems, immutable evidence, findings, attack paths, target coverage, and workflow decisions. |
 | Execution plane | Docker hosts, sandbox containers, shell/file/noVNC access, command execution, sandbox-local skills, built-in security tooling, and outbound network policy. |
 
 This separation is reflected in the repository structure: routers and handlers expose application contracts, services own domain behavior, models define persistent state, and the React workbench consumes the stable REST/WebSocket surface.
@@ -123,9 +128,10 @@ sequenceDiagram
   Pool->>Agents: Execute lead or specialist Agent
   Agents->>Tools: Invoke project, sandbox, or delegation tools
 
-  alt Evidence operation
-    Tools->>Project: Create or update assets, findings, graph edges, paths
-    Project->>DB: Persist structured evidence
+  alt Graph-driven operation
+    Tools->>Project: Load WorkItem targets and graph neighborhood
+    Tools->>Project: Record evidence, relations, findings, and path steps
+    Project->>DB: Persist coverage, evidence, conclusions, and decisions
   else Sandbox operation
     Tools->>Sandbox: Execute command / read output / use shell, files, noVNC
     Sandbox->>DB: Persist task state and output metadata
@@ -145,33 +151,34 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-  Scope["Declared Scope"]
-  Assets["Assets<br/>service / domain / network / binary"]
-  Edges["Relationship Graph<br/>structural + offensive edges"]
-  Findings["Findings<br/>proof + impact + status"]
-  Paths["Attack Paths<br/>ordered edge traversal"]
-  Review["Review Surface<br/>records + graph + timeline"]
+  Scope["Authorized Scope"]
+  GraphData["Asset Graph<br/>structure / connectivity / trust / data"]
+  Work["Graph-targeted WorkItems<br/>targets / dependencies / coverage"]
+  Evidence["WorkItem-linked Evidence<br/>stable reference / provenance / hash"]
+  Findings["Security Findings<br/>validation / severity / disposition"]
+  Paths["Attack Paths<br/>evidence-backed offensive steps"]
+  Review["Review<br/>workflow / graph / conclusions / activity"]
 
-  Scope --> Assets
-  Assets --> Edges
-  Assets --> Findings
-  Edges --> Findings
-  Edges --> Paths
-  Findings --> Review
-  Paths --> Review
+  Scope --> GraphData --> Work --> Evidence
+  Evidence --> GraphData
+  Evidence --> Findings --> Paths --> Review
+  Work --> Paths
+  Work --> Review
 ```
 
-WorkProject is the durable evidence boundary for professional review. Assets are graph nodes. Relationships describe architecture or attack progression. Findings attach proof and impact to affected assets and, when needed, to a specific relationship. Attack paths are ordered traversals through the graph.
+WorkProject provides a durable workspace for each assessment. Operators can explore the target environment as an asset graph, assign specialists to specific assets and test surfaces, review the evidence produced by each assignment, and follow validated offensive progression through attack paths. Findings and path conclusions remain connected to their supporting material, giving the team a coherent record from initial scope through review and retesting.
 
 | Data object | Role in the assessment |
 | --- | --- |
-| WorkProject | Assessment container for owners, type, status, scope assets, sandbox bindings, sessions, tasks, and summaries. |
-| Asset | Normalized target or discovered object: service, domain, network, or binary. |
-| Finding | Security observation with severity, status, proof, impact, and optional graph binding. |
-| Graph edge | Directed relationship between two assets, either structural or offensive. |
-| Attack path | Ordered path over graph edges, used to reconstruct access or impact progression. |
+| WorkProject | Assessment boundary for owners, authorized scope, sandbox bindings, sessions, workflow, and closure. |
+| Asset | Canonically identified network, host, domain, service, application, endpoint, code, artifact, identity, data, or cloud entity. |
+| Relation | Evidence-matured environment assertion covering structure, connectivity, dependencies, identity, trust, data flow, or provenance. |
+| WorkItem | Coordinated action unit connecting an assigned specialist with graph targets, dependencies, test surfaces, completion criteria, evidence, coverage conclusions, and lead review. |
+| Evidence | Immutable WorkItem-attributed observation with provenance, a stable source reference, supersession, and guarded invalidation. |
+| Finding | Evidence-backed security conclusion with validation, impact, disposition, and severity kept consistent with optional CVSS scoring. |
+| Attack path | Continuous sequence of offensive actions from entry to target, with evidence and optional ATT&CK mapping per step. |
 
-The evidence model stores durable facts as queryable, visualizable, and reviewable application records while Agent summaries provide concise operational context.
+The workbench gives operators a unified view of scope coverage, current assignments, blocked test surfaces, review queues, validated findings, attack paths, evidence, and specialist activity. Leads can review completed work, return specific target surfaces for further validation, and use focused search and filters to move quickly from project-level posture to the relevant asset, assignment, evidence chain, or security conclusion.
 
 ## Sandbox and Egress
 
@@ -213,13 +220,13 @@ Outbound traffic is normalized through a container-level egress profile. The san
 | Highlight | Description |
 | --- | --- |
 | Multi-Agent orchestration | A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis. |
-| Project evidence plane | WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries. |
+| Graph-driven operations | WorkProject binds specialist WorkItems to in-scope assets, test surfaces, evidence, findings, and attack-path validation. |
 | Retrieval context plane | Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs. |
 | Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
 | Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
 | Preloaded sandbox toolchain | The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills. |
 | Unified egress layer | Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface. |
-| Operator workbench | The frontend combines chat, project records, graph review, sandbox selector, terminal, files, and noVNC into one workflow. |
+| Operator workbench | The frontend combines chat, workflow state, graph review, evidence chains, attack paths, sandbox selector, terminal, files, and noVNC. |
 
 ## Expert Team
 

@@ -901,6 +901,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-projects/{id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Work Project Activity Route */
+        get: operations["query_work_project_activity_route_api_work_projects__id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-projects/{id}/assets": {
         parameters: {
             query?: never;
@@ -946,6 +963,23 @@ export interface paths {
         put?: never;
         /** Cancel Work Project Route */
         post: operations["cancel_work_project_route_api_work_projects__id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-projects/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Work Project Evidence Route */
+        get: operations["query_work_project_evidence_route_api_work_projects__id__evidence_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1003,6 +1037,23 @@ export interface paths {
         patch: operations["update_work_project_metadata_route_api_work_projects__id__metadata_patch"];
         trace?: never;
     };
+    "/api/work-projects/{id}/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Work Project Overview Route */
+        get: operations["get_work_project_overview_route_api_work_projects__id__overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-projects/{id}/retry": {
         parameters: {
             query?: never;
@@ -1050,6 +1101,23 @@ export interface paths {
         post?: never;
         /** Delete Work Project Session Route */
         delete: operations["delete_work_project_session_route_api_work_projects__id__sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-projects/{id}/work-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query Work Project Work Items Route */
+        get: operations["query_work_project_work_items_route_api_work_projects__id__work_items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1336,6 +1404,11 @@ export interface components {
             /** Run Id */
             run_id: string;
             status: components["schemas"]["AgentSubordinateStatus"];
+            /**
+             * Work Item Id
+             * @default null
+             */
+            work_item_id: number | null;
         };
         /** AgentSubordinateTaskToolResult */
         AgentSubordinateTaskToolResult: {
@@ -1902,6 +1975,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QueryWorkProjectActivityResponse] */
+        CommonResponse_QueryWorkProjectActivityResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryWorkProjectActivityResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QueryWorkProjectAssetsResponse] */
         CommonResponse_QueryWorkProjectAssetsResponse_: {
             /**
@@ -1930,6 +2017,20 @@ export interface components {
              */
             message: string;
         };
+        /** CommonResponse[QueryWorkProjectEvidenceResponse] */
+        CommonResponse_QueryWorkProjectEvidenceResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryWorkProjectEvidenceResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
         /** CommonResponse[QueryWorkProjectFindingsResponse] */
         CommonResponse_QueryWorkProjectFindingsResponse_: {
             /**
@@ -1938,6 +2039,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["QueryWorkProjectFindingsResponse"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[QueryWorkProjectWorkItemsResponse] */
+        CommonResponse_QueryWorkProjectWorkItemsResponse_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["QueryWorkProjectWorkItemsResponse"] | null;
             /**
              * Message
              * @default success
@@ -2064,6 +2179,20 @@ export interface components {
              */
             code: number;
             data?: components["schemas"]["WorkProjectGraphViewSchema"] | null;
+            /**
+             * Message
+             * @default success
+             */
+            message: string;
+        };
+        /** CommonResponse[WorkProjectOverviewSchema] */
+        CommonResponse_WorkProjectOverviewSchema_: {
+            /**
+             * Code
+             * @default 200
+             */
+            code: number;
+            data?: components["schemas"]["WorkProjectOverviewSchema"] | null;
             /**
              * Message
              * @default success
@@ -2921,6 +3050,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** QueryWorkProjectActivityResponse */
+        QueryWorkProjectActivityResponse: {
+            /** Items */
+            items: components["schemas"]["WorkProjectWorkLogSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
         /** QueryWorkProjectAssetsResponse */
         QueryWorkProjectAssetsResponse: {
             /** Items */
@@ -2943,10 +3083,32 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** QueryWorkProjectEvidenceResponse */
+        QueryWorkProjectEvidenceResponse: {
+            /** Items */
+            items: components["schemas"]["WorkProjectEvidenceRecordSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
         /** QueryWorkProjectFindingsResponse */
         QueryWorkProjectFindingsResponse: {
             /** Items */
             items: components["schemas"]["WorkProjectFindingRecordSchema"][];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** QueryWorkProjectWorkItemsResponse */
+        QueryWorkProjectWorkItemsResponse: {
+            /** Items */
+            items: components["schemas"]["WorkProjectWorkItemRecordSchema"][];
             /** Page */
             page: number;
             /** Size */
@@ -3730,99 +3892,47 @@ export interface components {
              */
             type: "user_message";
         };
-        /** WorkProjectAgentSummaryContentSchema */
-        WorkProjectAgentSummaryContentSchema: {
-            /**
-             * Blockers
-             * @description Current blockers or unresolved risks.
-             */
-            blockers?: string[];
-            /**
-             * Decisions
-             * @description Decisions or scope changes made by this agent.
-             */
-            decisions?: string[];
-            /**
-             * Findings
-             * @description Confirmed findings or valuable negative results.
-             */
-            findings?: string[];
-            /**
-             * Next Steps
-             * @description Concrete next actions.
-             */
-            next_steps?: string[];
-            /**
-             * Notes
-             * @description Brief extra context that does not fit other fields.
-             * @default
-             */
-            notes: string;
-            /**
-             * Progress
-             * @description This agent's subtask progress from 0 to 100 with at most two decimals.
-             * @default 0
-             */
-            progress: number;
-            /**
-             * Status
-             * @description Current live status of this agent's work.
-             * @default
-             */
-            status: string;
-            /**
-             * Task Id
-             * @description Related WorkProject task id when known.
-             * @default
-             */
-            task_id: string;
-            /**
-             * Task Title
-             * @description Related task title when task_id is unavailable.
-             * @default
-             */
-            task_title: string;
-        };
-        /** WorkProjectAgentSummarySchema */
-        WorkProjectAgentSummarySchema: {
-            /** Agent Code */
-            agent_code: string;
-            summary?: components["schemas"]["WorkProjectAgentSummaryContentSchema"];
-            /** Updated At */
-            updated_at?: string | null;
-        };
         /**
-         * WorkProjectAssetExtraSchema
-         * @description Recon metadata attached to an asset. Kept small on purpose.
+         * WorkProjectAssertionStatus
+         * @enum {string}
          */
-        WorkProjectAssetExtraSchema: {
-            /**
-             * Banner
-             * @default
-             */
-            banner: string;
-        };
+        WorkProjectAssertionStatus: "hypothesized" | "observed" | "validated" | "refuted";
+        /**
+         * WorkProjectAssetCriticality
+         * @enum {string}
+         */
+        WorkProjectAssetCriticality: "unknown" | "low" | "medium" | "high" | "critical";
+        /**
+         * WorkProjectAssetKind
+         * @enum {string}
+         */
+        WorkProjectAssetKind: "network" | "host" | "domain" | "service" | "application" | "endpoint" | "repository" | "component" | "artifact" | "identity" | "data_store" | "cloud_resource";
         /**
          * WorkProjectAssetOrigin
          * @enum {string}
          */
-        WorkProjectAssetOrigin: "scope" | "discovered";
+        WorkProjectAssetOrigin: "declared" | "discovered";
         /** WorkProjectAssetRequest */
         WorkProjectAssetRequest: {
-            extra?: components["schemas"]["WorkProjectAssetExtraSchema"];
+            /** @default unknown */
+            criticality: components["schemas"]["WorkProjectAssetCriticality"];
+            kind: components["schemas"]["WorkProjectAssetKind"];
+            /** Locator */
+            locator: string;
             /**
-             * Host
+             * Name
              * @default
              */
-            host: string;
+            name: string;
+            /** @default context */
+            scope: components["schemas"]["WorkProjectAssetScope"];
+            /** @default unknown */
+            state: components["schemas"]["WorkProjectAssetState"];
             /**
-             * Path
+             * Summary
              * @default
              */
-            path: string;
-            /** Port */
-            port?: number | null;
-            type: components["schemas"]["WorkProjectAssetType"];
+            summary: string;
         };
         /** WorkProjectAssetSchema */
         WorkProjectAssetSchema: {
@@ -3841,27 +3951,27 @@ export interface components {
              * @default
              */
             created_from_session_id: string;
-            extra?: components["schemas"]["WorkProjectAssetExtraSchema"];
-            /**
-             * Host
-             * @default
-             */
-            host: string;
+            criticality: components["schemas"]["WorkProjectAssetCriticality"];
             /** Id */
             id: number;
-            /** Identifier */
-            identifier: string;
-            origin: components["schemas"]["WorkProjectAssetOrigin"];
+            kind: components["schemas"]["WorkProjectAssetKind"];
+            /** Locator */
+            locator: string;
             /**
-             * Path
+             * Name
              * @default
              */
-            path: string;
-            /** Port */
-            port?: number | null;
+            name: string;
+            origin: components["schemas"]["WorkProjectAssetOrigin"];
             /** Project Id */
             project_id: number;
-            type: components["schemas"]["WorkProjectAssetType"];
+            scope: components["schemas"]["WorkProjectAssetScope"];
+            state: components["schemas"]["WorkProjectAssetState"];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
             /**
              * Updated At
              * Format: date-time
@@ -3869,22 +3979,40 @@ export interface components {
             updated_at: string;
         };
         /**
-         * WorkProjectAssetType
+         * WorkProjectAssetScope
          * @enum {string}
          */
-        WorkProjectAssetType: "service" | "domain" | "network" | "binary";
+        WorkProjectAssetScope: "in_scope" | "context" | "out_of_scope";
+        /**
+         * WorkProjectAssetState
+         * @enum {string}
+         */
+        WorkProjectAssetState: "unknown" | "active" | "inactive" | "retired";
+        /**
+         * WorkProjectAttackAction
+         * @enum {string}
+         */
+        WorkProjectAttackAction: "initial_access" | "execution" | "persistence" | "privilege_escalation" | "defense_evasion" | "credential_access" | "discovery" | "lateral_movement" | "collection" | "command_and_control" | "exfiltration" | "impact";
         /** WorkProjectAttackPathRecordSchema */
         WorkProjectAttackPathRecordSchema: {
             /** Assets */
             assets: components["schemas"]["WorkProjectAssetSchema"][];
-            /** Edges */
-            edges: components["schemas"]["WorkProjectGraphEdgeSchema"][];
+            /** Evidence */
+            evidence: components["schemas"]["WorkProjectEvidenceSchema"][];
             path: components["schemas"]["WorkProjectAttackPathSchema"];
+            status: components["schemas"]["WorkProjectAttackPathStatus"];
             /** Steps */
             steps: components["schemas"]["WorkProjectAttackPathStepSchema"][];
         };
         /** WorkProjectAttackPathSchema */
         WorkProjectAttackPathSchema: {
+            /**
+             * Archive Reason
+             * @default
+             */
+            archive_reason: string;
+            /** Archived At */
+            archived_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3900,16 +4028,18 @@ export interface components {
              * @default
              */
             created_from_session_id: string;
+            /** Entry Asset Id */
+            entry_asset_id: number;
             /** Id */
             id: number;
+            /** Objective */
+            objective: string;
             /** Project Id */
             project_id: number;
-            status: components["schemas"]["WorkProjectAttackPathStatus"];
-            /**
-             * Summary
-             * @default
-             */
+            /** Summary */
             summary: string;
+            /** Target Asset Id */
+            target_asset_id: number;
             /** Title */
             title: string;
             /**
@@ -3922,9 +4052,20 @@ export interface components {
          * WorkProjectAttackPathStatus
          * @enum {string}
          */
-        WorkProjectAttackPathStatus: "suspected" | "validated" | "blocked" | "closed";
+        WorkProjectAttackPathStatus: "hypothesized" | "validating" | "validated" | "blocked" | "refuted" | "archived";
         /** WorkProjectAttackPathStepSchema */
         WorkProjectAttackPathStepSchema: {
+            action: components["schemas"]["WorkProjectAttackAction"];
+            /**
+             * Attack Technique Id
+             * @default
+             */
+            attack_technique_id: string;
+            /**
+             * Blocker Reason
+             * @default
+             */
+            blocker_reason: string;
             /**
              * Created At
              * Format: date-time
@@ -3940,31 +4081,57 @@ export interface components {
              * @default
              */
             created_from_session_id: string;
-            /** Edge Id */
-            edge_id: number;
+            /** Description */
+            description: string;
+            /** Finding Id */
+            finding_id?: number | null;
             /** Id */
             id: number;
             /** Path Id */
             path_id: number;
+            /** Preconditions */
+            preconditions: string;
             /** Project Id */
             project_id: number;
+            /** Relation Id */
+            relation_id?: number | null;
+            /** Result */
+            result: string;
             /** Sequence */
             sequence: number;
+            /** Source Asset Id */
+            source_asset_id: number;
+            status: components["schemas"]["WorkProjectAttackStepStatus"];
+            /** Target Asset Id */
+            target_asset_id: number;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
         };
-        /** WorkProjectFindingRecordSchema */
-        WorkProjectFindingRecordSchema: {
-            asset?: components["schemas"]["WorkProjectAssetSchema"] | null;
-            finding: components["schemas"]["WorkProjectFindingSchema"];
+        /**
+         * WorkProjectAttackStepStatus
+         * @enum {string}
+         */
+        WorkProjectAttackStepStatus: "hypothesized" | "validating" | "validated" | "blocked" | "refuted";
+        /**
+         * WorkProjectEvidenceKind
+         * @enum {string}
+         */
+        WorkProjectEvidenceKind: "observation" | "command_output" | "http_exchange" | "code_location" | "artifact" | "external_source" | "negative_result" | "operator_note";
+        /** WorkProjectEvidenceRecordSchema */
+        WorkProjectEvidenceRecordSchema: {
+            evidence: components["schemas"]["WorkProjectEvidenceSchema"];
+            primary_asset?: components["schemas"]["WorkProjectAssetSchema"] | null;
         };
-        /** WorkProjectFindingSchema */
-        WorkProjectFindingSchema: {
-            /** Asset Id */
-            asset_id?: number | null;
+        /** WorkProjectEvidenceSchema */
+        WorkProjectEvidenceSchema: {
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
             /**
              * Created At
              * Format: date-time
@@ -3980,24 +4147,116 @@ export interface components {
              * @default
              */
             created_from_session_id: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string;
-            /** Edge Id */
-            edge_id?: number | null;
             /** Id */
             id: number;
             /**
-             * Impact
+             * Invalidation Reason
              * @default
              */
-            impact: string;
+            invalidation_reason: string;
+            kind: components["schemas"]["WorkProjectEvidenceKind"];
+            /** Primary Asset Id */
+            primary_asset_id?: number | null;
             /** Project Id */
             project_id: number;
+            /** Reference */
+            reference: string;
+            /**
+             * Sha256
+             * @default
+             */
+            sha256: string;
+            status: components["schemas"]["WorkProjectEvidenceStatus"];
+            /** Summary */
+            summary: string;
+            /** Supersedes Evidence Id */
+            supersedes_evidence_id?: number | null;
+            /** Title */
+            title: string;
+            /** Work Item Id */
+            work_item_id: number;
+        };
+        /**
+         * WorkProjectEvidenceStatus
+         * @enum {string}
+         */
+        WorkProjectEvidenceStatus: "active" | "superseded" | "invalidated";
+        /** WorkProjectFindingAssetLinkSchema */
+        WorkProjectFindingAssetLinkSchema: {
+            /** Asset Id */
+            asset_id: number;
+            /** Finding Id */
+            finding_id: number;
+            role: components["schemas"]["WorkProjectFindingAssetRole"];
+        };
+        /**
+         * WorkProjectFindingAssetRole
+         * @enum {string}
+         */
+        WorkProjectFindingAssetRole: "affected" | "entry" | "impact";
+        /**
+         * WorkProjectFindingCategory
+         * @enum {string}
+         */
+        WorkProjectFindingCategory: "vulnerability" | "misconfiguration" | "exposure" | "credential" | "sensitive_data" | "security_control_gap";
+        /** WorkProjectFindingRecordSchema */
+        WorkProjectFindingRecordSchema: {
+            /** Affected Assets */
+            affected_assets: components["schemas"]["WorkProjectAssetSchema"][];
+            /** Asset Links */
+            asset_links: components["schemas"]["WorkProjectFindingAssetLinkSchema"][];
+            /** Evidence */
+            evidence: components["schemas"]["WorkProjectEvidenceSchema"][];
+            finding: components["schemas"]["WorkProjectFindingSchema"];
+            primary_asset: components["schemas"]["WorkProjectAssetSchema"];
+        };
+        /**
+         * WorkProjectFindingResolution
+         * @enum {string}
+         */
+        WorkProjectFindingResolution: "open" | "accepted" | "remediated" | "closed";
+        /** WorkProjectFindingSchema */
+        WorkProjectFindingSchema: {
+            category: components["schemas"]["WorkProjectFindingCategory"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By Agent Code
+             * @default
+             */
+            created_by_agent_code: string;
+            /**
+             * Created From Session Id
+             * @default
+             */
+            created_from_session_id: string;
+            /** Cvss Score */
+            cvss_score?: number | null;
+            /** Cvss Vector */
+            cvss_vector: string;
+            /** Cwe Id */
+            cwe_id: string;
+            /** Deferral Reason */
+            deferral_reason: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: number;
+            /** Impact */
+            impact: string;
+            /** Preconditions */
+            preconditions: string;
+            /** Primary Asset Id */
+            primary_asset_id: number;
+            /** Project Id */
+            project_id: number;
+            /** Recommendation */
+            recommendation: string;
+            resolution?: components["schemas"]["WorkProjectFindingResolution"] | null;
             severity: components["schemas"]["WorkProjectFindingSeverity"];
-            status: components["schemas"]["WorkProjectFindingStatus"];
             /** Title */
             title: string;
             /**
@@ -4007,6 +4266,7 @@ export interface components {
             updated_at: string;
             /** Validated At */
             validated_at?: string | null;
+            verification: components["schemas"]["WorkProjectFindingVerification"];
         };
         /**
          * WorkProjectFindingSeverity
@@ -4014,12 +4274,73 @@ export interface components {
          */
         WorkProjectFindingSeverity: "info" | "low" | "medium" | "high" | "critical";
         /**
-         * WorkProjectFindingStatus
+         * WorkProjectFindingVerification
          * @enum {string}
          */
-        WorkProjectFindingStatus: "suspected" | "validated" | "false_positive";
-        /** WorkProjectGraphEdgeSchema */
-        WorkProjectGraphEdgeSchema: {
+        WorkProjectFindingVerification: "suspected" | "validated" | "refuted" | "deferred";
+        /** WorkProjectGraphViewSchema */
+        WorkProjectGraphViewSchema: {
+            /** Active Work Item Counts */
+            active_work_item_counts: {
+                [key: string]: number;
+            };
+            /** Assets */
+            assets: components["schemas"]["WorkProjectAssetSchema"][];
+            /** Attack Path Counts */
+            attack_path_counts: {
+                [key: string]: number;
+            };
+            /** Finding Counts */
+            finding_counts: {
+                [key: string]: number;
+            };
+            /**
+             * Is Truncated
+             * @default false
+             */
+            is_truncated: boolean;
+            /** Relations */
+            relations: components["schemas"]["WorkProjectRelationSchema"][];
+        };
+        /** WorkProjectOverviewSchema */
+        WorkProjectOverviewSchema: {
+            /** Asset Total */
+            asset_total: number;
+            /** Attack Path Status Counts */
+            attack_path_status_counts: {
+                [key: string]: number;
+            };
+            /** Blocked Target Total */
+            blocked_target_total: number;
+            /** Covered Target Total */
+            covered_target_total: number;
+            /** Evidence Total */
+            evidence_total: number;
+            /** Finding Verification Counts */
+            finding_verification_counts: {
+                [key: string]: number;
+            };
+            /** In Scope Asset Total */
+            in_scope_asset_total: number;
+            /** Running Agent Count */
+            running_agent_count: number;
+            /** Untouched Asset Total */
+            untouched_asset_total: number;
+            /** Work Item Status Counts */
+            work_item_status_counts: {
+                [key: string]: number;
+            };
+        };
+        /** WorkProjectOwnerSchema */
+        WorkProjectOwnerSchema: {
+            /** Id */
+            id: number;
+            role: components["schemas"]["SystemUserRole"];
+            /** Username */
+            username: string;
+        };
+        /** WorkProjectRelationSchema */
+        WorkProjectRelationSchema: {
             /**
              * Created At
              * Format: date-time
@@ -4037,18 +4358,19 @@ export interface components {
             created_from_session_id: string;
             /** Id */
             id: number;
-            /**
-             * Label
-             * @default
-             */
-            label: string;
             /** Project Id */
             project_id: number;
             /** Source Asset Id */
             source_asset_id: number;
+            status: components["schemas"]["WorkProjectAssertionStatus"];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
             /** Target Asset Id */
             target_asset_id: number;
-            type: components["schemas"]["WorkProjectGraphEdgeType"];
+            type: components["schemas"]["WorkProjectRelationType"];
             /**
              * Updated At
              * Format: date-time
@@ -4056,39 +4378,22 @@ export interface components {
             updated_at: string;
         };
         /**
-         * WorkProjectGraphEdgeType
+         * WorkProjectRelationType
          * @enum {string}
          */
-        WorkProjectGraphEdgeType: "related" | "resolves_to" | "hosts" | "connects_to" | "trusts" | "exploits" | "pivots_to" | "leads_to";
-        /** WorkProjectGraphViewSchema */
-        WorkProjectGraphViewSchema: {
-            /** Assets */
-            assets: components["schemas"]["WorkProjectAssetSchema"][];
-            /** Edges */
-            edges: components["schemas"]["WorkProjectGraphEdgeSchema"][];
-            /**
-             * Is Truncated
-             * @default false
-             */
-            is_truncated: boolean;
-        };
-        /** WorkProjectOwnerSchema */
-        WorkProjectOwnerSchema: {
-            /** Id */
-            id: number;
-            role: components["schemas"]["SystemUserRole"];
-            /** Username */
-            username: string;
-        };
+        WorkProjectRelationType: "contains" | "resolves_to" | "hosts" | "exposes" | "connects_to" | "depends_on" | "implements" | "authenticates_to" | "trusts" | "controls" | "reads_from" | "writes_to" | "derived_from";
         /** WorkProjectSchema */
         WorkProjectSchema: {
-            /** Agent Summaries */
-            agent_summaries: components["schemas"]["WorkProjectAgentSummarySchema"][];
             /**
-             * Agent Summary Count
+             * Active Attack Path Count
              * @default 0
              */
-            agent_summary_count: number;
+            active_attack_path_count: number;
+            /**
+             * Active Work Item Count
+             * @default 0
+             */
+            active_work_item_count: number;
             /**
              * Asset Count
              * @default 0
@@ -4096,6 +4401,11 @@ export interface components {
             asset_count: number;
             /** Assets */
             assets: components["schemas"]["WorkProjectAssetSchema"][];
+            /**
+             * Blocked Work Item Count
+             * @default 0
+             */
+            blocked_work_item_count: number;
             /**
              * Can Cancel
              * @default false
@@ -4120,17 +4430,17 @@ export interface components {
             description: string;
             /** Id */
             id: number;
+            /**
+             * In Scope Asset Count
+             * @default 0
+             */
+            in_scope_asset_count: number;
             /** Name */
             name: string;
             /** Owner User Ids */
             owner_user_ids: number[];
             /** Owners */
             owners: components["schemas"]["WorkProjectOwnerSchema"][];
-            /**
-             * Progress
-             * @default 0
-             */
-            progress: number;
             sandbox_container?: components["schemas"]["SandboxContainerSchema"] | null;
             /** Sandbox Container Id */
             sandbox_container_id?: number | null;
@@ -4140,37 +4450,55 @@ export interface components {
              */
             session_count: number;
             status: components["schemas"]["WorkProjectStatus"];
+            type: components["schemas"]["WorkProjectType"];
             /**
-             * Task Count
+             * Untouched Asset Count
              * @default 0
              */
-            task_count: number;
-            /** Tasks */
-            tasks: components["schemas"]["WorkProjectTaskSchema"][];
-            type: components["schemas"]["WorkProjectType"];
+            untouched_asset_count: number;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Validated Finding Count
+             * @default 0
+             */
+            validated_finding_count: number;
+            /**
+             * Work Item Count
+             * @default 0
+             */
+            work_item_count: number;
         };
         /**
          * WorkProjectStatus
          * @enum {string}
          */
-        WorkProjectStatus: "working" | "completed" | "canceled";
+        WorkProjectStatus: "active" | "completed" | "canceled";
         /** WorkProjectSummarySchema */
         WorkProjectSummarySchema: {
             /**
-             * Agent Summary Count
+             * Active Attack Path Count
              * @default 0
              */
-            agent_summary_count: number;
+            active_attack_path_count: number;
+            /**
+             * Active Work Item Count
+             * @default 0
+             */
+            active_work_item_count: number;
             /**
              * Asset Count
              * @default 0
              */
             asset_count: number;
+            /**
+             * Blocked Work Item Count
+             * @default 0
+             */
+            blocked_work_item_count: number;
             /**
              * Can Cancel
              * @default false
@@ -4195,17 +4523,17 @@ export interface components {
             description: string;
             /** Id */
             id: number;
+            /**
+             * In Scope Asset Count
+             * @default 0
+             */
+            in_scope_asset_count: number;
             /** Name */
             name: string;
             /** Owner User Ids */
             owner_user_ids: number[];
             /** Owners */
             owners: components["schemas"]["WorkProjectOwnerSchema"][];
-            /**
-             * Progress
-             * @default 0
-             */
-            progress: number;
             sandbox_container?: components["schemas"]["SandboxContainerSchema"] | null;
             /** Sandbox Container Id */
             sandbox_container_id?: number | null;
@@ -4215,64 +4543,172 @@ export interface components {
              */
             session_count: number;
             status: components["schemas"]["WorkProjectStatus"];
+            type: components["schemas"]["WorkProjectType"];
             /**
-             * Task Count
+             * Untouched Asset Count
              * @default 0
              */
-            task_count: number;
-            type: components["schemas"]["WorkProjectType"];
+            untouched_asset_count: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Validated Finding Count
+             * @default 0
+             */
+            validated_finding_count: number;
+            /**
+             * Work Item Count
+             * @default 0
+             */
+            work_item_count: number;
+        };
+        /**
+         * WorkProjectTargetStatus
+         * @enum {string}
+         */
+        WorkProjectTargetStatus: "pending" | "active" | "covered" | "blocked" | "deferred";
+        /**
+         * WorkProjectType
+         * @enum {string}
+         */
+        WorkProjectType: "penetration_test" | "source_code_audit";
+        /**
+         * WorkProjectWorkItemPhase
+         * @enum {string}
+         */
+        WorkProjectWorkItemPhase: "scope_review" | "reconnaissance" | "enumeration" | "assessment" | "validation" | "exploitation" | "post_exploitation" | "code_review" | "reverse_engineering" | "cryptography_review" | "reporting";
+        /**
+         * WorkProjectWorkItemPriority
+         * @enum {string}
+         */
+        WorkProjectWorkItemPriority: "low" | "normal" | "high" | "urgent";
+        /** WorkProjectWorkItemRecordSchema */
+        WorkProjectWorkItemRecordSchema: {
+            /** Dependency Ids */
+            dependency_ids: number[];
+            /** Evidence */
+            evidence: components["schemas"]["WorkProjectEvidenceSchema"][];
+            /** Recent Logs */
+            recent_logs: components["schemas"]["WorkProjectWorkLogSchema"][];
+            /** Subordinate Run Ids */
+            subordinate_run_ids: string[];
+            /** Target Assets */
+            target_assets: components["schemas"]["WorkProjectAssetSchema"][];
+            /** Targets */
+            targets: components["schemas"]["WorkProjectWorkItemTargetSchema"][];
+            work_item: components["schemas"]["WorkProjectWorkItemSchema"];
+            /** Work Log Total */
+            work_log_total: number;
+        };
+        /** WorkProjectWorkItemSchema */
+        WorkProjectWorkItemSchema: {
+            /** Assignee Agent Code */
+            assignee_agent_code: string;
+            /** Blocker Reason */
+            blocker_reason: string;
+            /** Completion Criteria */
+            completion_criteria: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By Agent Code
+             * @default
+             */
+            created_by_agent_code: string;
+            /**
+             * Created From Session Id
+             * @default
+             */
+            created_from_session_id: string;
+            /** Execution Scope */
+            execution_scope: string;
+            /** Focus Attack Path Id */
+            focus_attack_path_id?: number | null;
+            /** Focus Attack Path Step Id */
+            focus_attack_path_step_id?: number | null;
+            /** Focus Finding Id */
+            focus_finding_id?: number | null;
+            /** Focus Relation Id */
+            focus_relation_id?: number | null;
+            /** Id */
+            id: number;
+            /** Objective */
+            objective: string;
+            /** Parent Id */
+            parent_id?: number | null;
+            phase: components["schemas"]["WorkProjectWorkItemPhase"];
+            priority: components["schemas"]["WorkProjectWorkItemPriority"];
+            /** Project Id */
+            project_id: number;
+            /** Result Summary */
+            result_summary: string;
+            status: components["schemas"]["WorkProjectWorkItemStatus"];
+            /** Title */
+            title: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
         };
-        /** WorkProjectTaskSchema */
-        WorkProjectTaskSchema: {
+        /**
+         * WorkProjectWorkItemStatus
+         * @enum {string}
+         */
+        WorkProjectWorkItemStatus: "queued" | "active" | "blocked" | "review" | "completed" | "canceled";
+        /** WorkProjectWorkItemTargetSchema */
+        WorkProjectWorkItemTargetSchema: {
+            /** Asset Id */
+            asset_id: number;
+            /** Conclusion */
+            conclusion: string;
+            /** Deferral Reason */
+            deferral_reason: string;
+            /** Id */
+            id: number;
+            status: components["schemas"]["WorkProjectTargetStatus"];
+            /** Surface */
+            surface: string;
             /**
-             * Assignee
-             * @description Agent code or owner responsible for this task.
-             * @default
+             * Updated At
+             * Format: date-time
              */
-            assignee: string;
-            /**
-             * Id
-             * @description Stable task id.
-             */
-            id?: string;
-            /**
-             * Progress
-             * @description Task progress from 0 to 100 with at most two decimals.
-             * @default 0
-             */
-            progress: number;
-            /**
-             * @description Task status.
-             * @default todo
-             */
-            status: components["schemas"]["WorkProjectTaskStatus"];
-            /**
-             * Summary
-             * @description Current concise task summary.
-             * @default
-             */
-            summary: string;
-            /**
-             * Title
-             * @description Short task title.
-             */
-            title: string;
+            updated_at: string;
+            /** Work Item Id */
+            work_item_id: number;
         };
         /**
-         * WorkProjectTaskStatus
+         * WorkProjectWorkLogKind
          * @enum {string}
          */
-        WorkProjectTaskStatus: "todo" | "in_progress" | "blocked" | "done";
-        /**
-         * WorkProjectType
-         * @enum {string}
-         */
-        WorkProjectType: "penetration_test" | "source_code_audit";
+        WorkProjectWorkLogKind: "state_change" | "plan_change" | "decision" | "blocker" | "handoff" | "result";
+        /** WorkProjectWorkLogSchema */
+        WorkProjectWorkLogSchema: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Agent Code */
+            created_by_agent_code: string;
+            /** Created From Session Id */
+            created_from_session_id: string;
+            /** Id */
+            id: number;
+            kind: components["schemas"]["WorkProjectWorkLogKind"];
+            /** Project Id */
+            project_id: number;
+            /** Work Item Id */
+            work_item_id: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -8130,12 +8566,66 @@ export interface operations {
             };
         };
     };
+    query_work_project_activity_route_api_work_projects__id__activity_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryWorkProjectActivityResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     query_work_project_assets_route_api_work_projects__id__assets_get: {
         parameters: {
             query?: {
                 page?: number;
                 size?: number;
                 keyword?: string;
+                kind?: components["schemas"]["WorkProjectAssetKind"] | null;
+                scope?: components["schemas"]["WorkProjectAssetScope"] | null;
             };
             header?: never;
             path: {
@@ -8188,6 +8678,7 @@ export interface operations {
             query?: {
                 page?: number;
                 size?: number;
+                keyword?: string;
             };
             header?: never;
             path: {
@@ -8302,11 +8793,69 @@ export interface operations {
             };
         };
     };
+    query_work_project_evidence_route_api_work_projects__id__evidence_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+                kind?: components["schemas"]["WorkProjectEvidenceKind"] | null;
+                status?: components["schemas"]["WorkProjectEvidenceStatus"] | null;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryWorkProjectEvidenceResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
     query_work_project_findings_route_api_work_projects__id__findings_get: {
         parameters: {
             query?: {
                 page?: number;
                 size?: number;
+                keyword?: string;
+                verification?: components["schemas"]["WorkProjectFindingVerification"] | null;
+                severity?: components["schemas"]["WorkProjectFindingSeverity"] | null;
             };
             header?: never;
             path: {
@@ -8447,6 +8996,55 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    get_work_project_overview_route_api_work_projects__id__overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_WorkProjectOverviewSchema_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8661,6 +9259,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommonResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Work project not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_Any_"];
+                };
+            };
+        };
+    };
+    query_work_project_work_items_route_api_work_projects__id__work_items_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                keyword?: string;
+                status?: components["schemas"]["WorkProjectWorkItemStatus"] | null;
+                assignee_agent_code?: string;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommonResponse_QueryWorkProjectWorkItemsResponse_"];
                 };
             };
             /** @description Unauthorized */

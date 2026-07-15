@@ -4,28 +4,29 @@ from sqlalchemy import Column, Index, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from schema.work_project.graph import (
-    WorkProjectAttackPathStatus,
-    WorkProjectGraphEdgeType,
+    WorkProjectAssertionStatus,
+    WorkProjectAttackAction,
+    WorkProjectAttackStepStatus,
+    WorkProjectRelationType,
 )
 
 
-class WorkProjectGraphEdge(SQLModel, table=True):
-    """A relationship between two project assets. Assets are the graph nodes."""
-
-    __tablename__ = "work_project_graph_edges"
+class WorkProjectRelation(SQLModel, table=True):
+    __tablename__ = "work_project_relations"
     __table_args__ = (
-        UniqueConstraint("project_id", "source_asset_id", "target_asset_id", "type", name="uq_work_project_graph_edge"),
-        Index("ix_work_project_graph_edges_project_type", "project_id", "type"),
-        Index("ix_work_project_graph_edges_source", "source_asset_id"),
-        Index("ix_work_project_graph_edges_target", "target_asset_id"),
+        UniqueConstraint("project_id", "source_asset_id", "target_asset_id", "type", name="uq_work_project_relation"),
+        Index("ix_work_project_relations_project_status", "project_id", "status"),
+        Index("ix_work_project_relations_source", "source_asset_id"),
+        Index("ix_work_project_relations_target", "target_asset_id"),
     )
 
     id: int | None = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="work_projects.id", index=True, ondelete="CASCADE")
     source_asset_id: int = Field(foreign_key="work_project_assets.id", index=True, ondelete="CASCADE")
     target_asset_id: int = Field(foreign_key="work_project_assets.id", index=True, ondelete="CASCADE")
-    type: WorkProjectGraphEdgeType = Field(default=WorkProjectGraphEdgeType.RELATED, sa_column=Column(String(32), nullable=False))
-    label: str = Field(default="")
+    type: WorkProjectRelationType = Field(sa_column=Column(String(32), nullable=False))
+    status: WorkProjectAssertionStatus = Field(sa_column=Column(String(32), nullable=False, index=True))
+    summary: str = ""
     created_by_agent_code: str = Field(default="", index=True)
     created_from_session_id: str = Field(default="", index=True)
     created_at: datetime = Field(default_factory=datetime.now)
@@ -34,15 +35,16 @@ class WorkProjectGraphEdge(SQLModel, table=True):
 
 class WorkProjectAttackPath(SQLModel, table=True):
     __tablename__ = "work_project_attack_paths"
-    __table_args__ = (
-        Index("ix_work_project_attack_paths_project_status", "project_id", "status"),
-    )
 
     id: int | None = Field(default=None, primary_key=True)
     project_id: int = Field(foreign_key="work_projects.id", index=True, ondelete="CASCADE")
-    title: str = Field(default="", index=True)
-    status: WorkProjectAttackPathStatus = Field(default=WorkProjectAttackPathStatus.SUSPECTED, sa_column=Column(String(32), nullable=False))
-    summary: str = Field(default="")
+    title: str = Field(index=True)
+    objective: str = ""
+    entry_asset_id: int = Field(foreign_key="work_project_assets.id", index=True, ondelete="CASCADE")
+    target_asset_id: int = Field(foreign_key="work_project_assets.id", index=True, ondelete="CASCADE")
+    summary: str = ""
+    archived_at: datetime | None = Field(default=None, index=True)
+    archive_reason: str = ""
     created_by_agent_code: str = Field(default="", index=True)
     created_from_session_id: str = Field(default="", index=True)
     created_at: datetime = Field(default_factory=datetime.now)
@@ -50,8 +52,6 @@ class WorkProjectAttackPath(SQLModel, table=True):
 
 
 class WorkProjectAttackPathStep(SQLModel, table=True):
-    """One ordered hop of an attack path, pointing at the relationship edge it traverses."""
-
     __tablename__ = "work_project_attack_path_steps"
     __table_args__ = (
         UniqueConstraint("path_id", "sequence", name="uq_work_project_attack_path_step_sequence"),
@@ -62,7 +62,17 @@ class WorkProjectAttackPathStep(SQLModel, table=True):
     project_id: int = Field(foreign_key="work_projects.id", index=True, ondelete="CASCADE")
     path_id: int = Field(foreign_key="work_project_attack_paths.id", index=True, ondelete="CASCADE")
     sequence: int = Field(index=True)
-    edge_id: int = Field(foreign_key="work_project_graph_edges.id", index=True, ondelete="CASCADE")
+    source_asset_id: int = Field(foreign_key="work_project_assets.id", index=True, ondelete="CASCADE")
+    target_asset_id: int = Field(foreign_key="work_project_assets.id", index=True, ondelete="CASCADE")
+    action: WorkProjectAttackAction = Field(sa_column=Column(String(32), nullable=False, index=True))
+    description: str = ""
+    preconditions: str = ""
+    result: str = ""
+    status: WorkProjectAttackStepStatus = Field(sa_column=Column(String(32), nullable=False, index=True))
+    relation_id: int | None = Field(default=None, foreign_key="work_project_relations.id", index=True, ondelete="SET NULL")
+    finding_id: int | None = Field(default=None, foreign_key="work_project_findings.id", index=True, ondelete="SET NULL")
+    attack_technique_id: str = Field(default="", index=True)
+    blocker_reason: str = ""
     created_by_agent_code: str = Field(default="", index=True)
     created_from_session_id: str = Field(default="", index=True)
     created_at: datetime = Field(default_factory=datetime.now)

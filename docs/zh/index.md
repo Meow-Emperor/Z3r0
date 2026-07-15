@@ -22,7 +22,7 @@ features:
   - title: 多 Agent 编排
     details: 主控 Agent 协调情报搜集、漏洞验证、代码审计、逆向分析和密码分析专家。
   - title: 项目证据平面
-    details: WorkProject 将临时分析输出转化为持久记录、关系图、攻击路径、任务和摘要。
+    details: WorkProject 将图谱目标 WorkItem 绑定到授权资产、WorkItem 归属证据、已验证发现、连续攻击路径、重测候选和主控复核决策。
   - title: 检索上下文平面
     details: 通过 LightRAG Core 构建知识图谱，为任务型输入提供匹配的原始文档分块与图谱上下文。
   - title: 可回放事件时间线
@@ -34,5 +34,5 @@ features:
   - title: 统一出口层
     details: 容器流量可通过直连、HTTP、HTTPS 或 SOCKS5 模式路由，并由平台统一管理策略。
   - title: 操作者工作台
-    details: 前端将对话、项目记录、图谱复核、sandbox 选择、终端、文件和 noVNC 组织为统一流程。
+    details: 前端将对话、工作流状态、图谱复核、证据链、攻击路径、sandbox 选择、终端、文件和 noVNC 组织为统一流程。
 ---

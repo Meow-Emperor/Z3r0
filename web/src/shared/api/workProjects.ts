@@ -9,6 +9,7 @@ import type {
   DeleteWorkProjectSessionResponse,
   DeleteWorkProjectResponse,
   GetWorkProjectGraphResponse,
+  GetWorkProjectOverviewResponse,
   GetWorkProjectResponse,
   ListWorkProjectSessionsParams,
   ListWorkProjectSessionsResponse,
@@ -18,8 +19,14 @@ import type {
   QueryWorkProjectAssetsResponse,
   QueryWorkProjectAttackPathsParams,
   QueryWorkProjectAttackPathsResponse,
+  QueryWorkProjectActivityParams,
+  QueryWorkProjectActivityResponse,
+  QueryWorkProjectEvidenceParams,
+  QueryWorkProjectEvidenceResponse,
   QueryWorkProjectFindingsParams,
   QueryWorkProjectFindingsResponse,
+  QueryWorkProjectWorkItemsParams,
+  QueryWorkProjectWorkItemsResponse,
   RetryWorkProjectPathParams,
   RetryWorkProjectResponse,
   UpdateWorkProjectMetadataRequest,
@@ -46,12 +53,24 @@ export const updateWorkProjectMetadata = defineJsonEndpoint<
 export const queryWorkProjectAssets = defineJsonEndpoint<
   [id: WorkProjectId, params: QueryWorkProjectAssetsParams], QueryWorkProjectAssetsResponse
 >("GET", (id, params) => `${WORK_PROJECTS_PATH}/${id}/assets${buildQuery(params)}`);
+export const getWorkProjectOverview = defineJsonEndpoint<[id: WorkProjectId], GetWorkProjectOverviewResponse>(
+  "GET", (id) => `${WORK_PROJECTS_PATH}/${id}/overview`,
+);
+export const queryWorkProjectEvidence = defineJsonEndpoint<
+  [id: WorkProjectId, params: QueryWorkProjectEvidenceParams], QueryWorkProjectEvidenceResponse
+>("GET", (id, params) => `${WORK_PROJECTS_PATH}/${id}/evidence${buildQuery(params)}`);
 export const queryWorkProjectFindings = defineJsonEndpoint<
   [id: WorkProjectId, params: QueryWorkProjectFindingsParams], QueryWorkProjectFindingsResponse
 >("GET", (id, params) => `${WORK_PROJECTS_PATH}/${id}/findings${buildQuery(params)}`);
 export const queryWorkProjectAttackPaths = defineJsonEndpoint<
   [id: WorkProjectId, params: QueryWorkProjectAttackPathsParams], QueryWorkProjectAttackPathsResponse
 >("GET", (id, params) => `${WORK_PROJECTS_PATH}/${id}/attack-paths${buildQuery(params)}`);
+export const queryWorkProjectWorkItems = defineJsonEndpoint<
+  [id: WorkProjectId, params: QueryWorkProjectWorkItemsParams], QueryWorkProjectWorkItemsResponse
+>("GET", (id, params) => `${WORK_PROJECTS_PATH}/${id}/work-items${buildQuery(params)}`);
+export const queryWorkProjectActivity = defineJsonEndpoint<
+  [id: WorkProjectId, params: QueryWorkProjectActivityParams], QueryWorkProjectActivityResponse
+>("GET", (id, params) => `${WORK_PROJECTS_PATH}/${id}/activity${buildQuery(params)}`);
 export const getWorkProjectGraph = defineJsonEndpoint<[id: WorkProjectId], GetWorkProjectGraphResponse>(
   "GET", (id) => `${WORK_PROJECTS_PATH}/${id}/graph`,
 );

@@ -1,5 +1,5 @@
-import { Button, Popconfirm, Select, Table, Tag } from "@douyinfe/semi-ui";
-import { Boxes, Download, Pencil, Server, SquareTerminal, Trash2 } from "lucide-react";
+import { Button, Table, Tag } from "@douyinfe/semi-ui";
+import { Boxes, Download, Pencil, Server, SquareTerminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createManagedHost, deleteManagedHost, listManagedHostImages, pullManagedHostImages, removeManagedHostImage, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";
 import { querySandboxImages } from "../../shared/api/sandboxImages";
@@ -9,8 +9,9 @@ import type { ManagedHost, ManagedHostImage, SandboxImage } from "../../shared/a
 import { AppModal } from "../../shared/components/AppModal";
 import { AsyncContent } from "../../shared/components/AsyncContent";
 import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
+import { OptionListSelect } from "../../shared/components/OptionListSelect";
 import type { ResourceColumn } from "../../shared/components/ResourceTable";
-import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, OwnerCell, ResourceIdentity, RowActionButton, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { useOptionList } from "../../shared/hooks/useOptionList";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
@@ -19,7 +20,6 @@ import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { useVisibleResourceIds } from "../../shared/hooks/useVisibleResourceIds";
 import { formatDateTime } from "../../shared/lib/date";
 import { formatBytes } from "../../shared/lib/number";
-import { UI_TEXT } from "../../shared/lib/uiText";
 import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { HostFormModal } from "./HostFormModal";
 
@@ -51,16 +51,10 @@ export function HostsPage() {
     },
   });
 
-  const summary = useMemo(
-    () => hosts.items.reduce(
-      (acc, host) => ({
-        ssh: acc.ssh + (host.ssh_port > 0 ? 1 : 0),
-        docker: acc.docker + (host.docker_management_port > 0 ? 1 : 0),
-      }),
-      { ssh: 0, docker: 0 },
-    ),
-    [hosts.items],
-  );
+  const summary = useMemo(() => ({
+    ssh: hosts.items.filter((host) => host.ssh_port > 0).length,
+    docker: hosts.items.filter((host) => host.docker_management_port > 0).length,
+  }), [hosts.items]);
 
   const columns: ResourceColumn<ManagedHost>[] = [
     {
@@ -96,20 +90,18 @@ export function HostsPage() {
       key: "actions", header: "Actions", width: "140px",
       render: (host) => (
         <RowActions>
-          <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
-            aria-label={`Connect shell for ${host.ip_address}`} onClick={() => openHostShell(host)}
+          <RowActionButton icon={<SquareTerminal size={15} />} label={`Connect shell for ${host.ip_address}`}
+            onClick={() => openHostShell(host)}
           />
-          <Button icon={<Boxes size={15} />} theme="borderless" type="tertiary"
-            aria-label={`Manage images for ${host.ip_address}`} onClick={() => setImageModalHost(host)}
+          <RowActionButton icon={<Boxes size={15} />} label={`Manage images for ${host.ip_address}`}
+            onClick={() => setImageModalHost(host)}
           />
-          <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
-            aria-label={`Edit ${host.ip_address}`} onClick={() => setModal({ mode: "edit", host })}
+          <RowActionButton icon={<Pencil size={15} />} label={`Edit ${host.ip_address}`}
+            onClick={() => setModal({ mode: "edit", host })}
           />
-          <Popconfirm title="Delete host" content={`Delete ${host.ip_address}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteHost(host)}>
-            <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-              loading={deletingHostId === host.id} aria-label={`Delete ${host.ip_address}`}
-            />
-          </Popconfirm>
+          <DeleteRowAction title="Delete host" content={`Delete ${host.ip_address}?`} label={`Delete ${host.ip_address}`}
+            loading={deletingHostId === host.id} onConfirm={() => void deleteHost(host)}
+          />
         </RowActions>
       ),
     },
@@ -243,16 +235,14 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
       className="host-images-modal"
     >
       <div className="host-images-toolbar">
-        <Select
+        <OptionListSelect
+          source={imageOptions}
           multiple
           value={selectedImageNames}
           placeholder="Select images to pull"
           optionList={imageOptions.items.map((image) => ({ label: image.image_name, value: image.image_name }))}
-          loading={imageOptions.busy}
           disabled={activeActionRef.current !== null}
-          remote
-          onSearch={imageOptions.search}
-          onListScroll={imageOptions.onListScroll}
+          emptyContent="No images"
           onChange={(value) => setSelectedImageNames(Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [])}
         />
         <Button icon={<Download size={15} />} theme="solid" type="primary" loading={pulling} disabled={activeActionRef.current !== null || selectedImageNames.length === 0} onClick={() => void pullSelected()}>
@@ -277,13 +267,10 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
           {
             title: "", dataIndex: "image_id", width: 50,
             render: (_value, record) => (
-              <Popconfirm title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void removeImage(record as ManagedHostImage)}>
-                <Button icon={<Trash2 size={14} />} theme="borderless" type="danger" size="small"
-                  loading={removingId === (record as ManagedHostImage).image_id}
-                  disabled={activeActionRef.current !== null}
-                  aria-label="Remove image"
-                />
-              </Popconfirm>
+              <DeleteRowAction title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`}
+                label="Remove image" size="small" loading={removingId === (record as ManagedHostImage).image_id}
+                disabled={activeActionRef.current !== null} onConfirm={() => void removeImage(record as ManagedHostImage)}
+              />
             ),
           },
           ]}

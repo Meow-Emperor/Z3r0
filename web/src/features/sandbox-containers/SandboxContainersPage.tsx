@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Select, Spin, Tag, Tooltip } from "@douyinfe/semi-ui";
+import { Select, Tag, Tooltip } from "@douyinfe/semi-ui";
 import {
   Box,
   Boxes,
@@ -12,15 +12,12 @@ import {
   Route,
   SquareStop,
   SquareTerminal,
-  Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";
-import { queryManagedHosts } from "../../shared/api/hosts";
 import {
   canManageSandboxContainer,
   canOpenContainerNoVNC,
-  createSandboxContainer,
   deleteSandboxContainer,
   pauseSandboxContainer,
   querySandboxContainers,
@@ -29,22 +26,21 @@ import {
   stopSandboxContainer,
   updateSandboxContainerEgress,
 } from "../../shared/api/sandboxContainers";
-import { querySandboxImages } from "../../shared/api/sandboxImages";
-import { querySystemUsers } from "../../shared/api/systemUsers";
-import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS } from "../../shared/api/generated/constants";
-import type { CreateSandboxContainerRequest, EgressProxy, ManagedHost, SandboxContainer, SandboxContainerEgressMode, SandboxImage, SystemUser } from "../../shared/api/types";
+import { SANDBOX_CONTAINER_EGRESS_MODE, SANDBOX_CONTAINER_STATUS, SANDBOX_CONTAINER_STATUS_VALUES } from "../../shared/api/generated/constants";
+import type { EgressProxy, SandboxContainer, SandboxContainerEgressMode } from "../../shared/api/types";
 import { FormField } from "../../shared/components/FormField";
 import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
+import { OptionListSelect } from "../../shared/components/OptionListSelect";
 import { ResourceModal } from "../../shared/components/ResourceModal";
 import type { ResourceColumn } from "../../shared/components/ResourceTable";
-import { OwnerCell, ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, OwnerCell, ResourceIdentity, ResourceText, RowActionButton, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
-import { useOptionList, type OptionListResult } from "../../shared/hooks/useOptionList";
+import { useOptionList } from "../../shared/hooks/useOptionList";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
-import { useAuth } from "../../shared/auth/AuthProvider";
 import { formatDateTime } from "../../shared/lib/date";
+import { countBy } from "../../shared/lib/array";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { egressProxyOption, sandboxEgressModeOptions } from "../../shared/lib/sandboxOptions";
@@ -52,23 +48,10 @@ import { useContainerShell } from "../container-shell/ContainerShellProvider";
 import { SandboxContainerFormModal } from "./SandboxContainerFormModal";
 
 export function SandboxContainersPage() {
-  const { user } = useAuth();
   const containers = usePagedResourceList<SandboxContainer>({ query: querySandboxContainers });
   const [modalOpen, setModalOpen] = useState(false);
-  const imageOptions = useOptionList<SandboxImage>({ query: querySandboxImages });
-  const hostOptions = useOptionList<ManagedHost>({ query: queryManagedHosts });
-  const userOptions = useOptionList<SystemUser>({ query: querySystemUsers });
-  const egressProxyOptions = useOptionList<EgressProxy>({ query: queryEgressProxies });
   const [egressModalContainer, setEgressModalContainer] = useState<SandboxContainer | null>(null);
   const { openFileManager, openNoVNC, openShell } = useContainerShell();
-
-  const refreshAll = useCallback(async () => {
-    await containers.loadItems();
-    await imageOptions.load();
-    await hostOptions.load();
-    await userOptions.load();
-    await egressProxyOptions.load();
-  }, [containers.loadItems, egressProxyOptions.load, hostOptions.load, imageOptions.load, userOptions.load]);
 
   const { run: startContainer, busyId: startingId } = useResourceAction<SandboxContainer>(
     (container) => startSandboxContainer(container.id), containers.loadItems,
@@ -89,32 +72,12 @@ export function SandboxContainersPage() {
   useAdminResourceHeader({
     createLabel: "Create Container",
     refreshLabel: "Refresh sandbox containers",
-    loading: containers.loading || imageOptions.loading || hostOptions.loading || userOptions.loading || egressProxyOptions.loading,
+    loading: containers.loading,
     onCreate: () => setModalOpen(true),
-    onRefresh: refreshAll,
+    onRefresh: containers.loadItems,
   });
 
-  const { saving, submit } = useResourceSubmit({
-    onSuccess: async () => {
-      setModalOpen(false);
-      await containers.loadItems();
-    },
-  });
-
-  const summary = useMemo(
-    () => containers.items.reduce(
-      (acc, container) => ({
-        running: acc.running + (container.status === SANDBOX_CONTAINER_STATUS.RUNNING ? 1 : 0),
-        paused: acc.paused + (container.status === SANDBOX_CONTAINER_STATUS.PAUSED ? 1 : 0),
-        created: acc.created + (container.status === SANDBOX_CONTAINER_STATUS.CREATED ? 1 : 0),
-        stopped: acc.stopped + (container.status === SANDBOX_CONTAINER_STATUS.STOPPED ? 1 : 0),
-      }),
-      { running: 0, paused: 0, created: 0, stopped: 0 },
-    ),
-    [containers.items],
-  );
-
-  const handleCreate = (payload: CreateSandboxContainerRequest) => submit(() => createSandboxContainer(payload));
+  const summary = useMemo(() => countBy(containers.items, SANDBOX_CONTAINER_STATUS_VALUES, (container) => container.status), [containers.items]);
 
   const columns: ResourceColumn<SandboxContainer>[] = [
     {
@@ -162,44 +125,42 @@ export function SandboxContainersPage() {
         const canManage = canManageSandboxContainer(container);
         return (
           <RowActions>
-            <Button icon={<FolderOpen size={15} />} theme="borderless" type="tertiary"
+            <RowActionButton icon={<FolderOpen size={15} />} label={`Browse files for ${container.container_name}`}
               disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
-              aria-label={`Browse files for ${container.container_name}`} onClick={() => openFileManager(container)}
+              onClick={() => openFileManager(container)}
             />
-            <Button icon={<SquareTerminal size={15} />} theme="borderless" type="tertiary"
+            <RowActionButton icon={<SquareTerminal size={15} />} label={`Connect shell for ${container.container_name}`}
               disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || container.control_proxy_host_port <= 0}
-              aria-label={`Connect shell for ${container.container_name}`} onClick={() => openShell(container)}
+              onClick={() => openShell(container)}
             />
-            <Button icon={<Monitor size={15} />} theme="borderless" type="tertiary"
+            <RowActionButton icon={<Monitor size={15} />} label={`Connect screen for ${container.container_name}`}
               disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING || !canOpenContainerNoVNC(container)}
-              aria-label={`Connect screen for ${container.container_name}`} onClick={() => openNoVNC(container)}
+              onClick={() => openNoVNC(container)}
             />
-            <Button icon={<Network size={15} />} theme="borderless" type="tertiary"
+            <RowActionButton icon={<Network size={15} />} label={`Set egress for ${container.container_name}`}
               disabled={!canManage || container.control_proxy_host_port <= 0}
-              aria-label={`Set egress for ${container.container_name}`} onClick={() => setEgressModalContainer(container)}
+              onClick={() => setEgressModalContainer(container)}
             />
-            <Button icon={<Play size={15} />} theme="borderless" type="primary"
+            <RowActionButton icon={<Play size={15} />} label={`Start ${container.container_name}`} type="primary"
               disabled={!canManage || (container.status !== SANDBOX_CONTAINER_STATUS.CREATED && container.status !== SANDBOX_CONTAINER_STATUS.STOPPED)}
               loading={startingId === container.id}
-              aria-label={`Start ${container.container_name}`} onClick={() => void startContainer(container)}
+              onClick={() => void startContainer(container)}
             />
-            <Button icon={<SquareStop size={15} />} theme="borderless" type="danger"
+            <RowActionButton icon={<SquareStop size={15} />} label={`Stop ${container.container_name}`} type="danger"
               disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={stoppingId === container.id}
-              aria-label={`Stop ${container.container_name}`} onClick={() => void stopContainer(container)}
+              onClick={() => void stopContainer(container)}
             />
-            <Button icon={<Pause size={15} />} theme="borderless" type="tertiary"
+            <RowActionButton icon={<Pause size={15} />} label={`Pause ${container.container_name}`}
               disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.RUNNING} loading={pausingId === container.id}
-              aria-label={`Pause ${container.container_name}`} onClick={() => void pauseContainer(container)}
+              onClick={() => void pauseContainer(container)}
             />
-            <Button icon={<RotateCcw size={15} />} theme="borderless" type="primary"
+            <RowActionButton icon={<RotateCcw size={15} />} label={`Resume ${container.container_name}`} type="primary"
               disabled={!canManage || container.status !== SANDBOX_CONTAINER_STATUS.PAUSED} loading={resumingId === container.id}
-              aria-label={`Resume ${container.container_name}`} onClick={() => void resumeContainer(container)}
+              onClick={() => void resumeContainer(container)}
             />
-            <Popconfirm title="Delete container" content={`Delete ${container.container_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteContainer(container)}>
-              <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-                disabled={!canManage} loading={deletingId === container.id} aria-label={`Delete ${container.container_name}`}
-              />
-            </Popconfirm>
+            <DeleteRowAction title="Delete container" content={`Delete ${container.container_name}?`} label={`Delete ${container.container_name}`}
+              disabled={!canManage} loading={deletingId === container.id} onConfirm={() => void deleteContainer(container)}
+            />
           </RowActions>
         );
       },
@@ -218,10 +179,10 @@ export function SandboxContainersPage() {
         state={containers}
         metrics={[
           { label: "Total", value: containers.total },
-          { label: "Running", value: summary.running },
-          { label: "Paused", value: summary.paused },
-          { label: "Created", value: summary.created },
-          { label: "Stopped", value: summary.stopped },
+          { label: "Running", value: summary[SANDBOX_CONTAINER_STATUS.RUNNING] },
+          { label: "Paused", value: summary[SANDBOX_CONTAINER_STATUS.PAUSED] },
+          { label: "Created", value: summary[SANDBOX_CONTAINER_STATUS.CREATED] },
+          { label: "Stopped", value: summary[SANDBOX_CONTAINER_STATUS.STOPPED] },
         ]}
         emptyIcon={<Boxes size={42} />}
         emptyTitle="No containers found"
@@ -229,18 +190,14 @@ export function SandboxContainersPage() {
 
       <SandboxContainerFormModal
         open={modalOpen}
-        saving={saving}
-        imageOptions={imageOptions}
-        hostOptions={hostOptions}
-        userOptions={userOptions}
-        egressProxyOptions={egressProxyOptions}
-        currentUserId={user?.id ?? 0}
         onCancel={() => setModalOpen(false)}
-        onSubmit={handleCreate}
+        onCreated={async () => {
+          setModalOpen(false);
+          await containers.loadItems();
+        }}
       />
       <ContainerEgressModal
         container={egressModalContainer}
-        egressProxyOptions={egressProxyOptions}
         onClose={() => setEgressModalContainer(null)}
         onSaved={async () => {
           setEgressModalContainer(null);
@@ -253,15 +210,14 @@ export function SandboxContainersPage() {
 
 function ContainerEgressModal({
   container,
-  egressProxyOptions,
   onClose,
   onSaved,
 }: {
   container: SandboxContainer | null;
-  egressProxyOptions: OptionListResult<EgressProxy>;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const egressProxyOptions = useOptionList<EgressProxy>({ enabled: Boolean(container), query: queryEgressProxies });
   const [egressMode, setEgressMode] = useState<SandboxContainerEgressMode>(SANDBOX_CONTAINER_EGRESS_MODE.DIRECT);
   const [selectedProxyId, setSelectedProxyId] = useState<number | undefined>();
   const { saving, submit } = useResourceSubmit({ onSuccess: onSaved });
@@ -305,16 +261,13 @@ function ContainerEgressModal({
       </FormField>
       {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
         <FormField label="Managed Proxy">
-          <Select
+          <OptionListSelect
+            source={egressProxyOptions}
             prefix={<Network size={16} />}
             value={selectedProxyId}
-            loading={egressProxyOptions.busy}
             placeholder="Select an egress proxy"
-            emptyContent={egressProxyOptions.busy ? <Spin size="small" /> : "No egress proxies"}
+            emptyContent="No egress proxies"
             optionList={egressProxyOptions.items.map(egressProxyOption)}
-            remote
-            onSearch={egressProxyOptions.search}
-            onListScroll={egressProxyOptions.onListScroll}
             onChange={(value) => setSelectedProxyId(typeof value === "number" ? value : undefined)}
           />
         </FormField>

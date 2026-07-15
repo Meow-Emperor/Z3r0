@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Progress } from "@douyinfe/semi-ui";
+import { Button } from "@douyinfe/semi-ui";
 import {
   Ban,
   ChevronDown,
@@ -7,7 +7,6 @@ import {
   FolderKanban,
   FolderOpen,
   RotateCcw,
-  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -31,19 +30,17 @@ import type {
 import { AsyncContent } from "../../shared/components/AsyncContent";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
-import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, ResourceIdentity, ResourceText, RowActionButton, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
+import { useMountedRef } from "../../shared/hooks/useMountedRef";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
-import { UI_TEXT } from "../../shared/lib/uiText";
 import { WorkProjectFormModal } from "./WorkProjectFormModal";
 import {
   WorkProjectAssets,
   WorkProjectPanel,
   WorkProjectStatusTag,
-  WorkProjectSummaries,
-  WorkProjectTasks,
   WorkProjectTypeTag,
   workProjectOwnerNames,
 } from "./workProjectView";
@@ -62,19 +59,11 @@ export function WorkProjectsPage() {
   const navigate = useNavigate();
   const [adminAction, setAdminAction] = useState<{ id: number; type: AdminAction } | null>(null);
   const adminActionRef = useRef(false);
-  const mountedRef = useRef(true);
+  const mountedRef = useMountedRef();
 
   useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      detailRequestRef.current += 1;
-    };
+    return () => { detailRequestRef.current += 1; };
   }, []);
-
-  const refreshAll = useCallback(async () => {
-    await projects.loadItems();
-  }, [projects.loadItems]);
 
   useAdminResourceHeader({
     createLabel: "Create Project",
@@ -84,14 +73,14 @@ export function WorkProjectsPage() {
       setEditingProject(null);
       setModalOpen(true);
     },
-    onRefresh: refreshAll,
+    onRefresh: projects.loadItems,
   });
 
   const { saving, submit } = useResourceSubmit({
     onSuccess: async () => {
       setModalOpen(false);
       setEditingProject(null);
-      await refreshAll();
+      await projects.loadItems();
       refreshProjectSidebar();
     },
   });
@@ -99,7 +88,7 @@ export function WorkProjectsPage() {
   const summary = useMemo(
     () => projects.items.reduce(
       (acc, project) => ({
-        working: acc.working + (project.status === WORK_PROJECT_STATUS.WORKING ? 1 : 0),
+        working: acc.working + (project.status === WORK_PROJECT_STATUS.ACTIVE ? 1 : 0),
         sessions: acc.sessions + project.session_count,
         assets: acc.assets + project.asset_count,
       }),
@@ -209,58 +198,45 @@ export function WorkProjectsPage() {
     { key: "status", header: "Status", width: "104px", render: (project) => <WorkProjectStatusTag project={project} /> },
     {
       key: "records", header: "Records", width: "minmax(170px, 0.5fr)",
-      render: (project) => <ResourceText>{project.asset_count} assets · {project.task_count} tasks</ResourceText>,
+      render: (project) => <ResourceText>{project.asset_count} assets · {project.work_item_count} work items</ResourceText>,
     },
     { key: "updated", header: "Updated", width: "minmax(150px, 0.4fr)", render: (p) => formatDateTime(p.updated_at) },
     {
       key: "actions", header: "Actions", width: "132px",
       render: (project) => (
         <RowActions>
-          <Button
+          <RowActionButton
             icon={<FolderOpen size={15} />}
-            theme="borderless"
-            type="tertiary"
-            aria-label={`Open workspace for ${project.name}`}
+            label={`Open workspace for ${project.name}`}
             disabled={adminAction !== null}
             onClick={() => navigate(`/work-projects/${project.id}`)}
           />
-          <Button
+          <RowActionButton
             icon={<Edit3 size={15} />}
-            theme="borderless"
-            type="tertiary"
-            aria-label={`Edit ${project.name}`}
+            label={`Edit ${project.name}`}
             disabled={adminAction !== null}
             loading={detailLoadingId === project.id && expandedId !== project.id}
             onClick={() => void openProjectEditor(project)}
           />
-          <Button
+          <RowActionButton
             icon={<Ban size={15} />}
-            theme="borderless"
+            label={`Cancel ${project.name}`}
             type="danger"
             disabled={adminAction !== null || !project.can_cancel}
             loading={adminAction?.id === project.id && adminAction.type === "cancel"}
-            aria-label={`Cancel ${project.name}`}
             onClick={() => void handleAdminProjectAction(project, "cancel")}
           />
-          <Button
+          <RowActionButton
             icon={<RotateCcw size={15} />}
-            theme="borderless"
-            type="tertiary"
+            label={`Retry ${project.name}`}
             disabled={adminAction !== null || !project.can_retry}
             loading={adminAction?.id === project.id && adminAction.type === "retry"}
-            aria-label={`Retry ${project.name}`}
             onClick={() => void handleAdminProjectAction(project, "retry")}
           />
-          <Popconfirm title="Delete project" content={`Delete ${project.name} and all project sessions?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void handleAdminProjectAction(project, "delete")}>
-            <Button
-              icon={<Trash2 size={15} />}
-              theme="borderless"
-              type="danger"
-              disabled={adminAction !== null}
-              loading={adminAction?.id === project.id && adminAction.type === "delete"}
-              aria-label={`Delete ${project.name}`}
-            />
-          </Popconfirm>
+          <DeleteRowAction title="Delete project" content={`Delete ${project.name} and all project sessions?`} label={`Delete ${project.name}`}
+            disabled={adminAction !== null} loading={adminAction?.id === project.id && adminAction.type === "delete"}
+            onConfirm={() => void handleAdminProjectAction(project, "delete")}
+          />
         </RowActions>
       ),
     },
@@ -273,7 +249,7 @@ export function WorkProjectsPage() {
         state={projects}
         metrics={[
           { label: "Total", value: projects.total },
-          { label: "Working", value: summary.working },
+          { label: "Active", value: summary.working },
           { label: "Project sessions", value: summary.sessions },
           { label: "Assets", value: summary.assets },
         ]}
@@ -329,8 +305,8 @@ function WorkProjectExpanded({
           <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
         </div>
         <div>
-          <span>Task Progress</span>
-          <Progress percent={project.progress} size="small" showInfo />
+          <span>Scope Coverage</span>
+          <strong>{project.untouched_asset_count} untouched / {project.in_scope_asset_count} in scope</strong>
         </div>
       </section>
 
@@ -338,11 +314,18 @@ function WorkProjectExpanded({
         <WorkProjectPanel title="Assets" empty={project.assets.length === 0 ? "No assets." : ""}>
           <WorkProjectAssets project={project} />
         </WorkProjectPanel>
-        <WorkProjectPanel title="Tasks" empty={project.tasks.length === 0 ? "No tasks." : ""}>
-          <WorkProjectTasks project={project} />
+        <WorkProjectPanel title="Workflow" empty="">
+          <div className="work-project-asset-list">
+            <div><strong>{project.active_work_item_count}</strong><span>Active or review</span></div>
+            <div><strong>{project.blocked_work_item_count}</strong><span>Blocked</span></div>
+            <div><strong>{project.work_item_count}</strong><span>Total work items</span></div>
+          </div>
         </WorkProjectPanel>
-        <WorkProjectPanel title="Agent Summaries" empty={project.agent_summaries.length === 0 ? "No summaries." : ""}>
-          <WorkProjectSummaries project={project} />
+        <WorkProjectPanel title="Security State" empty="">
+          <div className="work-project-asset-list">
+            <div><strong>{project.validated_finding_count}</strong><span>Validated findings</span></div>
+            <div><strong>{project.active_attack_path_count}</strong><span>Open attack paths</span></div>
+          </div>
         </WorkProjectPanel>
       </section>
     </div>

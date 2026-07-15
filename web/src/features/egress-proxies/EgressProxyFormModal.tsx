@@ -8,23 +8,14 @@ import { ResourceModal } from "../../shared/components/ResourceModal";
 
 type EgressProxyFormValues = CreateEgressProxyRequest;
 
-type EgressProxyFormModalProps =
-  | {
-      open: boolean;
-      mode: "create";
-      proxy: null;
-      saving: boolean;
-      onCancel: () => void;
-      onSubmit: (payload: CreateEgressProxyRequest) => Promise<void>;
-    }
-  | {
-      open: boolean;
-      mode: "edit";
-      proxy: EgressProxy;
-      saving: boolean;
-      onCancel: () => void;
-      onSubmit: (payload: UpdateEgressProxyRequest) => Promise<void>;
-    };
+type EgressProxyFormModalProps = {
+  open: boolean;
+  proxy: EgressProxy | null;
+  saving: boolean;
+  onCancel: () => void;
+  onCreate: (payload: CreateEgressProxyRequest) => Promise<void>;
+  onUpdate: (proxy: EgressProxy, payload: UpdateEgressProxyRequest) => Promise<void>;
+};
 
 const EMPTY: EgressProxyFormValues = {
   proxy_type: EGRESS_PROXY_TYPE.HTTP,
@@ -45,21 +36,24 @@ function initial(proxy: EgressProxy | null): EgressProxyFormValues {
   };
 }
 
-export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSubmit }: EgressProxyFormModalProps) {
+export function EgressProxyFormModal({ open, proxy, saving, onCancel, onCreate, onUpdate }: EgressProxyFormModalProps) {
   const [values, setValues] = useState<EgressProxyFormValues>(() => initial(proxy));
+  const editing = Boolean(proxy);
 
   useEffect(() => {
     if (open) setValues(initial(proxy));
   }, [open, proxy]);
 
   const submit = async () => {
-    await onSubmit({
+    const payload = {
       proxy_type: values.proxy_type,
       proxy_host: values.proxy_host.trim(),
       proxy_port: values.proxy_port,
       proxy_account: values.proxy_account.trim(),
       proxy_password: values.proxy_password,
-    });
+    };
+    if (proxy) await onUpdate(proxy, payload);
+    else await onCreate(payload);
   };
 
   const submitDisabled = (
@@ -71,10 +65,10 @@ export function EgressProxyFormModal({ open, mode, proxy, saving, onCancel, onSu
   return (
     <ResourceModal
       open={open}
-      title={mode === "create" ? "Create Egress Proxy" : "Edit Egress Proxy"}
+      title={editing ? "Edit Egress Proxy" : "Create Egress Proxy"}
       titleIcon={<Network size={17} />}
       saving={saving}
-      submitLabel={mode === "create" ? "Create" : "Save"}
+      submitLabel={editing ? "Save" : "Create"}
       submitDisabled={submitDisabled}
       onCancel={onCancel}
       onSubmit={submit}

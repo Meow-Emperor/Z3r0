@@ -15,21 +15,24 @@ from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
 from model.work_project.assets import WorkProjectAsset
 from model.work_project.findings import WorkProjectFinding
-from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
+from model.work_project.graph import WorkProjectAttackPath, WorkProjectAttackPathStep
+from model.work_project.projects import WorkProject, WorkProjectOwner
+from model.work_project.workflow import WorkProjectWorkItem, WorkProjectWorkItemTarget
 from schema.agent.sessions import AgentSessionSummarySchema, SessionType
 from schema.sandbox.containers import SandboxContainerSchema, SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
-from schema.work_project.assets import WorkProjectAssetOrigin, WorkProjectAssetRequest, WorkProjectAssetType
+from schema.work_project.assets import WorkProjectAssetOrigin, WorkProjectAssetRequest, WorkProjectAssetScope
+from schema.work_project.findings import WorkProjectFindingVerification
+from schema.work_project.graph import WorkProjectAttackPathStepSchema, WorkProjectAttackPathStatus, derive_attack_path_status
 from schema.work_project.projects import (
     CreateWorkProjectRequest,
     UpdateWorkProjectMetadataRequest,
-    WorkProjectAgentSummarySchema,
     WorkProjectOwnerSchema,
     WorkProjectSchema,
     WorkProjectSummarySchema,
     WorkProjectStatus,
-    WorkProjectTaskSchema,
 )
+from schema.work_project.workflow import WorkProjectTargetStatus, WorkProjectWorkItemStatus
 from service.agent.sessions import cancel_sessions, delete_session, ensure_sdk_session_row, list_sessions
 from service.common.pagination import Page, paginate_statement
 from service.sandbox.egress import sandbox_egress_label
@@ -38,8 +41,6 @@ from service.sandbox.status import status_generation
 from service.sandbox.types import SandboxContainerRecord
 from service.system_user.locking import lock_system_user_lifecycle
 from service.work_project.assets import apply_asset_request
-from service.work_project.graph import purge_edges_touching_asset
-from service.work_project.progress import derive_work_project_status
 
 
 logger = get_logger(__name__)
@@ -58,11 +59,11 @@ class WorkProjectMetadataValidationError(ValueError):
 
 
 def can_create_work_project_session(status: WorkProjectStatus) -> bool:
-    return status != WorkProjectStatus.CANCELED
+    return status == WorkProjectStatus.ACTIVE
 
 
 def can_cancel_work_project(status: WorkProjectStatus) -> bool:
-    return status != WorkProjectStatus.CANCELED
+    return status == WorkProjectStatus.ACTIVE
 
 
 def can_retry_work_project(status: WorkProjectStatus) -> bool:
@@ -79,9 +80,8 @@ async def create_work_project(
     project = WorkProject(
         name=request.name,
         description=request.description,
-        tasks=[],
-        progress=0,
-        status=WorkProjectStatus.WORKING,
+        sandbox_container_id=request.sandbox_container_id,
+        status=WorkProjectStatus.ACTIVE,
         type=request.type,
         created_at=now,
         updated_at=now,
@@ -101,7 +101,6 @@ async def create_work_project(
         await session.flush()
         project_id = project.id or 0
         _set_project_owner_rows(session, project_id, request.owner_user_ids)
-        _set_project_sandbox_container_row(session, project_id, request.sandbox_container_id)
         _set_project_asset_rows(session, project_id, request.assets)
         await session.commit()
         await session.refresh(project)
@@ -149,11 +148,11 @@ async def update_work_project_metadata(
             return None
         project.name = request.name
         project.description = request.description
+        project.sandbox_container_id = request.sandbox_container_id
         project.type = request.type
         project.updated_at = datetime.now()
         session.add(project)
         await _replace_project_owners(session, id, request.owner_user_ids)
-        await _replace_project_sandbox_container(session, id, request.sandbox_container_id)
         await _upsert_project_assets(session, id, request.assets)
         await _sync_project_session_sandbox_selection(session, id, request.sandbox_container_id)
         await session.commit()
@@ -244,7 +243,7 @@ async def retry_work_project(
         if not can_retry_work_project(project.status):
             return await _project_schema(session, project, user_id=user_id, user_role=user_role), False
 
-        project.status = derive_work_project_status(project.tasks, WorkProjectStatus.WORKING)
+        project.status = WorkProjectStatus.ACTIVE
         project.updated_at = datetime.now()
         session.add(project)
         await session.commit()
@@ -253,6 +252,62 @@ async def retry_work_project(
 
     logger.debug("work project retried: %s", project.id)
     return schema, True
+
+
+async def complete_work_project(project_id: int) -> str:
+    async with get_async_session() as session:
+        project = (await session.exec(
+            select(WorkProject).where(WorkProject.id == project_id).with_for_update()
+        )).one_or_none()
+        if project is None:
+            return "work project not found"
+        if project.status != WorkProjectStatus.ACTIVE:
+            return f"work project is {project.status}"
+        open_work = (await session.exec(select(WorkProjectWorkItem.id).where(
+            WorkProjectWorkItem.project_id == project_id,
+            WorkProjectWorkItem.status.not_in({WorkProjectWorkItemStatus.COMPLETED, WorkProjectWorkItemStatus.CANCELED}),
+        ).limit(1))).first()
+        if open_work is not None:
+            return "work project has non-terminal work items"
+        suspected = (await session.exec(select(WorkProjectFinding.id).where(
+            WorkProjectFinding.project_id == project_id,
+            WorkProjectFinding.verification == WorkProjectFindingVerification.SUSPECTED,
+        ).limit(1))).first()
+        if suspected is not None:
+            return "work project has suspected findings that require validation, refutation, or deferral"
+        in_scope_assets = set((await session.exec(select(WorkProjectAsset.id).where(
+            WorkProjectAsset.project_id == project_id,
+            WorkProjectAsset.scope == WorkProjectAssetScope.IN_SCOPE,
+        ))).all())
+        covered_assets = set((await session.exec(
+            select(WorkProjectWorkItemTarget.asset_id)
+            .join(WorkProjectWorkItem, WorkProjectWorkItem.id == WorkProjectWorkItemTarget.work_item_id)
+            .where(
+                WorkProjectWorkItem.project_id == project_id,
+                WorkProjectWorkItem.status == WorkProjectWorkItemStatus.COMPLETED,
+                WorkProjectWorkItemTarget.status.in_({WorkProjectTargetStatus.COVERED, WorkProjectTargetStatus.DEFERRED}),
+            )
+        )).all())
+        if not in_scope_assets.issubset(covered_assets):
+            return "work project has in-scope assets without a covered or deferred target conclusion"
+        paths = list((await session.exec(select(WorkProjectAttackPath).where(WorkProjectAttackPath.project_id == project_id))).all())
+        steps = list((await session.exec(select(WorkProjectAttackPathStep).where(WorkProjectAttackPathStep.project_id == project_id))).all())
+        steps_by_path: dict[int, list[WorkProjectAttackPathStepSchema]] = {}
+        for step in steps:
+            steps_by_path.setdefault(step.path_id, []).append(WorkProjectAttackPathStepSchema.model_validate(step))
+        for path in paths:
+            status = derive_attack_path_status(steps_by_path.get(path.id or 0, []), path.archived_at)
+            if status not in {
+                WorkProjectAttackPathStatus.VALIDATED,
+                WorkProjectAttackPathStatus.REFUTED,
+                WorkProjectAttackPathStatus.ARCHIVED,
+            }:
+                return "work project has unresolved attack paths"
+        project.status = WorkProjectStatus.COMPLETED
+        project.updated_at = datetime.now()
+        session.add(project)
+        await session.commit()
+    return ""
 
 
 async def query_work_projects_for_user(
@@ -401,6 +456,7 @@ async def _project_schema(
 ) -> WorkProjectSchema:
     project_id = project.id or 0
     assets = await _scope_assets_for_project(session, project_id)
+    metrics = await _project_metrics(session, project_id)
     return WorkProjectSchema(**_project_schema_payload(
         project=project,
         owners=await _owners_for_project(session, project_id),
@@ -411,7 +467,7 @@ async def _project_schema(
             user_role=user_role,
         ),
         assets=assets,
-        asset_count=(await _asset_counts(session, [project_id])).get(project_id, 0),
+        metrics=metrics,
         session_count=await _session_count_in_tx(session, project_id),
     ))
 
@@ -479,7 +535,6 @@ async def _query_work_projects(
 
     async with get_async_session() as session:
         counts = await _session_counts(session, [project.id or 0 for project in projects])
-        asset_counts = await _asset_counts(session, [project.id or 0 for project in projects])
         owners = await _owners_by_project(session, [project.id or 0 for project in projects])
         sandbox_container_by_project = await _sandbox_container_by_project(
             session,
@@ -492,7 +547,7 @@ async def _query_work_projects(
                 project=project,
                 owners=owners.get(project.id or 0, []),
                 sandbox_container=sandbox_container_by_project.get(project.id or 0),
-                asset_count=asset_counts.get(project.id or 0, 0),
+                metrics=await _project_metrics(session, project.id or 0),
                 session_count=counts.get(project.id or 0, 0),
             ))
             for project in projects
@@ -505,7 +560,7 @@ def _project_schema_payload(
     owners: list[WorkProjectOwnerSchema],
     sandbox_container: SandboxContainerSchema | None,
     assets: list[WorkProjectAsset],
-    asset_count: int,
+    metrics: dict[str, int],
     session_count: int,
 ) -> dict[str, object]:
     return {
@@ -513,16 +568,10 @@ def _project_schema_payload(
             project=project,
             owners=owners,
             sandbox_container=sandbox_container,
-            asset_count=asset_count,
+            metrics=metrics,
             session_count=session_count,
         ),
         "assets": assets,
-        "tasks": [WorkProjectTaskSchema.model_validate(item) for item in project.tasks],
-        "agent_summaries": [
-            WorkProjectAgentSummarySchema.model_validate(summary)
-            for summary in (project.agent_summaries or {}).values()
-            if isinstance(summary, dict)
-        ],
     }
 
 
@@ -530,7 +579,7 @@ def _project_summary_payload(
     project: WorkProject,
     owners: list[WorkProjectOwnerSchema],
     sandbox_container: SandboxContainerSchema | None,
-    asset_count: int,
+    metrics: dict[str, int],
     session_count: int,
 ) -> dict[str, object]:
     return {
@@ -541,10 +590,14 @@ def _project_summary_payload(
         "owners": owners,
         "sandbox_container_id": sandbox_container.id if sandbox_container is not None else None,
         "sandbox_container": sandbox_container,
-        "asset_count": asset_count,
-        "task_count": len(project.tasks or []),
-        "agent_summary_count": len(project.agent_summaries or {}),
-        "progress": project.progress,
+        "asset_count": metrics["asset_count"],
+        "in_scope_asset_count": metrics["in_scope_asset_count"],
+        "untouched_asset_count": metrics["untouched_asset_count"],
+        "work_item_count": metrics["work_item_count"],
+        "active_work_item_count": metrics["active_work_item_count"],
+        "blocked_work_item_count": metrics["blocked_work_item_count"],
+        "validated_finding_count": metrics["validated_finding_count"],
+        "active_attack_path_count": metrics["active_attack_path_count"],
         "session_count": session_count,
         "status": project.status,
         "can_create_session": can_create_work_project_session(project.status),
@@ -590,7 +643,7 @@ async def _sandbox_container_by_project(
         return {}
     rows = (await session.exec(
         select(
-            WorkProjectSandboxContainer,
+            WorkProject,
             SandboxContainer,
             SandboxImage.image_name,
             SandboxImage.supports_tor,
@@ -599,21 +652,17 @@ async def _sandbox_container_by_project(
             ManagedHost.ip_address,
             EgressProxy,
         )
-        .join(SandboxContainer, SandboxContainer.id == WorkProjectSandboxContainer.sandbox_container_id)
+        .join(SandboxContainer, SandboxContainer.id == WorkProject.sandbox_container_id)
         .join(SandboxImage, SandboxImage.id == SandboxContainer.image_id)
         .join(SystemUser, SystemUser.id == SandboxContainer.owner_id)
         .join(ManagedHost, ManagedHost.id == SandboxContainer.host_id)
         .outerjoin(EgressProxy, EgressProxy.id == SandboxContainer.egress_proxy_id)
-        .where(WorkProjectSandboxContainer.project_id.in_(ids))
-        .order_by(
-            WorkProjectSandboxContainer.project_id,
-            WorkProjectSandboxContainer.position,
-            WorkProjectSandboxContainer.sandbox_container_id,
-        )
+        .where(WorkProject.id.in_(ids))
+        .order_by(WorkProject.id)
     )).all()
     result: dict[int, SandboxContainerSchema | None] = dict.fromkeys(ids)
     for (
-        link,
+        project,
         container,
         image_name,
         supports_tor,
@@ -622,8 +671,6 @@ async def _sandbox_container_by_project(
         host_ip_address,
         egress_proxy,
     ) in rows:
-        if result.get(link.project_id) is not None:
-            continue
         record = SandboxContainerRecord(
             container=container,
             image_name=image_name,
@@ -633,7 +680,7 @@ async def _sandbox_container_by_project(
             host_ip_address=host_ip_address,
             egress_label=sandbox_egress_label(container, egress_proxy),
         )
-        result[link.project_id] = sandbox_container_schema(record, user_id=user_id, user_role=user_role)
+        result[project.id or 0] = sandbox_container_schema(record, user_id=user_id, user_role=user_role)
     return result
 
 
@@ -652,16 +699,76 @@ async def _sandbox_container_for_project(
     )).get(project_id)
 
 
-async def _asset_counts(session, project_ids: list[int]) -> dict[int, int]:
-    ids = [project_id for project_id in project_ids if project_id > 0]
-    if not ids:
-        return {}
-    rows = (await session.exec(
-        select(WorkProjectAsset.project_id, func.count())
-        .where(WorkProjectAsset.project_id.in_(ids))
-        .group_by(WorkProjectAsset.project_id)
-    )).all()
-    return {int(project_id): int(count) for project_id, count in rows}
+async def _project_metrics(session, project_id: int) -> dict[str, int]:
+    asset_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectAsset).where(WorkProjectAsset.project_id == project_id)
+    )).one())
+    in_scope_asset_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectAsset).where(
+            WorkProjectAsset.project_id == project_id,
+            WorkProjectAsset.scope == WorkProjectAssetScope.IN_SCOPE,
+        )
+    )).one())
+    touched_asset_ids = select(WorkProjectWorkItemTarget.asset_id).join(
+        WorkProjectWorkItem,
+        WorkProjectWorkItem.id == WorkProjectWorkItemTarget.work_item_id,
+    ).where(WorkProjectWorkItem.project_id == project_id)
+    untouched_asset_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectAsset).where(
+            WorkProjectAsset.project_id == project_id,
+            WorkProjectAsset.scope == WorkProjectAssetScope.IN_SCOPE,
+            WorkProjectAsset.id.not_in(touched_asset_ids),
+        )
+    )).one())
+    work_item_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectWorkItem).where(WorkProjectWorkItem.project_id == project_id)
+    )).one())
+    active_work_item_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectWorkItem).where(
+            WorkProjectWorkItem.project_id == project_id,
+            WorkProjectWorkItem.status.in_({WorkProjectWorkItemStatus.ACTIVE, WorkProjectWorkItemStatus.REVIEW}),
+        )
+    )).one())
+    blocked_work_item_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectWorkItem).where(
+            WorkProjectWorkItem.project_id == project_id,
+            WorkProjectWorkItem.status == WorkProjectWorkItemStatus.BLOCKED,
+        )
+    )).one())
+    validated_finding_count = int((await session.exec(
+        select(func.count()).select_from(WorkProjectFinding).where(
+            WorkProjectFinding.project_id == project_id,
+            WorkProjectFinding.verification == WorkProjectFindingVerification.VALIDATED,
+        )
+    )).one())
+    paths = list((await session.exec(select(WorkProjectAttackPath).where(
+        WorkProjectAttackPath.project_id == project_id
+    ))).all())
+    steps = list((await session.exec(select(WorkProjectAttackPathStep).where(
+        WorkProjectAttackPathStep.project_id == project_id
+    ))).all())
+    steps_by_path: dict[int, list[WorkProjectAttackPathStepSchema]] = {}
+    for step in steps:
+        steps_by_path.setdefault(step.path_id, []).append(WorkProjectAttackPathStepSchema.model_validate(step))
+    resolved_path_statuses = {
+        WorkProjectAttackPathStatus.VALIDATED,
+        WorkProjectAttackPathStatus.REFUTED,
+        WorkProjectAttackPathStatus.ARCHIVED,
+    }
+    active_attack_path_count = sum(
+        derive_attack_path_status(steps_by_path.get(path.id or 0, []), path.archived_at) not in resolved_path_statuses
+        for path in paths
+    )
+    return {
+        "asset_count": asset_count,
+        "in_scope_asset_count": in_scope_asset_count,
+        "untouched_asset_count": untouched_asset_count,
+        "work_item_count": work_item_count,
+        "active_work_item_count": active_work_item_count,
+        "blocked_work_item_count": blocked_work_item_count,
+        "validated_finding_count": validated_finding_count,
+        "active_attack_path_count": active_attack_path_count,
+    }
 
 
 async def _scope_assets_for_project(session, project_id: int) -> list[WorkProjectAsset]:
@@ -669,7 +776,8 @@ async def _scope_assets_for_project(session, project_id: int) -> list[WorkProjec
         select(WorkProjectAsset)
         .where(
             WorkProjectAsset.project_id == project_id,
-            WorkProjectAsset.origin == WorkProjectAssetOrigin.SCOPE,
+            WorkProjectAsset.origin == WorkProjectAssetOrigin.DECLARED,
+            WorkProjectAsset.scope == WorkProjectAssetScope.IN_SCOPE,
         )
         .order_by(WorkProjectAsset.id)
     )).all())
@@ -691,34 +799,6 @@ def _set_project_owner_rows(session, project_id: int, owner_user_ids: list[int])
 async def _replace_project_owners(session, project_id: int, owner_user_ids: list[int]) -> None:
     await session.execute(delete(WorkProjectOwner).where(WorkProjectOwner.project_id == project_id))
     _set_project_owner_rows(session, project_id, owner_user_ids)
-
-
-def _set_project_sandbox_container_row(session, project_id: int, sandbox_container_id: int | None) -> None:
-    if sandbox_container_id is None:
-        return
-    session.add(WorkProjectSandboxContainer(
-        project_id=project_id,
-        sandbox_container_id=sandbox_container_id,
-        position=0,
-    ))
-
-
-async def _replace_project_sandbox_container(session, project_id: int, sandbox_container_id: int | None) -> None:
-    links = (await session.exec(
-        select(WorkProjectSandboxContainer).where(WorkProjectSandboxContainer.project_id == project_id)
-    )).all()
-    if (
-        sandbox_container_id is not None
-        and len(links) == 1
-        and links[0].sandbox_container_id == sandbox_container_id
-        and links[0].position == 0
-    ):
-        return
-    for link in links:
-        await session.delete(link)
-    if links:
-        await session.flush()
-    _set_project_sandbox_container_row(session, project_id, sandbox_container_id)
 
 
 def _validate_work_project_metadata_static(
@@ -783,23 +863,20 @@ async def _validate_project_sandbox_container(
     if user_role != SystemUserRole.ADMIN and container.owner_id != user_id:
         return "selected sandbox container is not available to current user"
 
-    bound_to_current_project = False
-    if project_id is not None:
-        bound_to_current_project = (await session.exec(
-            select(WorkProjectSandboxContainer.project_id)
-            .where(WorkProjectSandboxContainer.project_id == project_id)
-            .where(WorkProjectSandboxContainer.sandbox_container_id == sandbox_container_id)
-            .limit(1)
-        )).first() is not None
+    bound_to_current_project = project_id is not None and (await session.exec(
+        select(WorkProject.id).where(
+            WorkProject.id == project_id,
+            WorkProject.sandbox_container_id == sandbox_container_id,
+        )
+    )).first() is not None
 
     binding_statement = (
-        select(WorkProjectSandboxContainer.project_id)
-        .where(WorkProjectSandboxContainer.sandbox_container_id == sandbox_container_id)
-        .order_by(WorkProjectSandboxContainer.project_id)
+        select(WorkProject.id)
+        .where(WorkProject.sandbox_container_id == sandbox_container_id)
         .limit(1)
     )
     if project_id is not None:
-        binding_statement = binding_statement.where(WorkProjectSandboxContainer.project_id != project_id)
+        binding_statement = binding_statement.where(WorkProject.id != project_id)
     bound_project_id = (await session.exec(binding_statement)).first()
     if bound_project_id is not None and bound_project_id != project_id:
         return "selected sandbox container is already bound to another work project"
@@ -809,12 +886,8 @@ async def _validate_project_sandbox_container(
 
 
 async def _sandbox_container_id_for_project_in_tx(session, project_id: int) -> int | None:
-    return (await session.exec(
-        select(WorkProjectSandboxContainer.sandbox_container_id)
-        .where(WorkProjectSandboxContainer.project_id == project_id)
-        .order_by(WorkProjectSandboxContainer.position, WorkProjectSandboxContainer.sandbox_container_id)
-        .limit(1)
-    )).first()
+    project = await session.get(WorkProject, project_id)
+    return project.sandbox_container_id if project is not None else None
 
 
 async def _project_sandbox_selection_in_tx(session, project_id: int) -> tuple[int | None, int]:
@@ -849,18 +922,18 @@ async def _sync_project_session_sandbox_selection(
 
 def _set_project_asset_rows(session, project_id: int, assets: list[WorkProjectAssetRequest]) -> None:
     now = datetime.now()
-    seen: set[tuple[WorkProjectAssetType, str]] = set()
+    seen: set[tuple] = set()
     for request in assets:
         if request.identity in seen:
             continue
         seen.add(request.identity)
         asset = WorkProjectAsset(
             project_id=project_id,
-            origin=WorkProjectAssetOrigin.SCOPE,
+            origin=WorkProjectAssetOrigin.DECLARED,
             created_at=now,
             updated_at=now,
         )
-        apply_asset_request(asset, request, now)
+        apply_asset_request(asset, request.model_copy(update={"scope": WorkProjectAssetScope.IN_SCOPE}), now)
         session.add(asset)
 
 
@@ -870,13 +943,13 @@ async def _upsert_project_assets(session, project_id: int, assets: list[WorkProj
         select(WorkProjectAsset).where(
             WorkProjectAsset.project_id == project_id,
             or_(
-                WorkProjectAsset.origin == WorkProjectAssetOrigin.SCOPE,
-                tuple_(WorkProjectAsset.type, WorkProjectAsset.identifier).in_(identities),
+                WorkProjectAsset.origin == WorkProjectAssetOrigin.DECLARED,
+                tuple_(WorkProjectAsset.kind, WorkProjectAsset.locator).in_(identities),
             ),
         )
     )).all()
-    existing = {(asset.type, asset.identifier): asset for asset in rows}
-    seen: set[tuple[WorkProjectAssetType, str]] = set()
+    existing = {(asset.kind, asset.locator): asset for asset in rows}
+    seen: set[tuple] = set()
     now = datetime.now()
     for request in assets:
         if request.identity in seen:
@@ -887,33 +960,25 @@ async def _upsert_project_assets(session, project_id: int, assets: list[WorkProj
             asset = WorkProjectAsset(project_id=project_id, created_at=now, updated_at=now)
             existing[request.identity] = asset
             session.add(asset)
-            apply_asset_request(asset, request, now)
+            apply_asset_request(asset, request.model_copy(update={"scope": WorkProjectAssetScope.IN_SCOPE}), now)
         else:
-            previous_extra = asset.extra
-            apply_asset_request(asset, request, now)
-            if "extra" not in request.model_fields_set:
-                asset.extra = previous_extra
-        # A metadata-declared asset is authoritative project scope, even if an agent discovered it first.
-        asset.origin = WorkProjectAssetOrigin.SCOPE
+            apply_asset_request(asset, request.model_copy(update={"scope": WorkProjectAssetScope.IN_SCOPE}), now)
+        asset.origin = WorkProjectAssetOrigin.DECLARED
         asset.created_by_agent_code = ""
         asset.created_from_session_id = ""
     for asset in rows:
-        if asset.origin != WorkProjectAssetOrigin.SCOPE or (asset.type, asset.identifier) in seen:
+        if asset.origin != WorkProjectAssetOrigin.DECLARED or (asset.kind, asset.locator) in seen:
             continue
-        await session.execute(
-            update(WorkProjectFinding)
-            .where(WorkProjectFinding.asset_id == asset.id)
-            .values(asset_id=None)
-        )
-        await purge_edges_touching_asset(session, project_id, asset.id or 0)
-        await session.delete(asset)
+        asset.scope = WorkProjectAssetScope.OUT_OF_SCOPE
+        asset.updated_at = now
+        session.add(asset)
 
 
 def _duplicate_asset_identity(assets: list[WorkProjectAssetRequest]) -> str:
-    seen: set[tuple[WorkProjectAssetType, str]] = set()
+    seen: set[tuple] = set()
     for asset in assets:
         if asset.identity in seen:
-            return f"{asset.type.value}:{asset.identifier}"
+            return f"{asset.kind.value}:{asset.locator}"
         seen.add(asset.identity)
     return ""
 

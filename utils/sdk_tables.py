@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, TIMESTAMP, Table, Text
+from sqlalchemy import Column, ForeignKey, Integer, String, TIMESTAMP, Table, Text
 from sqlmodel import SQLModel
 
 
@@ -20,7 +20,7 @@ agent_messages = Table(
     "agent_messages",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("session_id", String, nullable=False),
+    Column("session_id", String, ForeignKey("agent_sessions.session_id", ondelete="CASCADE"), nullable=False),
     Column("message_data", Text, nullable=False),
     Column("created_at", TIMESTAMP(timezone=False), nullable=False),
     extend_existing=True,

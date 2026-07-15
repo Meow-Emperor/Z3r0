@@ -1,17 +1,10 @@
-import { Progress } from "@douyinfe/semi-ui";
-import { FileText, FolderKanban, UserRound } from "lucide-react";
+import { FileText, FolderKanban } from "lucide-react";
 import { AppModal } from "../../shared/components/AppModal";
 import { AsyncContent } from "../../shared/components/AsyncContent";
 import { type ProjectRecordTab, WorkProjectRecordTabs } from "./ProjectRecordViews";
+import { WorkProjectMarkdown } from "./WorkProjectMarkdown";
 import { useWorkProjectDetails } from "./useWorkProjectDetails";
-import {
-  WorkProjectPanel,
-  WorkProjectStatusTag,
-  WorkProjectSummaries,
-  WorkProjectTasks,
-  WorkProjectTypeTag,
-  workProjectOwnerNames,
-} from "./workProjectView";
+import { WorkProjectStatusTag, WorkProjectTypeTag, workProjectOwnerNames } from "./workProjectView";
 
 type WorkProjectInfoModalProps = {
   open: boolean;
@@ -20,7 +13,7 @@ type WorkProjectInfoModalProps = {
   onClose: () => void;
 };
 
-export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", onClose }: WorkProjectInfoModalProps) {
+export function WorkProjectInfoModal({ open, projectId, initialTab = "overview", onClose }: WorkProjectInfoModalProps) {
   const { project, loading } = useWorkProjectDetails(projectId, open);
 
   return (
@@ -41,54 +34,33 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "assets", o
         wrapperClassName="project-record-spin"
       >
         {project ? (
-          <div className="project-info-content project-record-content">
-            <aside className="project-info-sidebar">
-              <div className="project-info-sidebar-scroll">
-                <section className="project-info-meta">
-                  <div>
-                    <span>Type</span>
-                    <WorkProjectTypeTag project={project} />
-                  </div>
-                  <div>
-                    <span>Status</span>
-                    <WorkProjectStatusTag project={project} />
-                  </div>
-                  <div>
-                    <span>Owners</span>
-                    <strong>{workProjectOwnerNames(project)}</strong>
-                  </div>
-                  <div>
-                    <span>Sandbox</span>
-                    <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
-                  </div>
-                </section>
-
-                {project.description ? <div className="project-info-description">{project.description}</div> : null}
-
-                <section className="project-info-progress">
-                  <span>Task Progress</span>
-                  <Progress percent={project.progress} size="small" showInfo />
-                </section>
-
-                <WorkProjectPanel
-                  title="Tasks"
-                  icon={<FileText size={15} />}
-                  empty={!project.tasks.length ? "No data." : ""}
-                  mode="info"
-                >
-                  <WorkProjectTasks project={project} mode="info" />
-                </WorkProjectPanel>
-
-                <WorkProjectPanel
-                  title="Agent Summaries"
-                  icon={<UserRound size={15} />}
-                  empty={!project.agent_summaries.length ? "No data." : ""}
-                  mode="info"
-                >
-                  <WorkProjectSummaries project={project} mode="info" />
-                </WorkProjectPanel>
-              </div>
-            </aside>
+          <div className="project-info-content">
+            <section className="project-info-summary">
+              <section className="project-info-meta">
+                <div>
+                  <span>Type</span>
+                  <WorkProjectTypeTag project={project} />
+                </div>
+                <div>
+                  <span>Status</span>
+                  <WorkProjectStatusTag project={project} />
+                </div>
+                <div>
+                  <span>Owners</span>
+                  <strong>{workProjectOwnerNames(project)}</strong>
+                </div>
+                <div>
+                  <span>Sandbox</span>
+                  <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
+                </div>
+                <div className="project-info-state">
+                  <span>Operational State</span>
+                  <strong>{project.untouched_asset_count} untouched assets</strong>
+                  <small>{project.active_work_item_count} active · {project.blocked_work_item_count} blocked</small>
+                </div>
+              </section>
+              <WorkProjectMarkdown className="project-info-description" content={project.description} />
+            </section>
 
             <section className="project-record-panel">
               <WorkProjectRecordTabs

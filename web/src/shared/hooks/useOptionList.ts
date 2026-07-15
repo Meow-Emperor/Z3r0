@@ -21,11 +21,7 @@ type QueryOptions<Item> = {
 export type OptionListResult<Item> = {
   items: Item[];
   knownItems: Item[];
-  loading: boolean;
-  loadingMore: boolean;
   busy: boolean;
-  hasMore: boolean;
-  load: () => Promise<void>;
   search: (keyword: string) => void;
   onListScroll: (event: UIEvent<HTMLDivElement>) => void;
   updateItems: (update: (items: Item[]) => Item[]) => void;
@@ -86,15 +82,6 @@ export function useOptionList<Item extends { id: string | number }>({ enabled = 
     }
   }, [query]);
 
-  const load = useCallback(async () => {
-    keywordRef.current = "";
-    if (searchTimerRef.current !== undefined) {
-      window.clearTimeout(searchTimerRef.current);
-      searchTimerRef.current = undefined;
-    }
-    await loadPage(1, "", false);
-  }, [loadPage]);
-
   const loadMore = useCallback(() => {
     if (!enabled || loading || loadingMoreRef.current || items.length >= total) return;
     void loadPage(page + 1, keywordRef.current, true);
@@ -148,13 +135,9 @@ export function useOptionList<Item extends { id: string | number }>({ enabled = 
   return useMemo(() => ({
     items,
     knownItems,
-    loading,
-    loadingMore,
     busy: loading || loadingMore,
-    hasMore: items.length < total,
-    load,
     search,
     onListScroll,
     updateItems,
-  }), [items, knownItems, load, loading, loadingMore, onListScroll, search, total, updateItems]);
+  }), [items, knownItems, loading, loadingMore, onListScroll, search, updateItems]);
 }

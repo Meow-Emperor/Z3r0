@@ -36,8 +36,10 @@ from core.runtime.partial_context import DeltaBuffer, discard_partial_stream, in
 from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
 from core.sandbox.command_jobs import cancel_agent_async_sandbox_commands
 from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, run_until_idle
+from core.work_project_context import activate_work_project_context
 from database import get_async_session, get_engine
 from logger import get_logger
+from model.work_project.workflow import WorkProjectWorkItem
 from schema.agent.events import (
     AgentEventSchema,
     AgentInputPart,
@@ -56,6 +58,7 @@ from schema.agent.subordinates import (
     AgentSubordinateTaskToolItem,
     AgentSubordinateTaskToolResult,
 )
+from schema.work_project.workflow import WorkProjectWorkItemStatus
 from service.agent import notifications as agent_notifications
 from service.agent import subordinates as agent_subordinates
 from service.agent.event_log import persist_subagent_event_unpooled
@@ -119,15 +122,18 @@ def build_subagent_tools(
     allowed = frozenset(mounted_codes)
     allowed_codes = ", ".join(sorted(allowed))
 
-    async def start_subagent_task(ctx: RunContextWrapper[AgentRuntimeContext], agent_code: str, brief: str) -> str:
+    async def start_subagent_task(
+        ctx: RunContextWrapper[AgentRuntimeContext],
+        agent_code: str,
+        brief: str,
+        work_item_id: int | None = None,
+    ) -> str:
         """Start a configured subagent task in the background.
 
         Args:
             agent_code: str code of the configured subagent to run.
             brief: str self-contained task brief for the subagent.
-                In WorkProject sessions, include the relevant task_id/task_title and instruct the subagent
-                to update its WorkProject summary immediately after findings, useful negative results,
-                blockers, decisions, or progress changes, before continuing to more tools when practical.
+            work_item_id: int WorkItem bound to this run; required in WorkProject sessions.
 
         Returns:
             JSON status including run_id, agent_code, status, timestamps, and automatic completion resume guidance.
@@ -138,6 +144,17 @@ def build_subagent_tools(
         body = brief.strip()
         if not body:
             return _tool_response(message="brief is required")
+        if ctx.context.work_project_id is not None:
+            if work_item_id is None:
+                return _tool_response(message="work_item_id is required in WorkProject sessions")
+            async with get_async_session() as session:
+                work_item = await session.get(WorkProjectWorkItem, work_item_id)
+            if work_item is None or work_item.project_id != ctx.context.work_project_id:
+                return _tool_response(message="work item not found")
+            if work_item.assignee_agent_code != code:
+                return _tool_response(message="work item assignee does not match the selected subagent")
+            if work_item.status != WorkProjectWorkItemStatus.ACTIVE:
+                return _tool_response(message="work item must be active before delegation")
 
         starter = asyncio.create_task(
             start_subagent_task_run(
@@ -146,6 +163,7 @@ def build_subagent_tools(
                 parent_agent_code=parent_code,
                 agent_code=code,
                 brief=body,
+                work_item_id=work_item_id,
                 nested_call_id=getattr(ctx, "tool_call_id", "") or "",
             ),
             name=f"subagent-starter-{code}",
@@ -228,11 +246,11 @@ def build_subagent_tools(
                 "Start a configured subagent task.\n\n"
                 "Args:\n"
                 f"    agent_code: str subagent code, one of {allowed_codes}.\n"
-                "    brief: str self-contained task brief with objective, constraints, expected output, and relevant context.\n\n"
+                "    brief: str self-contained task brief with objective, constraints, expected output, and relevant context.\n"
+                "    work_item_id: int required WorkItem id in WorkProject sessions.\n\n"
                 "Returns:\n"
                 "    JSON status with a persistent run id. This agent is resumed automatically after the subagent finishes. "
-                "For WorkProject tasks, include task_id/task_title and require summary/progress updates after "
-                "findings, blockers, decisions, or progress changes."
+                "WorkProject runs are durably bound to work_item_id."
             ),
         ),
         function_tool(
@@ -327,6 +345,7 @@ def _task_tool_item(
         error_chars=len(snapshot.error),
         next_offset=next_offset,
         progress=snapshot.progress,
+        work_item_id=snapshot.work_item_id,
     )
 
 
@@ -365,6 +384,7 @@ async def start_subagent_task_run(
     parent_agent_code: str,
     agent_code: str,
     brief: str,
+    work_item_id: int | None,
     nested_call_id: str,
 ) -> AgentSubordinateTaskSnapshot:
     # Each driver owns a dedicated graph (Agent + httpx client) bound from the
@@ -380,6 +400,7 @@ async def start_subagent_task_run(
             agent_code=agent_code,
             agent_name=code_to_name.get(agent_code, child_agent.name),
             brief=brief,
+            work_item_id=work_item_id,
             nested_call_id=nested_call_id,
             owner_id=context.user.id,
             sandbox_container_id=context.sandbox_container_id,
@@ -663,50 +684,51 @@ def _subagent_run_turn(driver: _SubagentDriver) -> Callable[[TurnTrigger], Any]:
             current_retrieval_text,
         )
         async with activate_lightrag_context(context, retrieval_query):
-            user_input = [build_turn_input_item(trigger)]
-            if agent_config is not None:
-                await memory_session.compact_if_needed(agent_config=agent_config, incoming_items=user_input)
-            stream = Runner.run_streamed(
-                starting_agent=child_agent,
-                input=user_input,
-                session=memory_session,
-                context=context,
-                max_turns=max_turns,
-                run_config=build_context_run_config(agent_config) if agent_config is not None else None,
-            )
-            buffers: dict[str, DeltaBuffer] = {}
-            try:
-                async for event in iter_interruptible_events(
-                    stream,
-                    session_id=snapshot.session_id,
-                    agent_instance_id=context.agent_instance_id,
-                    current_agent_name=child_agent.name,
-                    segment_scope=_next_subagent_segment_scope(context),
-                ):
-                    track_delta(buffers, event)
-                    _publish_event(snapshot.session_id, _tag_nested(event, snapshot))
-                    await _update_progress_from_event(snapshot, event)
-                # Finalize segments left open by providers that omit text-done events.
-                for finalize_event in incomplete_segment_events(buffers, agent_name=child_agent.name):
-                    _publish_event(snapshot.session_id, _tag_nested(finalize_event, snapshot))
-                buffers.clear()
-            except (InterruptSignal, asyncio.CancelledError):
-                # Mid-flight end: emit boundary + done so the parent finalises cleanly.
-                boundary_events = incomplete_segment_events(buffers, agent_name=child_agent.name)
-                await discard_partial_stream(stream, buffers, log_label="subagent")
-                for evt in boundary_events:
-                    _publish_event(snapshot.session_id, _tag_nested(evt, snapshot))
-                _publish_event(snapshot.session_id, _tag_nested(
-                    DoneEvent(created_at=datetime.now(), agent_name=child_agent.name), snapshot,
-                ))
-                raise
-            except StreamIdleTimeout as exc:
-                await discard_partial_stream(stream, buffers, log_label="subagent")
-                raise RuntimeError(str(exc)) from exc
-            except Exception:
-                await discard_partial_stream(stream, buffers, log_label="subagent")
-                raise
-            return stream
+            async with activate_work_project_context(context):
+                user_input = [build_turn_input_item(trigger)]
+                if agent_config is not None:
+                    await memory_session.compact_if_needed(agent_config=agent_config, incoming_items=user_input)
+                stream = Runner.run_streamed(
+                    starting_agent=child_agent,
+                    input=user_input,
+                    session=memory_session,
+                    context=context,
+                    max_turns=max_turns,
+                    run_config=build_context_run_config(agent_config) if agent_config is not None else None,
+                )
+                buffers: dict[str, DeltaBuffer] = {}
+                try:
+                    async for event in iter_interruptible_events(
+                        stream,
+                        session_id=snapshot.session_id,
+                        agent_instance_id=context.agent_instance_id,
+                        current_agent_name=child_agent.name,
+                        segment_scope=_next_subagent_segment_scope(context),
+                    ):
+                        track_delta(buffers, event)
+                        _publish_event(snapshot.session_id, _tag_nested(event, snapshot))
+                        await _update_progress_from_event(snapshot, event)
+                    # Finalize segments left open by providers that omit text-done events.
+                    for finalize_event in incomplete_segment_events(buffers, agent_name=child_agent.name):
+                        _publish_event(snapshot.session_id, _tag_nested(finalize_event, snapshot))
+                    buffers.clear()
+                except (InterruptSignal, asyncio.CancelledError):
+                    # Mid-flight end: emit boundary + done so the parent finalises cleanly.
+                    boundary_events = incomplete_segment_events(buffers, agent_name=child_agent.name)
+                    await discard_partial_stream(stream, buffers, log_label="subagent")
+                    for evt in boundary_events:
+                        _publish_event(snapshot.session_id, _tag_nested(evt, snapshot))
+                    _publish_event(snapshot.session_id, _tag_nested(
+                        DoneEvent(created_at=datetime.now(), agent_name=child_agent.name), snapshot,
+                    ))
+                    raise
+                except StreamIdleTimeout as exc:
+                    await discard_partial_stream(stream, buffers, log_label="subagent")
+                    raise RuntimeError(str(exc)) from exc
+                except Exception:
+                    await discard_partial_stream(stream, buffers, log_label="subagent")
+                    raise
+                return stream
 
     return _run_turn
 
@@ -868,6 +890,7 @@ def _subagent_context(
         sandbox_container_generation=context.sandbox_container_generation,
         sandbox_skill_metadata=context.sandbox_skill_metadata,
         work_project_id=context.work_project_id,
+        work_item_id=snapshot.work_item_id,
     )
 
 

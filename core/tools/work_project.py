@@ -1,75 +1,66 @@
 import json
-from datetime import datetime
-from enum import StrEnum
 
 from agents import RunContextWrapper, function_tool
-from sqlalchemy import Text, cast, func, literal, update
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, array
 from sqlmodel import select
 
 from core.agent.constants import DEFAULT_AGENT_CODE
 from core.runtime.context import AgentRuntimeContext
+from core.work_project_context import build_work_project_context
 from database import get_async_session
-from model.work_project.projects import WorkProject
-from model.work_project.projects import WorkProjectSandboxContainer
+from model.work_project.assets import WorkProjectAsset
+from model.work_project.graph import WorkProjectAttackPathStep
+from model.work_project.workflow import WorkProjectWorkItem
 from schema.common.tool_results import ToolResultSchema, ToolResultStatusSchema, ToolResultTypeSchema
-from schema.work_project.assets import WorkProjectAssetRequest
+from schema.work_project.assets import WorkProjectAssetRequest, WorkProjectAssetScope
+from schema.work_project.evidence import WorkProjectEvidenceRequest
 from schema.work_project.findings import WorkProjectFindingRequest
 from schema.work_project.graph import (
+    WorkProjectAssertionStatus,
     WorkProjectAttackPathRequest,
-    WorkProjectAttackPathStepRequest,
-    WorkProjectGraphEdgeRequest,
+    WorkProjectRelationRequest,
+    derive_attack_path_status,
 )
-from schema.work_project.projects import (
-    WorkProjectAgentSummaryContentSchema,
-    WorkProjectAgentSummarySchema,
-    WorkProjectTaskSchema,
+from schema.work_project.workflow import (
+    WorkProjectReviewDecision,
+    WorkProjectWorkItemPlanRequest,
+    WorkProjectWorkItemStatus,
+    WorkProjectWorkItemTargetKey,
+    WorkProjectWorkItemTargetUpdateRequest,
+    WorkProjectWorkLogRequest,
 )
-from service.work_project.assets import (
-    delete_work_project_asset,
-    query_work_project_assets,
-    update_work_project_asset,
-    upsert_work_project_asset,
-)
-from service.work_project.findings import (
-    create_work_project_finding,
-    delete_work_project_finding,
-    query_work_project_findings,
-    update_work_project_finding,
-)
+from service.work_project.assets import merge_work_project_assets, query_work_project_assets, update_work_project_asset, upsert_work_project_asset
+from service.work_project.evidence import create_work_project_evidence, invalidate_work_project_evidence, query_work_project_evidence
+from service.work_project.findings import query_work_project_findings, save_work_project_finding as save_work_project_finding_service
 from service.work_project.graph import (
-    create_work_project_attack_path,
-    create_work_project_attack_path_step,
-    delete_work_project_attack_path,
-    delete_work_project_attack_path_step,
-    delete_work_project_graph_edge,
-    query_work_project_graph,
-    update_work_project_attack_path,
-    update_work_project_attack_path_step,
-    update_work_project_graph_edge,
-    upsert_work_project_graph_edge,
+    query_work_project_attack_paths,
+    query_work_project_relations,
+    save_work_project_attack_path as save_work_project_attack_path_service,
+    upsert_work_project_relation,
 )
-from service.work_project.progress import calculate_work_project_progress, derive_work_project_status
+from service.work_project.work_item_records import get_work_project_work_item_record, query_work_project_work_item_records
+from service.work_project.workflow import (
+    activate_work_project_work_item as activate_work_project_work_item_service,
+    block_work_project_work_item as block_work_project_work_item_service,
+    cancel_work_project_work_item as cancel_work_project_work_item_service,
+    create_work_project_work_item as create_work_project_work_item_service,
+    create_work_project_work_log,
+    reopen_work_project_work_item as reopen_work_project_work_item_service,
+    review_work_project_work_item as review_work_project_work_item_service,
+    submit_work_project_work_item_review as submit_work_project_work_item_review_service,
+    update_work_project_work_item_plan as update_work_project_work_item_plan_service,
+    update_work_project_work_item_target as update_work_project_work_item_target_service,
+)
 
 
-_AGENT_PAGE_SIZE = 50
-_AGENT_GRAPH_ITEMS = 40
-_MAX_TOOL_TEXT = 500
-
-
-class WorkProjectRecordType(StrEnum):
-    ASSET = "asset"
-    FINDING = "finding"
-    GRAPH_EDGE = "graph_edge"
-    ATTACK_PATH = "attack_path"
-    ATTACK_PATH_STEP = "attack_path_step"
+_PAGE_SIZE = 20
+_WORK_ITEM_PAGE_SIZE = 10
 
 
 def work_project_success(payload: object) -> str:
     return ToolResultSchema(
         status=ToolResultStatusSchema.SUCCESS,
         type=ToolResultTypeSchema.WORK_PROJECT,
-        output=json.dumps(payload, ensure_ascii=False),
+        output=json.dumps(payload, ensure_ascii=False, default=str),
     ).model_dump_json()
 
 
@@ -82,625 +73,838 @@ def work_project_error(message: str) -> str:
 
 
 @function_tool
-async def load_work_project_metadata(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
-    """Load metadata for the WorkProject bound to the current session.
+async def load_work_project_context(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
+    """Load the current graph-driven WorkProject context.
 
-    Args:
-        None.
+    A fresh snapshot is injected automatically at turn start. Call this explicit
+    refresh after material writes when another same-turn decision depends on them.
 
     Returns:
-        JSON status with project id, name, description, sandbox container id, status, and type.
+        JSON tool result containing the exact runtime-bound or cso-focused WorkItem,
+        complete bounded queue metadata, relevant graph and Evidence, and retest candidates.
     """
-    project = await _current_project(ctx.context)
-    if project is None:
-        return work_project_error("No WorkProject is bound to this session.")
-    return work_project_success(await _metadata_payload(project))
+    return work_project_success(await build_work_project_context(ctx.context))
 
 
 @function_tool
-async def load_work_project_tasks(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
-    """Load the shared task list for the WorkProject bound to the current session.
-
-    Args:
-        None.
-
-    Returns:
-        JSON status with project_id, code-calculated overall progress, and shared task records.
-    """
-    project = await _current_project(ctx.context)
-    if project is None:
-        return work_project_error("No WorkProject is bound to this session.")
-    return work_project_success(_tasks_payload(project))
-
-
-@function_tool
-async def load_work_project_agent_summaries(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
-    """Load all agent summary slots for the WorkProject bound to the current session.
-
-    Args:
-        None.
-
-    Returns:
-        JSON status with project_id and structured summaries written by participating agents.
-    """
-    project = await _current_project(ctx.context)
-    if project is None:
-        return work_project_error("No WorkProject is bound to this session.")
-    return work_project_success(_agent_summaries_payload(project))
-
-
-@function_tool
-async def update_work_project_agent_summary(
-    ctx: RunContextWrapper[AgentRuntimeContext],
-    summary: WorkProjectAgentSummaryContentSchema,
-) -> str:
-    """Replace this agent's live structured task summary for the current WorkProject.
-
-    Each agent can only write its own summary slot, keyed by agent_code.
-    Call after meaningful discoveries, useful negative results, blockers,
-    decisions, handoffs, or progress changes, before the next command, delegated task, handoff, or user reply when practical.
-    Keep the summary current throughout the task.
-    Use task_id/task_title and progress (0-100, at most two decimals) to report this agent's current subtask progress.
-
-    Args:
-        summary: WorkProjectAgentSummaryContentSchema full replacement for this agent's current summary.
-            Include task_id/task_title,
-            progress, status, findings, decisions, blockers, next_steps, and notes as applicable.
-            When task_id or exact task_title matches a shared task, that task's progress is synchronized.
-            Overall project progress is recalculated by code and is not an input.
-
-    Returns:
-        JSON status with project_id and all current structured agent summaries.
-    """
-    agent_code = ctx.context.agent_code.strip()
-    if not agent_code:
-        return work_project_error("Agent code is required.")
-    project_id = ctx.context.work_project_id
-    if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
-
-    now = datetime.now()
-    payload = {
-        "agent_code": agent_code,
-        "summary": summary.model_dump(mode="json"),
-        "updated_at": now.isoformat(),
-    }
-    async with get_async_session() as session:
-        result = await session.execute(
-            update(WorkProject)
-            .where(WorkProject.id == project_id)
-            .values(
-                agent_summaries=func.jsonb_set(
-                    func.coalesce(WorkProject.agent_summaries, literal({}, type_=JSONB)),
-                    cast(array([agent_code]), ARRAY(Text)),
-                    literal(payload, type_=JSONB),
-                    True,
-                ),
-                updated_at=now,
-            )
-            .returning(WorkProject.id)
-        )
-        updated_project_id = result.scalar_one_or_none()
-        if updated_project_id is None:
-            await session.rollback()
-            return work_project_error("WorkProject not found.")
-        project = (await session.exec(
-            select(WorkProject)
-            .where(WorkProject.id == project_id)
-            .with_for_update()
-        )).first()
-        if project is None:
-            await session.rollback()
-            return work_project_error("WorkProject not found.")
-        _sync_summary_progress_to_task(project, summary)
-        session.add(project)
-        await session.commit()
-        await session.refresh(project)
-
-    return work_project_success(_agent_summaries_payload(project))
-
-
-@function_tool
-async def update_work_project_tasks(
-    ctx: RunContextWrapper[AgentRuntimeContext],
-    tasks: list[WorkProjectTaskSchema],
-) -> str:
-    """Update the shared WorkProject task list.
-
-    Only the chief security officer agent (`cso`) can update the shared project task list.
-    Call when global task state changes, including after your own progress or subagent results,
-    before reporting or delegating more work when practical.
-    Each task status must be one of: todo, in_progress, blocked, done.
-    Each task progress value must be 0-100 with at most two decimal places.
-    Do not provide or estimate overall project progress; it is recalculated by code from task progress.
-
-    Args:
-        tasks: list[WorkProjectTaskSchema] complete desired task list after applying your changes.
-            Preserve existing tasks that still matter,
-            update status/progress/summary, and add or remove tasks only when the project plan changes.
-
-    Returns:
-        JSON status with project_id, recalculated overall progress, and the saved shared task list.
-    """
-    # The default agent code is the chief security officer (cso), the sole owner of the shared task list.
-    if ctx.context.agent_code != DEFAULT_AGENT_CODE:
-        return work_project_error("Only the cso agent can update the shared WorkProject task list.")
-    project_id = ctx.context.work_project_id
-    if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
-
-    async with get_async_session() as session:
-        project = await session.get(WorkProject, project_id)
-        if project is None:
-            return work_project_error("WorkProject not found.")
-        project.tasks = [task.model_dump(mode="json") for task in tasks]
-        _recalculate_project_progress(project)
-        project.updated_at = datetime.now()
-        session.add(project)
-        await session.commit()
-        await session.refresh(project)
-
-    return work_project_success(_tasks_payload(project))
-
-
-@function_tool
-async def list_work_project_assets(
+async def list_work_project_work_items(
     ctx: RunContextWrapper[AgentRuntimeContext],
     keyword: str = "",
+    status: WorkProjectWorkItemStatus | None = None,
+    assignee_agent_code: str = "",
     page: int = 1,
 ) -> str:
-    """List durable Asset records for the current WorkProject.
+    """List complete WorkItem records with targets, dependencies, Evidence, logs, and delegated runs.
 
-    Results are paginated to keep model context small. Increase page to continue reading when total exceeds size.
+    Specialists can list only WorkItems assigned to their Agent code. cso can filter
+    the complete project queue, including queued and terminal WorkItems.
 
     Args:
-        keyword: str optional search term matched against asset identifier, host, path, or type.
-        page: int one-based result page. Use page > 1 when total exceeds size.
+        keyword: Optional title, objective, assignee, or status search text.
+        status: Optional exact WorkItem status filter.
+        assignee_agent_code: Optional assignee filter; cso only.
+        page: One-based result page; each page contains at most 10 complete records.
 
     Returns:
-        JSON status with page, size, total, and compact asset records.
+        JSON tool result with pagination metadata and complete WorkItem records.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    page_result = await query_work_project_assets(
+    assignee = assignee_agent_code.strip()
+    if ctx.context.agent_code != DEFAULT_AGENT_CODE:
+        if assignee and assignee != ctx.context.agent_code:
+            return work_project_error("Specialists can list only their assigned WorkItems.")
+        assignee = ctx.context.agent_code
+    result = await query_work_project_work_item_records(
         project_id,
-        page=_agent_page(page),
-        size=_AGENT_PAGE_SIZE,
+        page=max(page, 1),
+        size=_WORK_ITEM_PAGE_SIZE,
         keyword=keyword,
+        status=status,
+        assignee_agent_code=assignee,
     )
     return work_project_success({
-        "page": page_result.page,
-        "size": page_result.size,
-        "total": page_result.total,
-        "assets": [_compact_asset(item.model_dump(mode="json")) for item in page_result.items],
+        "page": result.page,
+        "size": result.size,
+        "total": result.total,
+        "work_items": [item.model_dump(mode="json") for item in result.items],
     })
 
 
 @function_tool
-async def create_or_update_work_project_asset(
+async def get_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    asset_id: int | None,
-    asset: WorkProjectAssetRequest,
+    work_item_id: int,
 ) -> str:
-    """Create or update a durable Asset record for the current WorkProject.
+    """Load one complete WorkItem record by its durable id.
 
-    Omit asset_id to upsert by the normalized (type, identifier) identity; provide asset_id to update a specific record.
-    Asset type is one of service, domain, network, binary. Required base fields depend on type:
-    service/domain/network require host (port is optional for service); binary requires path.
-    Put a short recon banner in extra; keep it small and reference large output from a finding instead.
-    Asset origin (scope vs discovered) is managed by the system and is not settable here.
-    Scope asset identity is managed by project metadata; when updating a scope asset, keep type/host/port/path unchanged.
+    Specialists may load only their runtime-bound WorkItem. cso may load any
+    WorkItem for planning, review, cancellation, reopening, or closure decisions.
 
     Args:
-        asset_id: int | None asset id to update. Use null to upsert by normalized (type, identifier).
-        asset: WorkProjectAssetRequest containing type plus host/port/path and optional extra.banner.
+        work_item_id: Durable WorkItem id to retrieve.
 
     Returns:
-        JSON status with the compact saved asset record.
+        JSON tool result with the complete WorkItem, targets, assets, dependencies,
+        Evidence, WorkLogs, and subordinate run ids.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
+    if ctx.context.agent_code != DEFAULT_AGENT_CODE and work_item_id != ctx.context.work_item_id:
+        return work_project_error("Specialists can load only their runtime-bound WorkItem.")
+    record = await get_work_project_work_item_record(project_id, work_item_id)
+    if record is None:
+        return work_project_error("WorkItem not found.")
+    if (
+        ctx.context.agent_code != DEFAULT_AGENT_CODE
+        and record.work_item.assignee_agent_code != ctx.context.agent_code
+    ):
+        return work_project_error("WorkItem is assigned to another Agent.")
+    return work_project_success({"work_item": record.model_dump(mode="json")})
+
+
+@function_tool
+async def list_work_project_assets(ctx: RunContextWrapper[AgentRuntimeContext], keyword: str = "", page: int = 1) -> str:
+    """List canonical Asset nodes in the current WorkProject.
+
+    Scope is authoritative; never execute against context or out-of-scope assets.
+
+    Args:
+        keyword: Optional locator, name, summary, or kind search text.
+        page: One-based result page; values below one are normalized to one.
+
+    Returns:
+        JSON tool result with pagination metadata and compact Asset records.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    result = await query_work_project_assets(project_id, page=max(page, 1), size=_PAGE_SIZE, keyword=keyword)
+    return work_project_success({"page": result.page, "size": result.size, "total": result.total, "assets": [_compact_asset(item) for item in result.items]})
+
+
+@function_tool
+async def save_work_project_asset(ctx: RunContextWrapper[AgentRuntimeContext], asset_id: int | None, asset: WorkProjectAssetRequest) -> str:
+    """Create or update a canonical Asset graph node.
+
+    Specialists create discoveries as context assets and may enrich descriptive
+    state. Only cso may change canonical identity, scope, or criticality.
+
+    Args:
+        asset_id: Existing Asset id to update, or null to upsert by kind and locator.
+        asset: Canonical locator, graph classification, scope, criticality, state,
+            name, and concise summary.
+
+    Returns:
+        JSON tool result containing the saved Asset, or a validation/permission error.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := await _specialist_mutation_error(ctx):
+        return work_project_error(error)
+    if ctx.context.agent_code != DEFAULT_AGENT_CODE:
+        if asset_id is None and asset.scope != WorkProjectAssetScope.CONTEXT:
+            return work_project_error("Specialist agents must record discovered assets with context scope; cso confirms scope.")
+        implicit_match = asset_id is None
+        current_asset = None
+        if implicit_match:
+            async with get_async_session() as session:
+                current_asset = (await session.exec(select(WorkProjectAsset).where(
+                    WorkProjectAsset.project_id == project_id,
+                    WorkProjectAsset.kind == asset.kind,
+                    WorkProjectAsset.locator == asset.locator,
+                ))).first()
+            if current_asset is not None:
+                asset_id = current_asset.id
+        if asset_id is not None:
+            if current_asset is None:
+                async with get_async_session() as session:
+                    current_asset = await session.get(WorkProjectAsset, asset_id)
+            if current_asset is None or current_asset.project_id != project_id:
+                return work_project_error("Asset not found.")
+            governed_fields = ("kind", "locator", "scope", "criticality")
+            changed_fields = [
+                field_name for field_name in governed_fields
+                if getattr(current_asset, field_name) != getattr(asset, field_name)
+            ]
+            if changed_fields and not implicit_match:
+                return work_project_error(
+                    f"Only cso can change governed asset fields: {', '.join(changed_fields)}."
+                )
+            if implicit_match:
+                asset = asset.model_copy(update={
+                    field_name: getattr(current_asset, field_name)
+                    for field_name in governed_fields
+                })
     if asset_id is None:
         saved, error = await upsert_work_project_asset(
-            project_id,
-            asset,
+            project_id, asset,
             created_by_agent_code=ctx.context.agent_code,
             created_from_session_id=ctx.context.session_id,
         )
     else:
         saved, error = await update_work_project_asset(project_id, asset_id, asset)
-    if error:
-        return work_project_error(error)
-    return work_project_success({"asset": _compact_asset(_dump(saved))})
+    return work_project_error(error) if error else work_project_success({"asset": _dump(saved)})
 
 
 @function_tool
-async def list_work_project_findings(
+async def merge_work_project_asset_records(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    source_asset_id: int,
+    target_asset_id: int,
+) -> str:
+    """Merge a duplicate Asset into a canonical Asset and rewire references.
+
+    This operation is restricted to cso and refuses merges that would collapse
+    distinct nodes in an AttackPath.
+
+    Args:
+        source_asset_id: Duplicate Asset id that will be removed.
+        target_asset_id: Canonical Asset id that will remain.
+
+    Returns:
+        JSON tool result containing the canonical Asset and merged source id.
+    """
+    if ctx.context.agent_code != DEFAULT_AGENT_CODE:
+        return work_project_error("Only cso can merge assets.")
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    saved, error = await merge_work_project_assets(project_id, source_asset_id, target_asset_id)
+    return work_project_error(error) if error else work_project_success({"asset": _dump(saved), "merged_asset_id": source_asset_id})
+
+
+@function_tool
+async def record_work_project_evidence(ctx: RunContextWrapper[AgentRuntimeContext], evidence: WorkProjectEvidenceRequest) -> str:
+    """Record immutable Evidence produced by an assigned WorkItem.
+
+    Record Evidence before asserting an observed or validated Relation, Finding,
+    AttackPathStep, or target conclusion. Corrections supersede existing Evidence.
+
+    Args:
+        evidence: Evidence kind, WorkItem id, stable source reference, concise
+            summary, optional primary Asset and hash, capture time, and optional
+            active Evidence id to supersede.
+
+    Returns:
+        JSON tool result containing the immutable Evidence record.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := await _specialist_mutation_error(ctx, evidence.work_item_id):
+        return work_project_error(error)
+    saved, error = await create_work_project_evidence(
+        project_id, evidence,
+        created_by_agent_code=ctx.context.agent_code,
+        created_from_session_id=ctx.context.session_id,
+    )
+    return work_project_error(error) if error else work_project_success({"evidence": _dump(saved)})
+
+
+@function_tool
+async def invalidate_work_project_evidence_record(ctx: RunContextWrapper[AgentRuntimeContext], evidence_id: int, reason: str) -> str:
+    """Invalidate erroneous active Evidence while retaining audit history.
+
+    A specialist may invalidate only Evidence it created. Invalidation is refused
+    when a reviewed WorkItem or evidence-mature conclusion would lose its last
+    active supporting Evidence.
+
+    Args:
+        evidence_id: Active Evidence id to invalidate.
+        reason: Specific reason the Evidence is no longer trustworthy.
+
+    Returns:
+        JSON tool result containing the invalidated Evidence id, or a gate error.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := await _specialist_mutation_error(ctx):
+        return work_project_error(error)
+    error = await invalidate_work_project_evidence(
+        project_id,
+        evidence_id,
+        reason,
+        actor_agent_code=ctx.context.agent_code,
+        actor_work_item_id=ctx.context.work_item_id,
+    )
+    return work_project_error(error) if error else work_project_success({"invalidated_evidence_id": evidence_id})
+
+
+@function_tool
+async def list_work_project_evidence(ctx: RunContextWrapper[AgentRuntimeContext], keyword: str = "", page: int = 1) -> str:
+    """List WorkProject Evidence with stable source references.
+
+    Args:
+        keyword: Optional title, summary, reference, or kind search text.
+        page: One-based result page; values below one are normalized to one.
+
+    Returns:
+        JSON tool result with pagination metadata and Evidence records.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    result = await query_work_project_evidence(project_id, page=max(page, 1), size=_PAGE_SIZE, keyword=keyword)
+    return work_project_success({"page": result.page, "size": result.size, "total": result.total, "evidence": [_dump(item) for item in result.items]})
+
+
+@function_tool
+async def save_work_project_relation(ctx: RunContextWrapper[AgentRuntimeContext], relation_id: int | None, relation: WorkProjectRelationRequest) -> str:
+    """Create or update an evidence-backed environment Relation.
+
+    Relations model structure, connectivity, dependency, identity, data flow, or
+    provenance only. Attack progression belongs in AttackPaths.
+
+    Args:
+        relation_id: Existing Relation id to update, or null to upsert by endpoints and type.
+        relation: Source and target Asset ids, Relation type, assertion status,
+            concise summary, and active supporting Evidence ids.
+
+    Returns:
+        JSON tool result containing the saved Relation.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := await _specialist_mutation_error(ctx):
+        return work_project_error(error)
+    saved, error = await upsert_work_project_relation(
+        project_id, relation, relation_id=relation_id,
+        created_by_agent_code=ctx.context.agent_code,
+        created_from_session_id=ctx.context.session_id,
+    )
+    return work_project_error(error) if error else work_project_success({"relation": _dump(saved)})
+
+
+@function_tool
+async def list_work_project_relations(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    keyword: str = "",
+    status: WorkProjectAssertionStatus | None = None,
+    page: int = 1,
+) -> str:
+    """Page through environment Relations in the current WorkProject.
+
+    Args:
+        keyword: Optional summary, Relation type, or assertion-status search text.
+        status: Optional exact assertion status filter.
+        page: One-based result page; values below one are normalized to one.
+
+    Returns:
+        JSON tool result with pagination metadata and Relation records.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    result = await query_work_project_relations(
+        project_id,
+        page=max(page, 1),
+        size=_PAGE_SIZE,
+        keyword=keyword,
+        status=status,
+    )
+    return work_project_success({
+        "page": result.page,
+        "size": result.size,
+        "total": result.total,
+        "relations": [_dump(item) for item in result.items],
+    })
+
+
+@function_tool
+async def list_work_project_findings(ctx: RunContextWrapper[AgentRuntimeContext], keyword: str = "", page: int = 1) -> str:
+    """List suspected, validated, refuted, and deferred security Findings.
+
+    Args:
+        keyword: Optional title, description, impact, CWE, verification, or severity search text.
+        page: One-based result page; values below one are normalized to one.
+
+    Returns:
+        JSON tool result with pagination metadata and Finding records.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    result = await query_work_project_findings(project_id, page=max(page, 1), size=_PAGE_SIZE, keyword=keyword)
+    return work_project_success({"page": result.page, "size": result.size, "total": result.total, "findings": [_dump(item) for item in result.items]})
+
+
+@function_tool
+async def save_work_project_finding(ctx: RunContextWrapper[AgentRuntimeContext], finding_id: int | None, finding: WorkProjectFindingRequest) -> str:
+    """Create or update an evidence-backed security Finding.
+
+    Args:
+        finding_id: Existing Finding id to update, or null to create one.
+        finding: Primary and affected Assets, category, verification, severity,
+            technical conclusion, impact, remediation, Evidence ids, and optional
+            evidence-supported CWE/CVSS classification.
+
+    Returns:
+        JSON tool result containing the saved Finding.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := await _specialist_mutation_error(ctx):
+        return work_project_error(error)
+    saved, error = await save_work_project_finding_service(
+        project_id, finding, finding_id=finding_id,
+        created_by_agent_code=ctx.context.agent_code,
+        created_from_session_id=ctx.context.session_id,
+    )
+    return work_project_error(error) if error else work_project_success({"finding": _dump(saved)})
+
+
+@function_tool
+async def save_work_project_attack_path(ctx: RunContextWrapper[AgentRuntimeContext], path_id: int | None, path: WorkProjectAttackPathRequest) -> str:
+    """Atomically create or update a continuous evidence-backed AttackPath.
+
+    Args:
+        path_id: Existing AttackPath id to update, or null to create one.
+        path: Entry and target Assets, objective, archive state, and the complete
+            ordered sequence of actions, results, blockers, graph links, ATT&CK
+            mappings, and active Evidence ids.
+
+    Returns:
+        JSON tool result containing the saved AttackPath and its ordered steps.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := await _specialist_mutation_error(ctx):
+        return work_project_error(error)
+    saved, steps, error = await save_work_project_attack_path_service(
+        project_id, path, path_id=path_id,
+        created_by_agent_code=ctx.context.agent_code,
+        created_from_session_id=ctx.context.session_id,
+    )
+    return work_project_error(error) if error else work_project_success({"attack_path": _dump(saved), "steps": [_dump(item) for item in steps]})
+
+
+@function_tool
+async def list_work_project_attack_paths(
     ctx: RunContextWrapper[AgentRuntimeContext],
     keyword: str = "",
     page: int = 1,
 ) -> str:
-    """List durable Finding records for the current WorkProject.
-
-    Results are paginated to keep model context small. Increase page to continue reading when total exceeds size.
+    """Page through AttackPaths and their ordered validation steps.
 
     Args:
-        keyword: str optional search term matched against finding title, description, impact, severity, or status.
-        page: int one-based result page. Use page > 1 when total exceeds size.
+        keyword: Optional title, objective, or summary search text.
+        page: One-based result page; values below one are normalized to one.
 
     Returns:
-        JSON status with page, size, total, and compact finding records.
+        JSON tool result with pagination metadata, derived path status, and steps.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    page_result = await query_work_project_findings(
+    result = await query_work_project_attack_paths(
         project_id,
-        page=_agent_page(page),
-        size=_AGENT_PAGE_SIZE,
+        page=max(page, 1),
+        size=_PAGE_SIZE,
         keyword=keyword,
     )
+    path_ids = [item.id for item in result.items]
+    async with get_async_session() as session:
+        steps = list((await session.exec(select(WorkProjectAttackPathStep).where(
+            WorkProjectAttackPathStep.path_id.in_(path_ids)
+        ).order_by(WorkProjectAttackPathStep.path_id, WorkProjectAttackPathStep.sequence))).all()) if path_ids else []
+    steps_by_path: dict[int, list[WorkProjectAttackPathStep]] = {}
+    for step in steps:
+        steps_by_path.setdefault(step.path_id, []).append(step)
     return work_project_success({
-        "page": page_result.page,
-        "size": page_result.size,
-        "total": page_result.total,
-        "findings": [_compact_finding(item.model_dump(mode="json")) for item in page_result.items],
+        "page": result.page,
+        "size": result.size,
+        "total": result.total,
+        "attack_paths": [{
+            **_dump(path),
+            "status": derive_attack_path_status(
+                steps_by_path.get(path.id, []),
+                path.archived_at,
+            ).value,
+            "steps": [_dump(item) for item in steps_by_path.get(path.id, [])],
+        } for path in result.items],
     })
 
 
 @function_tool
-async def create_or_update_work_project_finding(
+async def create_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    finding_id: int | None,
-    finding: WorkProjectFindingRequest,
+    plan: WorkProjectWorkItemPlanRequest,
 ) -> str:
-    """Create or update a durable Finding record for the current WorkProject.
-
-    A finding describes a weakness or proven issue. Set asset_id to the affected asset.
-    When a finding substantiates a relationship or attack step, set edge_id to that graph edge.
-    status is one of suspected, validated, false_positive; the finding's description and impact
-    carry the proof, so mark it validated only once it is actually confirmed.
+    """Create a queued graph-targeted WorkItem; cso only.
 
     Args:
-        finding_id: int | None finding id to update. Use null to create a new finding.
-        finding: WorkProjectFindingRequest with asset_id/edge_id, title, severity, status, description, and impact.
+        plan: Immutable execution plan containing assignee, objective, scope,
+            completion criteria, dependencies, graph focus, and target surfaces.
 
     Returns:
-        JSON status with the compact saved finding record.
+        JSON tool result containing the new queued WorkItem.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    if finding_id is None:
-        saved, error = await create_work_project_finding(
-            project_id,
-            finding,
-            created_by_agent_code=ctx.context.agent_code,
-            created_from_session_id=ctx.context.session_id,
-        )
-    else:
-        saved, error = await update_work_project_finding(project_id, finding_id, finding)
-    if error:
-        return work_project_error(error)
-    return work_project_success({"finding": _compact_finding(_dump(saved))})
-
-
-@function_tool
-async def load_work_project_graph(
-    ctx: RunContextWrapper[AgentRuntimeContext],
-    page: int = 1,
-) -> str:
-    """Load durable relationship edges, attack paths, and ordered path steps.
-
-    Graph nodes are the project assets; edges connect two assets. Use list_work_project_assets for node detail.
-    Results are paginated to keep model context small. Increase page to continue reading when a total exceeds size.
-
-    Args:
-        page: int one-based graph page. Applies separately to edges, attack paths, and attack path steps.
-
-    Returns:
-        JSON status with total counts, page, size, compact edges, compact attack paths, and compact path steps.
-    """
-    project_id = _project_id(ctx)
-    if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
-    page = _agent_page(page)
-    graph_page = await query_work_project_graph(
+    saved, error = await create_work_project_work_item_service(
         project_id,
-        page=page,
-        size=_AGENT_GRAPH_ITEMS,
+        plan,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
     )
-    return work_project_success({
-        "counts": {
-            "edges": graph_page.edge_total,
-            "attack_paths": graph_page.attack_path_total,
-            "attack_path_steps": graph_page.attack_path_step_total,
-        },
-        "page": page,
-        "size": _AGENT_GRAPH_ITEMS,
-        "edges": [_compact_edge(item.model_dump(mode="json")) for item in graph_page.edges],
-        "attack_paths": [_compact_attack_path(item.model_dump(mode="json")) for item in graph_page.attack_paths],
-        "attack_path_steps": [
-            _compact_attack_path_step(item.model_dump(mode="json"))
-            for item in graph_page.attack_path_steps
-        ],
-    })
+    return _work_item_result(saved, error)
 
 
 @function_tool
-async def create_or_update_work_project_graph_edge(
+async def update_work_project_work_item_plan(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    edge_id: int | None,
-    edge: WorkProjectGraphEdgeRequest,
+    work_item_id: int,
+    plan: WorkProjectWorkItemPlanRequest,
 ) -> str:
-    """Create or update a relationship edge between two assets for the current WorkProject.
-
-    Omit edge_id to upsert by (source_asset_id, target_asset_id, type); provide edge_id to update one edge.
-    The edge type is either structural (related, resolves_to, hosts, connects_to, trusts) to describe the
-    target architecture, or offensive (exploits, pivots_to, leads_to) to describe how an attack progresses,
-    directed from source_asset_id to target_asset_id.
+    """Replace the plan of a queued WorkItem before activation; cso only.
 
     Args:
-        edge_id: int | None graph edge id to update. Use null to upsert by source_asset_id, target_asset_id, and type.
-        edge: WorkProjectGraphEdgeRequest with source_asset_id, target_asset_id, type, and optional label.
+        work_item_id: Queued WorkItem id whose plan will be replaced.
+        plan: Complete immutable execution plan and target surface set.
 
     Returns:
-        JSON status with the compact saved graph edge record.
+        JSON tool result containing the updated queued WorkItem.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    if edge_id is None:
-        saved, error = await upsert_work_project_graph_edge(
-            project_id,
-            edge,
-            created_by_agent_code=ctx.context.agent_code,
-            created_from_session_id=ctx.context.session_id,
-        )
-    else:
-        saved, error = await update_work_project_graph_edge(project_id, edge_id, edge)
-    if error:
-        return work_project_error(error)
-    return work_project_success({"edge": _compact_edge(_dump(saved))})
+    saved, error = await update_work_project_work_item_plan_service(
+        project_id,
+        work_item_id,
+        plan,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
 
 
 @function_tool
-async def create_or_update_work_project_attack_path(
+async def activate_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    path_id: int | None,
-    path: WorkProjectAttackPathRequest,
+    work_item_id: int,
+    reason: str,
 ) -> str:
-    """Create or update a durable attack path for the current WorkProject.
+    """Activate queued work as cso or resume the bound blocked WorkItem as its assignee.
 
     Args:
-        path_id: int | None attack path id to update. Use null to create a new attack path.
-        path: WorkProjectAttackPathRequest with title, status, and summary.
+        work_item_id: Queued or blocked WorkItem id.
+        reason: Specific activation or blocker-resolution reason for the WorkLog.
 
     Returns:
-        JSON status with the compact saved attack path record.
+        JSON tool result containing the active WorkItem, or a scope/dependency error.
+    """
+    if error := _specialist_work_item_error(ctx, work_item_id):
+        return work_project_error(error)
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    saved, error = await activate_work_project_work_item_service(
+        project_id,
+        work_item_id,
+        reason,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
+
+
+@function_tool
+async def update_work_project_work_item_target(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    work_item_id: int,
+    target: WorkProjectWorkItemTargetUpdateRequest,
+) -> str:
+    """Update one target surface on the active runtime-bound WorkItem.
+
+    Args:
+        work_item_id: Active WorkItem id.
+        target: Exact asset and surface plus active, covered, or deferred state;
+            covered requires a conclusion and deferred requires a reason.
+
+    Returns:
+        JSON tool result containing the updated target surface.
+    """
+    if error := _specialist_work_item_error(ctx, work_item_id):
+        return work_project_error(error)
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    saved, error = await update_work_project_work_item_target_service(
+        project_id,
+        work_item_id,
+        target,
+        actor_agent_code=ctx.context.agent_code,
+    )
+    return work_project_error(error) if error else work_project_success({"target": _dump(saved)})
+
+
+@function_tool
+async def block_work_project_work_item(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    work_item_id: int,
+    targets: list[WorkProjectWorkItemTargetKey],
+    reason: str,
+) -> str:
+    """Block an active WorkItem and atomically mark the affected target surfaces blocked.
+
+    Args:
+        work_item_id: Active WorkItem id.
+        targets: One or more exact asset and surface targets affected by the blocker.
+        reason: Concrete blocker and the condition required to resume.
+
+    Returns:
+        JSON tool result containing the blocked WorkItem.
+    """
+    if error := _specialist_work_item_error(ctx, work_item_id):
+        return work_project_error(error)
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    saved, error = await block_work_project_work_item_service(
+        project_id,
+        work_item_id,
+        targets,
+        reason,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
+
+
+@function_tool
+async def submit_work_project_work_item_review(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    work_item_id: int,
+    result_summary: str,
+) -> str:
+    """Submit an active WorkItem to cso review after all target and Evidence gates pass.
+
+    Args:
+        work_item_id: Active runtime-bound WorkItem id.
+        result_summary: Complete evidence-based result, valuable negatives, residual
+            limitations, and handoff implications.
+
+    Returns:
+        JSON tool result containing the WorkItem in review state.
+    """
+    if error := _specialist_work_item_error(ctx, work_item_id):
+        return work_project_error(error)
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    saved, error = await submit_work_project_work_item_review_service(
+        project_id,
+        work_item_id,
+        result_summary,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
+
+
+@function_tool
+async def review_work_project_work_item(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    work_item_id: int,
+    decision: WorkProjectReviewDecision,
+    reason: str,
+    reopened_targets: list[WorkProjectWorkItemTargetKey],
+) -> str:
+    """Accept a reviewed WorkItem or return named target surfaces to active work; cso only.
+
+    Args:
+        work_item_id: WorkItem currently awaiting review.
+        decision: accept to complete, or request_changes to return work to active.
+        reason: Evidence-based review conclusion recorded in WorkLog.
+        reopened_targets: Empty when accepting; exact targets requiring more work
+            when requesting changes.
+
+    Returns:
+        JSON tool result containing the completed or reactivated WorkItem.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    if path_id is None:
-        saved, error = await create_work_project_attack_path(
-            project_id,
-            path,
-            created_by_agent_code=ctx.context.agent_code,
-            created_from_session_id=ctx.context.session_id,
-        )
-    else:
-        saved, error = await update_work_project_attack_path(project_id, path_id, path)
-    if error:
-        return work_project_error(error)
-    return work_project_success({"attack_path": _compact_attack_path(_dump(saved))})
+    saved, error = await review_work_project_work_item_service(
+        project_id,
+        work_item_id,
+        decision,
+        reason,
+        reopened_targets,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
 
 
 @function_tool
-async def create_or_update_work_project_attack_path_step(
+async def cancel_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    path_id: int,
-    step_id: int | None,
-    step: WorkProjectAttackPathStepRequest,
+    work_item_id: int,
+    reason: str,
 ) -> str:
-    """Create or update one ordered attack path step.
-
-    Each step traverses a single relationship edge (edge_id), in order by sequence.
+    """Cancel a non-terminal WorkItem with an explicit governance reason; cso only.
 
     Args:
-        path_id: int parent attack path id.
-        step_id: int | None attack path step id to update. Use null to create a new step.
-        step: WorkProjectAttackPathStepRequest with sequence and edge_id.
+        work_item_id: Non-terminal WorkItem id.
+        reason: Scope, duplication, risk, priority, or planning reason for cancellation.
 
     Returns:
-        JSON status with the compact saved attack path step record.
+        JSON tool result containing the canceled WorkItem.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    if step_id is None:
-        saved, error = await create_work_project_attack_path_step(
-            project_id,
-            path_id,
-            step,
-            created_by_agent_code=ctx.context.agent_code,
-            created_from_session_id=ctx.context.session_id,
-        )
-    else:
-        saved, error = await update_work_project_attack_path_step(project_id, path_id, step_id, step)
-    if error:
-        return work_project_error(error)
-    return work_project_success({"attack_path_step": _compact_attack_path_step(_dump(saved))})
+    saved, error = await cancel_work_project_work_item_service(
+        project_id,
+        work_item_id,
+        reason,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
 
 
 @function_tool
-async def delete_work_project_record(
+async def reopen_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
-    record_type: WorkProjectRecordType,
-    record_id: int,
-    path_id: int | None = None,
+    work_item_id: int,
+    reason: str,
 ) -> str:
-    """Permanently delete a durable WorkProject record and detach its references.
-
-    record_type selects the record kind; record_id is that record's id.
-    For an attack_path_step, also provide path_id. Deleting an asset removes the edges that touch it
-    and detaches findings; scope assets cannot be deleted here and must be removed from project metadata.
-    Deleting an edge removes the steps that traverse it and detaches findings.
+    """Reopen a completed or canceled WorkItem as queued and reset its targets; cso only.
 
     Args:
-        record_type: WorkProjectRecordType record kind to delete: asset, finding, graph_edge, attack_path, or attack_path_step.
-        record_id: int id of the selected record.
-        path_id: int | None parent attack path id, required only when record_type is attack_path_step.
+        work_item_id: Terminal WorkItem id.
+        reason: New evidence, scope, or retest trigger requiring renewed execution.
 
     Returns:
-        JSON status with the deleted record type and id.
+        JSON tool result containing the reopened queued WorkItem.
     """
     project_id = _project_id(ctx)
     if project_id is None:
         return work_project_error("No WorkProject is bound to this session.")
-    if record_type == WorkProjectRecordType.ASSET:
-        error = await delete_work_project_asset(project_id, record_id)
-    elif record_type == WorkProjectRecordType.FINDING:
-        error = await delete_work_project_finding(project_id, record_id)
-    elif record_type == WorkProjectRecordType.GRAPH_EDGE:
-        error = await delete_work_project_graph_edge(project_id, record_id)
-    elif record_type == WorkProjectRecordType.ATTACK_PATH:
-        error = await delete_work_project_attack_path(project_id, record_id)
-    else:  # ATTACK_PATH_STEP
-        if path_id is None:
-            return work_project_error("path_id is required to delete an attack path step.")
-        error = await delete_work_project_attack_path_step(project_id, path_id, record_id)
-    if error:
+    saved, error = await reopen_work_project_work_item_service(
+        project_id,
+        work_item_id,
+        reason,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return _work_item_result(saved, error)
+
+
+@function_tool
+async def record_work_project_work_log(ctx: RunContextWrapper[AgentRuntimeContext], work_item_id: int, entry: WorkProjectWorkLogRequest) -> str:
+    """Record a durable WorkLog entry for an assigned WorkItem.
+
+    Args:
+        work_item_id: WorkItem receiving the timeline entry.
+        entry: Decision, blocker, handoff, or result kind and concise content.
+
+    Returns:
+        JSON tool result containing the persisted WorkLog entry.
+    """
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    if error := _specialist_work_item_error(ctx, work_item_id):
         return work_project_error(error)
-    return work_project_success({"deleted": {"type": record_type.value, "id": record_id}})
+    saved, error = await create_work_project_work_log(
+        project_id, work_item_id, entry,
+        actor_agent_code=ctx.context.agent_code,
+        actor_session_id=ctx.context.session_id,
+    )
+    return work_project_error(error) if error else work_project_success({"work_log": _dump(saved)})
 
 
-async def _current_project(context: AgentRuntimeContext) -> WorkProject | None:
-    if context.work_project_id is None:
-        return None
-    async with get_async_session() as session:
-        return await session.get(WorkProject, context.work_project_id)
+@function_tool
+async def complete_current_work_project(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
+    """Close the current WorkProject after all review gates pass.
 
+    This operation is restricted to cso. Closure requires terminal WorkItems,
+    concluded in-scope coverage, resolved Findings, and resolved AttackPaths.
 
-async def _metadata_payload(project: WorkProject) -> dict:
-    async with get_async_session() as session:
-        container_id = (await session.exec(
-            select(WorkProjectSandboxContainer.sandbox_container_id)
-            .where(WorkProjectSandboxContainer.project_id == project.id)
-            .order_by(WorkProjectSandboxContainer.position)
-            .limit(1)
-        )).first()
-    return {
-        "project_id": project.id,
-        "name": project.name,
-        "description": project.description,
-        "sandbox_container_id": container_id,
-        "status": project.status,
-        "type": project.type,
-    }
-
-
-def _tasks_payload(project: WorkProject) -> dict:
-    return {
-        "project_id": project.id,
-        "progress": project.progress,
-        "tasks": [
-            WorkProjectTaskSchema.model_validate(task).model_dump(mode="json")
-            for task in project.tasks
-        ],
-    }
-
-
-def _agent_summaries_payload(project: WorkProject) -> dict:
-    summaries = [
-        WorkProjectAgentSummarySchema.model_validate(summary).model_dump(mode="json")
-        for summary in (project.agent_summaries or {}).values()
-        if isinstance(summary, dict)
-    ]
-    return {
-        "project_id": project.id,
-        "agent_summaries": summaries,
-    }
-
-
-def _sync_summary_progress_to_task(
-    project: WorkProject,
-    summary: WorkProjectAgentSummaryContentSchema,
-) -> None:
-    task_id = summary.task_id.strip()
-    task_title = summary.task_title.strip()
-    if not task_id and not task_title:
-        return
-
-    tasks: list[dict] = []
-    changed = False
-    for raw_task in project.tasks:
-        task = WorkProjectTaskSchema.model_validate(raw_task)
-        if task.id == task_id or (not task_id and task.title == task_title):
-            task.progress = summary.progress
-            changed = True
-        tasks.append(task.model_dump(mode="json"))
-
-    if not changed:
-        return
-    project.tasks = tasks
-    _recalculate_project_progress(project)
-
-
-def _recalculate_project_progress(project: WorkProject) -> None:
-    project.progress = calculate_work_project_progress(project.tasks)
-    project.status = derive_work_project_status(project.tasks, project.status)
+    Returns:
+        JSON tool result containing the completed project id and status, or the
+        first unmet review gate.
+    """
+    if ctx.context.agent_code != DEFAULT_AGENT_CODE:
+        return work_project_error("Only the cso agent can complete a WorkProject.")
+    project_id = _project_id(ctx)
+    if project_id is None:
+        return work_project_error("No WorkProject is bound to this session.")
+    from service.work_project.projects import complete_work_project
+    error = await complete_work_project(project_id)
+    return work_project_error(error) if error else work_project_success({"project_id": project_id, "status": "completed"})
 
 
 def _project_id(ctx: RunContextWrapper[AgentRuntimeContext]) -> int | None:
     return ctx.context.work_project_id
 
 
-def _agent_page(page: int) -> int:
-    return page if page > 0 else 1
+def _specialist_work_item_error(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    work_item_id: int,
+) -> str:
+    if ctx.context.agent_code == DEFAULT_AGENT_CODE:
+        return ""
+    if ctx.context.work_item_id is None:
+        return "No WorkItem is bound to this specialist runtime."
+    if ctx.context.work_item_id != work_item_id:
+        return "Specialists can mutate only their runtime-bound WorkItem."
+    return ""
 
 
-def _compact_asset(item: dict) -> dict:
-    compact = _pick(item, (
-        "id", "type", "origin", "identifier", "host", "port", "path",
-    ))
-    banner = (item.get("extra") or {}).get("banner")
-    if banner:
-        compact["banner"] = _compact_value(banner)
-    return compact
+async def _specialist_mutation_error(
+    ctx: RunContextWrapper[AgentRuntimeContext],
+    work_item_id: int | None = None,
+) -> str:
+    if ctx.context.agent_code == DEFAULT_AGENT_CODE:
+        return ""
+    bound_id = ctx.context.work_item_id
+    if bound_id is None:
+        return "No WorkItem is bound to this specialist runtime."
+    if work_item_id is not None and work_item_id != bound_id:
+        return "Specialists can mutate only their runtime-bound WorkItem."
+    project_id = _project_id(ctx)
+    async with get_async_session() as session:
+        item = await session.get(WorkProjectWorkItem, bound_id)
+    if item is None or item.project_id != project_id:
+        return "The runtime-bound WorkItem was not found in this WorkProject."
+    if item.assignee_agent_code != ctx.context.agent_code:
+        return "The runtime-bound WorkItem is assigned to another Agent."
+    if item.status not in {
+        WorkProjectWorkItemStatus.ACTIVE,
+        WorkProjectWorkItemStatus.BLOCKED,
+    }:
+        return "Specialist project mutations require an active or blocked runtime-bound WorkItem."
+    return ""
 
 
-def _compact_finding(item: dict) -> dict:
-    return _pick(item, ("id", "asset_id", "edge_id", "title", "severity", "status", "description", "impact", "validated_at"))
-
-
-def _compact_edge(item: dict) -> dict:
-    return _pick(item, ("id", "source_asset_id", "target_asset_id", "type", "label"))
-
-
-def _compact_attack_path(item: dict) -> dict:
-    return _pick(item, ("id", "title", "status", "summary"))
-
-
-def _compact_attack_path_step(item: dict) -> dict:
-    return _pick(item, ("id", "path_id", "sequence", "edge_id"))
+def _work_item_result(saved, error: str) -> str:
+    return work_project_error(error) if error else work_project_success({"work_item": _dump(saved)})
 
 
 def _dump(value) -> dict:
-    return value.model_dump(mode="json") if value else {}
-
-
-def _pick(item: dict, keys: tuple[str, ...]) -> dict:
-    return {
-        key: _compact_value(item.get(key))
-        for key in keys
-        if item.get(key) not in (None, "", [])
+    if value is None:
+        return {}
+    return value.model_dump(mode="json") if hasattr(value, "model_dump") else {
+        key: getattr(value, key) for key in value.__class__.model_fields
     }
 
 
-def _compact_value(value):
-    if isinstance(value, str) and len(value) > _MAX_TOOL_TEXT:
-        return value[:_MAX_TOOL_TEXT - 3].rstrip() + "..."
-    return value
+def _compact(value, keys: tuple[str, ...]) -> dict:
+    return {key: getattr(value, key, None) for key in keys}
+
+
+def _compact_asset(value) -> dict:
+    return _compact(value, ("id", "kind", "locator", "name", "scope", "criticality", "state", "summary"))

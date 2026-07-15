@@ -131,7 +131,11 @@ class AgentRegistry:
             model=build_openai_model(cfg),
             model_settings=ModelSettings(parallel_tool_calls=False),
             instructions=lambda run_context, _: "\n\n".join(
-                part for part in (instructions, run_context.context.rag_context) if part
+                part for part in (
+                    instructions,
+                    run_context.context.work_project_context,
+                    run_context.context.rag_context,
+                ) if part
             ),
             tools=tools,
             tool_use_behavior=_end_turn_after_async_dispatch,

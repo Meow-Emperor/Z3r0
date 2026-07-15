@@ -1,19 +1,19 @@
-import { Button, Popconfirm, Tag } from "@douyinfe/semi-ui";
-import { Pencil, Trash2, Users } from "lucide-react";
+import { Tag } from "@douyinfe/semi-ui";
+import { Pencil, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createSystemUser, deleteSystemUser, querySystemUsers, updateSystemUser } from "../../shared/api/systemUsers";
-import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
+import { SYSTEM_USER_ROLE, SYSTEM_USER_ROLE_VALUES } from "../../shared/api/generated/constants";
 import type { CreateSystemUserRequest, SystemUser, UpdateSystemUserRequest } from "../../shared/api/types";
 import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
 import type { ResourceColumn } from "../../shared/components/ResourceTable";
-import { ResourceIdentity, RowActions } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, ResourceIdentity, RowActionButton, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
+import { countBy } from "../../shared/lib/array";
 import { SYSTEM_USER_ROLE_COLOR, SYSTEM_USER_ROLE_LABEL } from "../../shared/lib/labels";
-import { UI_TEXT } from "../../shared/lib/uiText";
 import { UserFormModal } from "./UserFormModal";
 
 type ModalState = { mode: "create" } | { mode: "edit"; user: SystemUser } | null;
@@ -41,16 +41,7 @@ export function SystemUsersPage() {
     },
   });
 
-  const summary = useMemo(
-    () => users.items.reduce(
-      (acc, user) => ({
-        admin: acc.admin + (user.role === SYSTEM_USER_ROLE.ADMIN ? 1 : 0),
-        user: acc.user + (user.role === SYSTEM_USER_ROLE.USER ? 1 : 0),
-      }),
-      { admin: 0, user: 0 },
-    ),
-    [users.items],
-  );
+  const summary = useMemo(() => countBy(users.items, SYSTEM_USER_ROLE_VALUES, (user) => user.role), [users.items]);
 
   const columns: ResourceColumn<SystemUser>[] = [
     {
@@ -69,14 +60,12 @@ export function SystemUsersPage() {
       key: "actions", header: "Actions", width: "104px",
       render: (user) => (
         <RowActions>
-          <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary" aria-label={`Edit ${user.username}`}
+          <RowActionButton icon={<Pencil size={15} />} label={`Edit ${user.username}`}
             onClick={() => setModal({ mode: "edit", user })}
           />
-          <Popconfirm title="Delete user" content={`Delete ${user.username}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteUser(user)}>
-            <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-              loading={deletingUserId === user.id} aria-label={`Delete ${user.username}`}
-            />
-          </Popconfirm>
+          <DeleteRowAction title="Delete user" content={`Delete ${user.username}?`} label={`Delete ${user.username}`}
+            loading={deletingUserId === user.id} onConfirm={() => void deleteUser(user)}
+          />
         </RowActions>
       ),
     },
@@ -93,26 +82,21 @@ export function SystemUsersPage() {
         state={users}
         metrics={[
           { label: "Total", value: users.total },
-          { label: "Admins", value: summary.admin },
-          { label: "Users", value: summary.user },
+          { label: "Admins", value: summary[SYSTEM_USER_ROLE.ADMIN] },
+          { label: "Users", value: summary[SYSTEM_USER_ROLE.USER] },
         ]}
         emptyIcon={<Users size={42} />}
         emptyTitle="No users found"
       />
 
-      {modal?.mode === "edit" ? (
-        <UserFormModal
-          open mode="edit" user={modal.user} saving={saving}
-          onCancel={() => setModal(null)}
-          onSubmit={(payload: UpdateSystemUserRequest) => submit(() => updateSystemUser(modal.user.id, payload))}
-        />
-      ) : (
-        <UserFormModal
-          open={modal?.mode === "create"} mode="create" user={null} saving={saving}
-          onCancel={() => setModal(null)}
-          onSubmit={(payload: CreateSystemUserRequest) => submit(() => createSystemUser(payload))}
-        />
-      )}
+      <UserFormModal
+        open={Boolean(modal)}
+        user={modal?.mode === "edit" ? modal.user : null}
+        saving={saving}
+        onCancel={() => setModal(null)}
+        onCreate={(payload: CreateSystemUserRequest) => submit(() => createSystemUser(payload))}
+        onUpdate={(user, payload: UpdateSystemUserRequest) => submit(() => updateSystemUser(user.id, payload))}
+      />
     </>
   );
 }

@@ -22,7 +22,7 @@ editLink: true
 系统包含以下核心模块：
 
 1. Playground：提供基于会话的 Agent 团队交互与协作。
-2. Work Projects：管理项目范围、负责人、会话、证据记录、关系图和攻击路径。
+2. Work Projects：管理授权范围、图谱目标工作流、证据、发现、攻击路径、决策和会话。
 3. Knowledges：管理文档接入、向量查看、语义检索与知识图谱探索。
 4. Host Management：管理主机节点，并编排 sandbox 容器的实际运行环境。
 5. Egress Proxies：统一出口管理模块，配置 HTTP/HTTPS/SOCKS5 proxy，用于 sandbox 容器的 egress。
@@ -118,17 +118,28 @@ sandbox 容器创建完成后，可通过列表项右侧的操作按钮启动容
 
 ### 创建项目
 
-以授权 CTF 赛题为目标，在 `Work Projects` 中新建 WorkProject，填写名称、类型、描述和负责人，并绑定 sandbox 容器与已知资产：
+以授权 CTF 赛题为目标，在 `Work Projects` 中新建项目，填写名称、类型、描述、负责人和 sandbox 绑定。为每个已知范围资产声明 kind、规范 locator、名称和关键性。声明资产立即进入 `in_scope`；后续发现的资产保持 context，直至主控 Agent 确认范围。
 
 ![create-project-1](/images/create-project-1.png)
 
-### 任务实施
+### 实施工作流
 
-WorkProject 创建完成后会出现在 `Playground` 列表中。进入项目并创建会话后，可向 Agent 团队下达授权 CTF 任务目标，最终交付经过验证的 flag 与可复核的 write-up：
+WorkProject 创建完成后会出现在 `Playground` 列表中。进入项目并创建会话后，向 Agent 团队下达授权目标。主控 Agent 读取范围与图谱，为目标资产制定包含完成标准的 WorkItem，并为每项工作协调合适的专家。
 
 ![project-example-1](/images/project-example-1.png)
 
-任务执行过程中，可通过 `Project records` 查看进度与结构化证据。资产、漏洞发现、关系和图谱数据共同保存评估过程中形成的有效结果：
+执行过程中，可在项目工作台复核八个作业视图：
+
+- `Overview` 汇总范围覆盖、当前分工、发现、路径、证据和活跃 Agent。
+- `Workflow` 将每项分工关联到资产、测试面、依赖、覆盖结论、WorkItem 归属证据、决策和 subordinate run，并支持按状态和执行 Agent 聚焦复核。
+- `Graph` 展示环境结构、连接、依赖、身份、信任、数据流和来源，不混入攻击动作。
+- `Assets` 区分声明范围、发现上下文、范围外实体、关键性和稳定 locator。
+- `Findings` 展示验证状态、严重性、影响、修复建议、处置状态、CWE/CVSS、受影响资产和支持证据。
+- `Attack Paths` 通过连续攻击步骤还原阻断点、证据和可选 ATT&CK 映射。
+- `Evidence` 保存归属于 WorkItem 的不可变观察事实，并呈现来源引用、完整性哈希、替代链和生命周期状态。
+- `Activity` 记录具有业务意义的状态与计划变化、决策、阻断、交接和结论。
+
+每位专家都会获得当前工作所需的分工信息、目标覆盖、支持证据、周边图谱和相关重测机会。随着关系、发现和路径步骤得到验证，Evidence 持续归属于对应 WorkItem。每个目标形成结论且结果准备就绪后，主控 Agent 可以接受该项工作，或将指定目标面退回进一步分析。有效负面结果同样作为证据保留，可用于关闭测试面而不虚构漏洞；新凭据、信任关系、路由、版本、代码路径和密钥则会将相关跟进与重测工作带入视野。
 
 ![project-example-2](/images/project-example-2.png)
 

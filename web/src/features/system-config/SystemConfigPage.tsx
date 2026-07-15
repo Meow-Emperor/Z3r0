@@ -16,6 +16,7 @@ import type {
   UpdateInstanceConfigRequest,
 } from "../../shared/api/types";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
+import { useMountedRef } from "../../shared/hooks/useMountedRef";
 
 type AgentFormValue = AgentConfig;
 type LightRAGFormValue = LightRAGConfig;
@@ -179,15 +180,13 @@ export function SystemConfigPage() {
   const [savedValues, setSavedValues] = useState<ConfigFormValue | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const mountedRef = useRef(true);
+  const mountedRef = useMountedRef();
   const loadRequestIdRef = useRef(0);
   const saveRequestIdRef = useRef(0);
   const savingRef = useRef(false);
 
   useEffect(() => {
-    mountedRef.current = true;
     return () => {
-      mountedRef.current = false;
       loadRequestIdRef.current += 1;
       saveRequestIdRef.current += 1;
       savingRef.current = false;
@@ -294,7 +293,6 @@ export function SystemConfigPage() {
     loading: loading || saving,
     onRefresh: loadConfig,
     extraActions: headerActions,
-    appendExtraActions: true,
   });
 
   return (

@@ -252,6 +252,7 @@ async def _create_job_record(
         session_id=context.session_id,
         agent_code=context.agent_code,
         agent_instance_id=context.agent_instance_id,
+        work_item_id=context.work_item_id,
         command=command,
         output_file=output_file,
         nested_for_agent_code=context.nested_for_agent_code,

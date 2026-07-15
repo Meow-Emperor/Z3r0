@@ -1,6 +1,6 @@
 import { Input, Select } from "@douyinfe/semi-ui";
 import { KeyRound, Mail, Shield, User, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getSystemUserRoles, isSystemUserRole } from "../../shared/api/contract";
 import { SYSTEM_USER_ROLE } from "../../shared/api/generated/constants";
 import type { CreateSystemUserRequest, SystemUser, SystemUserRole, UpdateSystemUserRequest } from "../../shared/api/types";
@@ -15,34 +15,26 @@ type UserFormValues = {
   role: SystemUserRole;
 };
 
-type UserFormModalProps =
-  | {
-      open: boolean;
-      mode: "create";
-      user: null;
-      saving: boolean;
-      onCancel: () => void;
-      onSubmit: (payload: CreateSystemUserRequest) => Promise<void>;
-    }
-  | {
-      open: boolean;
-      mode: "edit";
-      user: SystemUser;
-      saving: boolean;
-      onCancel: () => void;
-      onSubmit: (payload: UpdateSystemUserRequest) => Promise<void>;
-    };
+type UserFormModalProps = {
+  open: boolean;
+  user: SystemUser | null;
+  saving: boolean;
+  onCancel: () => void;
+  onCreate: (payload: CreateSystemUserRequest) => Promise<void>;
+  onUpdate: (user: SystemUser, payload: UpdateSystemUserRequest) => Promise<void>;
+};
 
 const EMPTY: UserFormValues = { username: "", email: "", password: "", role: SYSTEM_USER_ROLE.USER };
+const ROLES = getSystemUserRoles();
 
 function initial(user: SystemUser | null): UserFormValues {
   if (!user) return EMPTY;
   return { username: user.username, email: user.email, password: "", role: user.role };
 }
 
-export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: UserFormModalProps) {
+export function UserFormModal({ open, user, saving, onCancel, onCreate, onUpdate }: UserFormModalProps) {
   const [values, setValues] = useState<UserFormValues>(() => initial(user));
-  const roles = useMemo(() => getSystemUserRoles(), []);
+  const editing = Boolean(user);
 
   useEffect(() => {
     if (open) setValues(initial(user));
@@ -50,20 +42,17 @@ export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: 
 
   const submit = async () => {
     const base = { username: values.username.trim(), email: values.email.trim(), role: values.role };
-    if (mode === "create") {
-      await onSubmit({ ...base, password: values.password });
-    } else {
-      await onSubmit(values.password ? { ...base, password: values.password } : base);
-    }
+    if (!user) await onCreate({ ...base, password: values.password });
+    else await onUpdate(user, values.password ? { ...base, password: values.password } : base);
   };
 
   return (
     <ResourceModal
       open={open}
-      title={mode === "create" ? "Create User" : "Edit User"}
+      title={editing ? "Edit User" : "Create User"}
       titleIcon={<UserRound size={17} />}
       saving={saving}
-      submitLabel={mode === "create" ? "Create" : "Save"}
+      submitLabel={editing ? "Save" : "Create"}
       onCancel={onCancel}
       onSubmit={submit}
     >
@@ -80,13 +69,13 @@ export function UserFormModal({ open, mode, user, saving, onCancel, onSubmit }: 
       <FormField label="Role">
         <Select prefix={<Shield size={16} />} value={values.role}
           onChange={(role) => isSystemUserRole(role) && setValues((v) => ({ ...v, role }))}
-          optionList={roles.map((role) => ({ label: SYSTEM_USER_ROLE_LABEL[role], value: role }))}
+          optionList={ROLES.map((role) => ({ label: SYSTEM_USER_ROLE_LABEL[role], value: role }))}
         />
       </FormField>
       <FormField label="Password">
         <Input mode="password" prefix={<KeyRound size={16} />} value={values.password} maxLength={128}
-          required={mode === "create"}
-          placeholder={mode === "create" ? "Password" : "Leave blank to keep current password"}
+          required={!editing}
+          placeholder={editing ? "Leave blank to keep current password" : "Password"}
           onChange={(password) => setValues((v) => ({ ...v, password }))}
         />
       </FormField>

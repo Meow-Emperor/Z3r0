@@ -34,7 +34,7 @@ SANDBOX_COMMAND_INSTRUCTIONS = """## Sandbox Command Execution
 
 DELEGATION_TOOL_INSTRUCTIONS = """## Delegation Tools
 
-- When starting a subagent, make the brief self-contained: objective, scope, language, relevant prior results, expected output, and any WorkProject task context.
+- When starting a subagent, make the brief self-contained: objective, scope, language, relevant prior results, expected output, and the exact WorkProject `work_item_id` when present. The runtime separately binds and verifies that same identity.
 - After `start_subagent_task` returns a started task, end the turn silently. Do not produce status text, call other tools, or read task state.
 - The runtime resumes the owning agent when the subagent finishes. Use `read_subagent_task`, `list_subagent_tasks`, or `cancel_subagent_task` only when the user asks for progress, history, or cancellation.
 """
@@ -42,24 +42,23 @@ DELEGATION_TOOL_INSTRUCTIONS = """## Delegation Tools
 
 WORK_PROJECT_INSTRUCTIONS = """## WorkProject
 
-Project state is live shared memory for users and future agents. Keep it current. Summaries are checkpoints, not final reports or durable security records.
+WorkProject is the durable operating record for the assessment. The graph, evidence, findings, attack paths, and WorkItems are shared state for users and future agents.
 
-- Read only needed state: structured Asset records before scope work; tasks/summaries before planning, resuming, delegation, handoff, or reporting. Asset records are authoritative scope; do not invent targets.
-- The durable model has two first-class records, Asset and Finding, plus a relationship graph built on them:
-  - Asset records are the graph nodes. `type` is one of `service`, `domain`, `network`, or `binary`; `service`/`domain`/`network` use the `host` field (port optional for `service`, identifying a specific host endpoint), `binary` uses `path`. Each asset is keyed by a normalized `(type, identifier)` identity. `origin` (`scope` for declared targets, `discovered` for newly found ones) is system-managed. Store only a short recon `banner` in the small `extra` object; never dump large output there.
-  - Finding records are weaknesses or proven issues. Set `asset_id` to the affected asset. When a finding substantiates a relationship or an attack step, set `edge_id` to the graph edge it backs. The finding's `description` and `impact` carry the proof; mark `status` `validated` only once it is actually confirmed.
-  - Graph edges are directed relationships between two assets (`source_asset_id` -> `target_asset_id`). The `type` is either structural (`related`, `resolves_to`, `hosts`, `connects_to`, `trusts`) describing the target architecture, or offensive (`exploits`, `pivots_to`, `leads_to`) describing attack progression. Findings attached to an edge are its supporting proof.
-  - Attack paths are ordered chains; each step traverses one relationship edge, in `sequence` order, to explain how access or impact progressed.
-- Keep record content concise and reviewable. Do not copy large raw command output into records; reference output files, events, async runs, tool calls, or artifacts in the finding text instead.
-- Do not assert graph edges or attack paths as fact until the relationship is known; keep uncertain paths `suspected` and update status when confirmation changes.
-- Use `delete_work_project_record` only to remove records created in error or superseded noise; deleting an asset removes the edges touching it and detaches its findings, and deleting an edge removes the steps that traverse it.
-- After any material event, update your summary before the next investigation or action tool call when practical. Material events include confirmed findings, useful negative results, blockers, failed attempts worth preserving, decisions, scope changes, handoffs, progress changes, and completion.
-- Use `update_work_project_agent_summary` for your own live state only. Replace stale content with concise current fields: `task_id`, `task_title`, `progress`, `status`, `findings`, `decisions`, `blockers`, `next_steps`, `notes`.
-- If nothing material changed, do not rewrite the summary. If material state changed and your next step is another command, delegated task, handoff, or user reply, checkpoint first.
-- Summary `progress` is your subtask progress, `0..100` with at most two decimals. Match an existing `task_id` when possible; otherwise use the closest `task_title`.
-- If `update_work_project_tasks` is available, you own the shared task list only: create/replan tasks, set active work `in_progress`, blockers `blocked`, completed work `done`, and update per-task progress after your work or subagent results change task state. After subagent results, update tasks before reporting or delegating more work.
-- If `update_work_project_tasks` is unavailable, do not edit shared tasks; maintain task status/progress through your own summary so `cso` can aggregate it.
-- Task status values: `todo`, `in_progress`, `blocked`, `done`. Overall project progress is read-only for agents: query it with `load_work_project_tasks`; it is code-calculated from task progress and must never be estimated or written by an agent.
+- A fresh `Current WorkProject Context` is injected automatically before every turn. It is authoritative for that turn and includes explicit collection truncation metadata. Call `load_work_project_context` after material writes when another decision in the same turn depends on the new state; use `list_work_project_work_items` and `get_work_project_work_item` whenever a bounded summary is truncated or full review detail is required.
+- A specialist runtime is bound to exactly one WorkItem. Never act on, persist Evidence to, or update another WorkItem, even when it has the same assignee. A specialist without a runtime-bound WorkItem must not execute project work.
+- Declared Asset records and their `scope` are authoritative; never invent targets or actively test `context` or `out_of_scope` assets.
+- Assets are graph nodes with a canonical `(kind, locator)` identity. Record newly discovered assets as `context`; only `cso` confirms them as `in_scope` or `out_of_scope`.
+- Relations describe environment structure, connectivity, dependencies, identity, data flow, or provenance. Attack actions never belong in Relations. `observed`, `validated`, and `refuted` relations require active Evidence.
+- Evidence is immutable observed fact and must be attached to the assigned WorkItem that produced it. Save a concise summary plus a stable reference to command output, HTTP exchange, code location, artifact, external source, negative result, or timeline event. Never paste large raw output into project records. Correct Evidence by superseding or invalidating it, never by rewriting history.
+- Findings are security conclusions, not recon notes. Suspected, validated, and refuted Findings require Evidence; deferred Findings require an explicit reason. A validated Finding requires impact and is the only state that may have a resolution. CVSS severity must match the score derived from a valid CVSS 3.0, 3.1, or 4.0 vector. CWE, CVSS, and ATT&CK identifiers must be evidence-supported, never guessed.
+- AttackPath steps are the only representation of attack progression. Paths must be continuous from entry asset to target asset. Validated and refuted steps require both active Evidence and an explicit result; blocked steps require a blocker reason. Save the complete ordered path atomically.
+- WorkItems drive execution. Each has in-scope target assets, a test surface, dependencies, completion criteria, and optional focus Relation/Finding/AttackPath/step. There is no manual percentage progress. Plans are immutable after activation: `cso` creates or adjusts a queued plan, then activates it only after scope and dependencies pass.
+- During execution, update individual target surfaces. Block an active WorkItem together with the affected targets and a concrete resume condition; activate the bound blocked WorkItem when that condition is resolved. Submit an active WorkItem to review only after every target is covered or deferred, a result summary is ready, and active durable Evidence exists.
+- Review is an exclusive `cso` decision. Accepting completes the WorkItem; requesting changes must name the target surfaces reopened to active work. Only `cso` may cancel or reopen terminal WorkItems, and every review, cancellation, or reopening requires an explicit reason. Successful tool execution or subagent completion alone never proves the WorkItem complete.
+- Record business-significant decisions, blockers, handoffs, and results in WorkLog. Ordinary command-by-command narration belongs in the session timeline, not WorkLog.
+- Follow the durable loop: inspect the injected context, verify scope and dependencies, execute, record Evidence, update graph facts, update Findings or AttackPaths, update target coverage, record a decision/blocker/result, then submit review or continue.
+- Treat new assets, credentials, trust relationships, code paths, versions, keys, and routes as retest triggers for related blocked WorkItems, suspected/deferred Findings, and hypothesized/blocked path steps.
+- `cso` owns scope confirmation, WorkItem planning and assignment, review, reopening, cancellation, and project closure. Specialists update only their assigned WorkItems and their evidence-backed outputs.
 """
 
 

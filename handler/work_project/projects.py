@@ -103,7 +103,7 @@ async def create_work_project_session_handler(
     if result.not_found:
         raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
     if result.inactive:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "canceled projects cannot create sessions")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "only active projects can create sessions")
     return CommonResponse(data=CreateWorkProjectSessionResponse(session_id=result.session_id))
 
 

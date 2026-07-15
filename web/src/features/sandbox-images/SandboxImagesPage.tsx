@@ -1,17 +1,16 @@
-import { Button, Popconfirm, Tag } from "@douyinfe/semi-ui";
-import { Boxes, Network, Route, Trash2 } from "lucide-react";
+import { Tag } from "@douyinfe/semi-ui";
+import { Boxes, Network, Route } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createSandboxImage, deleteSandboxImage, querySandboxImages } from "../../shared/api/sandboxImages";
 import type { CreateSandboxImageRequest, SandboxImage } from "../../shared/api/types";
 import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
 import type { ResourceColumn } from "../../shared/components/ResourceTable";
-import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
-import { UI_TEXT } from "../../shared/lib/uiText";
 import { SandboxImageFormModal } from "./SandboxImageFormModal";
 
 export function SandboxImagesPage() {
@@ -37,15 +36,7 @@ export function SandboxImagesPage() {
     },
   });
 
-  const summary = useMemo(
-    () => images.items.reduce(
-      (acc, image) => ({
-        tor: acc.tor + (image.supports_tor ? 1 : 0),
-      }),
-      { tor: 0 },
-    ),
-    [images.items],
-  );
+  const torImageCount = useMemo(() => images.items.filter((image) => image.supports_tor).length, [images.items]);
 
   const handleCreate = (payload: CreateSandboxImageRequest) => submit(() => createSandboxImage(payload));
 
@@ -76,11 +67,9 @@ export function SandboxImagesPage() {
       key: "actions", header: "Actions", width: "104px",
       render: (image) => (
         <RowActions>
-          <Popconfirm title="Delete image" content={`Delete ${image.image_name}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteImage(image)}>
-            <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-              loading={deletingId === image.id} aria-label={`Delete ${image.image_name}`}
-            />
-          </Popconfirm>
+          <DeleteRowAction title="Delete image" content={`Delete ${image.image_name}?`} label={`Delete ${image.image_name}`}
+            loading={deletingId === image.id} onConfirm={() => void deleteImage(image)}
+          />
         </RowActions>
       ),
     },
@@ -97,7 +86,7 @@ export function SandboxImagesPage() {
         state={images}
         metrics={[
           { label: "Total", value: images.total },
-          { label: "Tor", value: summary.tor },
+          { label: "Tor", value: torImageCount },
         ]}
         emptyIcon={<Boxes size={42} />}
         emptyTitle="No images found"

@@ -1,6 +1,7 @@
-import { Button, Tooltip } from "@douyinfe/semi-ui";
-import { Eye, EyeOff, User } from "lucide-react";
-import type { ReactNode } from "react";
+import { Button, Popconfirm, Tooltip } from "@douyinfe/semi-ui";
+import { Eye, EyeOff, Trash2, User } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { UI_TEXT } from "../lib/uiText";
 
 type ResourceIdentityProps = {
   before?: ReactNode;
@@ -71,4 +72,31 @@ export function SecretCell({
 
 export function RowActions({ children }: { children: ReactNode }) {
   return <div className="row-actions">{children}</div>;
+}
+
+type ButtonProps = NonNullable<ComponentProps<typeof Button>>;
+
+type RowActionButtonProps = Omit<ButtonProps, "aria-label" | "icon" | "theme"> & {
+  icon: ReactNode;
+  label: string;
+};
+
+export function RowActionButton({ icon, label, type = "tertiary", ...props }: RowActionButtonProps) {
+  return <Button {...props} icon={icon} theme="borderless" type={type} aria-label={label} />;
+}
+
+type DeleteRowActionProps = Partial<Pick<ButtonProps, "disabled" | "loading" | "size">> & {
+  content: ReactNode;
+  label: string;
+  title: ReactNode;
+  onConfirm: () => void | Promise<void>;
+};
+
+export function DeleteRowAction({ content, label, onConfirm, title, ...buttonProps }: DeleteRowActionProps) {
+  const iconSize = buttonProps.size === "small" ? 14 : 15;
+  return (
+    <Popconfirm title={title} content={content} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={onConfirm}>
+      <Button {...buttonProps} icon={<Trash2 size={iconSize} />} theme="borderless" type="danger" aria-label={label} />
+    </Popconfirm>
+  );
 }

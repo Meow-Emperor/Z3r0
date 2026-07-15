@@ -24,30 +24,21 @@ export const MermaidDiagram = memo(function MermaidDiagram({ source }: { source:
   const [result, setResult] = useState<{ svg: string } | { error: string } | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     setResult(null);
-
-    mermaid
-      .render(renderId, source)
-      .then(({ svg }) => {
-        if (!cancelled) setResult({ svg });
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setResult({ error: error instanceof Error ? error.message : String(error) });
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    mermaid.render(renderId, source).then(({ svg }) => {
+      if (!canceled) setResult({ svg });
+    }).catch((error: unknown) => {
+      if (!canceled) setResult({ error: error instanceof Error ? error.message : String(error) });
+    });
+    return () => { canceled = true; };
   }, [renderId, source]);
 
   if (result && "error" in result) {
     return (
       <div className="mermaid-diagram mermaid-diagram-error" title={result.error}>
         <div className="mermaid-error-label">Mermaid render failed</div>
-        <pre>
-          <code className="language-mermaid">{source}</code>
-        </pre>
+        <pre><code className="language-mermaid">{source}</code></pre>
       </div>
     );
   }

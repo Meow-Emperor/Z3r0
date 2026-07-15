@@ -22,7 +22,7 @@ Enter the configured administrator account and password. After successful authen
 The system contains the following core modules:
 
 1. Playground: provides session-based interaction and collaboration with the Agent team.
-2. Work Projects: manages project scope, owners, sessions, evidence records, graphs, and attack paths.
+2. Work Projects: manages authorized scope, graph-targeted workflow, evidence, findings, attack paths, decisions, and sessions.
 3. Knowledges: manages document ingestion, vector inspection, semantic retrieval, and knowledge graph exploration.
 4. Host Management: manages host nodes and orchestrates the runtime environment for sandbox containers.
 5. Egress Proxies: manages unified network egress through HTTP, HTTPS, and SOCKS5 proxies.
@@ -118,17 +118,28 @@ After the sandbox container is created, use the action buttons on the right side
 
 ### Create a Project
 
-Using a CTF challenge as the target, create a work project in the `Work Projects` module. Fill in the project name, project type, description, responsible users, and other basic information. Then bind the sandbox container and enter the known asset information:
+Using an authorized CTF challenge as the target, create a project in `Work Projects`. Fill in the project name, type, description, owners, and sandbox binding. Declare each known scope asset with a kind, canonical locator, name, and criticality. Declared assets are immediately `in_scope`; assets discovered later remain contextual until the lead Agent confirms scope.
 
 ![create-project-1](/images/create-project-1.png)
 
-### Execute the Task
+### Execute the Workflow
 
-After the WorkProject is created, it appears in the `Playground` list. Open it, create a session, and assign the authorized CTF objective to the Agent team. The final deliverable can include the validated flag and a reviewable write-up:
+After the WorkProject is created, it appears in `Playground`. Open it, create a session, and assign the authorized objective to the Agent team. The lead Agent reads the scope and graph, prepares WorkItems with target assets and completion criteria, then coordinates the appropriate specialist for each assignment.
 
 ![project-example-1](/images/project-example-1.png)
 
-During execution, open `Project records` to review progress and structured evidence. Assets, findings, relationships, and graph data preserve the material results of the assessment:
+During execution, open the project workspace to review the eight operational views:
+
+- `Overview` summarizes scope coverage, current assignments, findings, paths, evidence, and active Agents.
+- `Workflow` connects each assignment to assets, test surfaces, dependencies, coverage conclusions, WorkItem-attributed evidence, decisions, and subordinate runs; status and assignee filters support focused review.
+- `Graph` presents environment structure, connectivity, dependencies, identity, trust, data flow, and provenance without mixing in offensive actions.
+- `Assets` distinguishes declared scope, discovered context, out-of-scope entities, criticality, and stable locators.
+- `Findings` presents validation, severity, impact, remediation, disposition, CWE/CVSS, affected assets, and supporting evidence.
+- `Attack Paths` reconstructs continuous offensive steps with blockers, evidence, and optional ATT&CK mappings.
+- `Evidence` preserves WorkItem-attributed immutable observations with source references, integrity hashes, supersession, and lifecycle state.
+- `Activity` records business-significant state and plan changes, decisions, blockers, handoffs, and results.
+
+Each specialist receives the assignment, target coverage, supporting Evidence, surrounding graph, and relevant retest opportunities needed for the current task. Evidence remains attributed to the WorkItem as relationships, findings, and path steps are validated. Once every target has a conclusion and the result is ready, the lead Agent can accept the work or return specific target surfaces for further analysis. Useful negative results remain available as evidence and can close a test surface without inventing a vulnerability. New credentials, trust relationships, routes, versions, code paths, and keys bring related follow-up and retest work into view.
 
 ![project-example-2](/images/project-example-2.png)
 

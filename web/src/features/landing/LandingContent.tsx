@@ -86,16 +86,16 @@ const planes: CardItem[] = [
   {
     title: "Runtime Plane",
     kicker: "Agent sessions",
-    text: "Coordinates lead and specialist Agents, enriches task inputs with LightRAG context, streams session activity, and resumes long-running work when results become available.",
+    text: "Coordinates lead and specialist Agents around project scope, assignments, and evidence, enriches work with LightRAG context, and preserves continuity across long-running assessments.",
     icon: Workflow,
     items: ["Session runtime", "Agent graph", "Replayable timeline"],
   },
   {
     title: "Evidence Plane",
     kicker: "WorkProject",
-    text: "Preserves assessment scope, assets, findings, relationship graph edges, attack paths, tasks, and Agent summaries as durable project evidence.",
+    text: "Connects authorized scope, asset relationships, WorkItem-attributed evidence, findings, attack paths, and review gates in one durable operating record.",
     icon: FileCheck2,
-    items: ["Assets and scope", "Findings and graph", "Attack paths"],
+    items: ["Asset graph", "Evidence chain", "Workflow and paths"],
   },
   {
     title: "Execution Plane",
@@ -119,7 +119,7 @@ const runtimePath: CardItem[] = [
   },
   {
     title: "Session runtime",
-    text: "Runs the selected Agent team, streams live progress, and preserves work across long-running tasks.",
+    text: "Keeps each specialist focused on assigned graph targets, current evidence, and retest priorities while long-running work continues.",
     icon: Bot,
   },
   {
@@ -135,17 +135,17 @@ const runtimePath: CardItem[] = [
 ];
 
 const evidenceNodes: CardItem[] = [
-  { title: "Scope", text: "Declared targets and project boundaries", icon: ShieldCheck },
-  { title: "Assets", text: "Services, domains, networks, binaries", icon: Boxes },
-  { title: "Relationships", text: "Structural and offensive graph edges", icon: GitBranch },
-  { title: "Findings", text: "Proof, impact, severity, status", icon: FileSearch },
-  { title: "Attack paths", text: "Ordered traversal from access to impact", icon: Route },
-  { title: "Review", text: "Records, graph view, timeline replay", icon: ClipboardCheck },
+  { title: "Authorized scope", text: "Declared assets and explicit testing boundaries", icon: ShieldCheck },
+  { title: "Asset graph", text: "Environment structure, connectivity, trust, and dependency", icon: GitBranch },
+  { title: "Graph-targeted work", text: "Coordinated assignments connect specialists, graph assets, test surfaces, and review outcomes", icon: ClipboardCheck },
+  { title: "Evidence", text: "Immutable observations remain attributed to the WorkItem and reproducible source", icon: FileCheck2 },
+  { title: "Security conclusions", text: "Findings separate validation state, impact, and disposition", icon: FileSearch },
+  { title: "Attack paths", text: "Evidence-backed steps reconstruct access and impact", icon: Route },
 ];
 
 const workbenchSurfaces: CardItem[] = [
   { title: "Playground", text: "Live transcript, Agent selection, streaming state, subagent panel, and sandbox actions.", icon: Activity },
-  { title: "Work Projects", text: "Project metadata, owners, scoped assets, sessions, records, graph, and attack paths.", icon: FolderKanban },
+  { title: "Work Projects", text: "Searchable scope coverage, graph-targeted workflow, evidence chains, findings, attack paths, retest candidates, and decision activity.", icon: FolderKanban },
   { title: "Knowledges", text: "Parallel document ingestion, vector inspection, semantic retrieval, and progressive knowledge graph exploration.", icon: Database },
   { title: "Host Management", text: "Docker host inventory for distributing sandbox workloads across managed infrastructure.", icon: Server },
   { title: "Egress Proxies", text: "Managed HTTP, HTTPS, and SOCKS5 upstreams for container-level outbound routing.", icon: Network },
@@ -238,8 +238,8 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
 
       <Section
         eyebrow="Evidence model"
-        title="WorkProject turns transient investigation output into durable review material."
-        description="Assets are graph nodes, relationships are directed edges, findings carry proof and impact, and attack paths reconstruct how access or impact progresses through the graph."
+        title="WorkProject drives the assessment from authorized scope to evidence-backed attack paths."
+        description="Specialists work from graph-targeted assignments with the surrounding assets and evidence in view. Attributed observations support environment relations, security findings, and validated path steps, while the lead reviews conclusions and directs follow-up work."
       >
         <div className="landing-card-grid landing-card-grid-6">
           {evidenceNodes.map((item, index) => <Card key={item.title} item={item} index={index} arrow={index < evidenceNodes.length - 1} />)}

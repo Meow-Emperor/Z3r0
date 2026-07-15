@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { MetricStrip } from "../../shared/components/ResourcePageShell";
 import { AsyncContent } from "../../shared/components/AsyncContent";
 import { WorkProjectRecordTabs } from "./ProjectRecordViews";
+import { WorkProjectMarkdown } from "./WorkProjectMarkdown";
 import { useWorkProjectDetails } from "./useWorkProjectDetails";
 import { workProjectOwnerNames, WorkProjectStatusTag, WorkProjectTypeTag } from "./workProjectView";
 
@@ -16,10 +17,12 @@ export function WorkProjectWorkspacePage() {
   const { project, loading } = useWorkProjectDetails(validProjectId);
 
   const metrics = useMemo(() => [
-    { label: "Assets", value: project?.asset_count ?? 0 },
-    { label: "Tasks", value: project?.task_count ?? 0 },
-    { label: "Agent Summaries", value: project?.agent_summary_count ?? 0 },
-    { label: "Sessions", value: project?.session_count ?? 0 },
+    { label: "In Scope", value: project?.in_scope_asset_count ?? 0 },
+    { label: "Untouched", value: project?.untouched_asset_count ?? 0 },
+    { label: "Active Work", value: project?.active_work_item_count ?? 0 },
+    { label: "Blocked", value: project?.blocked_work_item_count ?? 0 },
+    { label: "Validated Findings", value: project?.validated_finding_count ?? 0 },
+    { label: "Open Paths", value: project?.active_attack_path_count ?? 0 },
   ], [project]);
 
   if (!validProjectId) {
@@ -38,7 +41,7 @@ export function WorkProjectWorkspacePage() {
           <div className="workspace-title">
             <div className="workspace-title-main">
               <h2>{project.name}</h2>
-              {project.description ? <p>{project.description}</p> : null}
+              <WorkProjectMarkdown className="workspace-project-description" content={project.description} />
               <span>Owners: {workProjectOwnerNames(project)}</span>
             </div>
             <div className="workspace-title-tags">

@@ -1,5 +1,5 @@
-import { Button, Popconfirm, Select, TabPane, Tabs, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
-import { Braces, DatabaseZap, Eye, FileText, Network, Trash2, Upload } from "lucide-react";
+import { Select, TabPane, Tabs, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
+import { Braces, DatabaseZap, Eye, FileText, Network, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   deleteKnowledgeDocument,
@@ -25,7 +25,7 @@ import type {
   KnowledgeVector,
   QueryKnowledgeDocumentsData,
 } from "../../shared/api/types";
-import { ResourceIdentity, ResourceText, RowActions } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, ResourceIdentity, ResourceText, RowActionButton, RowActions } from "../../shared/components/ResourceCells";
 import {
   MetricStrip,
   ResourcePager,
@@ -39,7 +39,6 @@ import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeade
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { formatDateTime } from "../../shared/lib/date";
-import { UI_TEXT } from "../../shared/lib/uiText";
 import { KnowledgeDetailModal, type KnowledgeDetailTarget } from "./KnowledgeDetailModal";
 import { KnowledgeGraphView } from "./KnowledgeGraphView";
 import { KNOWLEDGE_STATUS_COLORS } from "./knowledgeUi";
@@ -454,29 +453,18 @@ function DocumentsTab({ items, status, pager, deletingId, onStatus, onView, onDe
       render: (item) => (
         <RowActions>
           <Tooltip content="View document details">
-            <Button
+            <RowActionButton
               icon={<Eye size={15} />}
-              theme="borderless"
-              type="tertiary"
-              aria-label={`View details for ${item.file_name}`}
+              label={`View details for ${item.file_name}`}
               onClick={() => onView(item)}
             />
           </Tooltip>
-          <Popconfirm
-            title="Delete document"
+          <DeleteRowAction title="Delete document"
             content={`Delete ${item.file_name} and all indexed vectors and graph data?`}
-            okType="danger"
-            cancelText={UI_TEXT.cancel}
+            label={`Delete ${item.file_name}`}
+            loading={deletingId === item.id}
             onConfirm={() => void onDelete(item)}
-          >
-            <Button
-              icon={<Trash2 size={15} />}
-              theme="borderless"
-              type="danger"
-              loading={deletingId === item.id}
-              aria-label={`Delete ${item.file_name}`}
-            />
-          </Popconfirm>
+          />
         </RowActions>
       ),
     },
@@ -521,11 +509,9 @@ function VectorsTab({
       render: (item) => (
         <RowActions>
           <Tooltip content="View vector details">
-            <Button
+            <RowActionButton
               icon={<Eye size={15} />}
-              theme="borderless"
-              type="tertiary"
-              aria-label={`View vector details for ${item.file_name}`}
+              label={`View vector details for ${item.file_name}`}
               onClick={() => onView(item)}
             />
           </Tooltip>

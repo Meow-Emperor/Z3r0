@@ -2,41 +2,42 @@ import cytoscape from "cytoscape";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
-  WORK_PROJECT_ASSET_TYPE,
-  WORK_PROJECT_ASSET_TYPE_VALUES,
-  WORK_PROJECT_GRAPH_EDGE_CATEGORY_VALUES,
-  workProjectEdgeCategory,
-  type WorkProjectGraphEdgeCategory,
+  WORK_PROJECT_ASSET_KIND_VALUES,
+  WORK_PROJECT_RELATION_CATEGORY_VALUES,
+  workProjectRelationCategory,
+  type WorkProjectRelationCategory,
 } from "../../shared/api/contract";
-import type { WorkProjectAsset, WorkProjectAssetType, WorkProjectGraphEdge } from "../../shared/api/types";
+import type { WorkProjectAsset, WorkProjectAssetKind, WorkProjectRelation } from "../../shared/api/types";
 import { CytoscapeGraph, type CytoscapeLayoutOptions } from "../../shared/components/CytoscapeGraph";
 import {
   WORK_PROJECT_ASSET_ORIGIN_LABEL,
-  WORK_PROJECT_ASSET_TYPE_LABEL,
-  WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL,
-  WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL,
+  WORK_PROJECT_ASSET_KIND_LABEL,
+  WORK_PROJECT_ASSET_SCOPE_LABEL,
+  WORK_PROJECT_ASSERTION_STATUS_LABEL,
+  WORK_PROJECT_RELATION_CATEGORY_LABEL,
+  WORK_PROJECT_RELATION_TYPE_LABEL,
 } from "../../shared/lib/labels";
 import { filledDetailItems, type DetailItem, type FilledDetailItem } from "./recordDetails";
 import { formatWorkProjectAsset } from "./workProjectView";
+import { WorkProjectMarkdown } from "./WorkProjectMarkdown";
 
-const ASSET_TYPE_COLOR: Record<WorkProjectAssetType, string> = {
-  [WORK_PROJECT_ASSET_TYPE.SERVICE]: "#65a9ff",
-  [WORK_PROJECT_ASSET_TYPE.DOMAIN]: "#42d6c5",
-  [WORK_PROJECT_ASSET_TYPE.NETWORK]: "#a78bfa",
-  [WORK_PROJECT_ASSET_TYPE.BINARY]: "#f7bd54",
-};
+const NODE_COLORS = ["#65a9ff", "#42d6c5", "#a78bfa", "#f7bd54", "#f28b82", "#81c995"];
+const ASSET_KIND_COLOR = Object.fromEntries(WORK_PROJECT_ASSET_KIND_VALUES.map((kind, index) => [kind, NODE_COLORS[index % NODE_COLORS.length]])) as Record<WorkProjectAssetKind, string>;
+const ASSET_KIND_BORDER = Object.fromEntries(WORK_PROJECT_ASSET_KIND_VALUES.map((kind) => [kind, "#e6edf5"])) as Record<WorkProjectAssetKind, string>;
 
-const ASSET_TYPE_BORDER: Record<WorkProjectAssetType, string> = {
-  [WORK_PROJECT_ASSET_TYPE.SERVICE]: "#d7eaff",
-  [WORK_PROJECT_ASSET_TYPE.DOMAIN]: "#d6fff9",
-  [WORK_PROJECT_ASSET_TYPE.NETWORK]: "#eee7ff",
-  [WORK_PROJECT_ASSET_TYPE.BINARY]: "#fff0c7",
-};
-
-const EDGE_CATEGORY_COLOR: Record<WorkProjectGraphEdgeCategory, string> = {
+const RELATION_CATEGORY_COLOR: Record<WorkProjectRelationCategory, string> = {
   structural: "#8ea5bf",
-  offensive: "#ff7d8a",
+  connectivity: "#42d6c5",
+  dependency: "#f7bd54",
+  identity: "#ff7d8a",
+  data: "#81c995",
+  provenance: "#a78bfa",
 };
+const RECORD_SIGNALS = [
+  ["Active work", "#42d6c5"],
+  ["Findings", "#ff7d8a"],
+  ["Attack paths", "#a78bfa"],
+] as const;
 
 const FIT_PADDING = 84;
 const WHEEL_SENSITIVITY = 1.6;
@@ -46,9 +47,14 @@ const NODE_SIZE = 12;
 
 type HoverTarget =
   | { kind: "node"; asset: WorkProjectAsset }
-  | { kind: "edge"; edge: WorkProjectGraphEdge };
+  | { kind: "edge"; edge: WorkProjectRelation };
 type HoverState = { target: HoverTarget; left: number; top: number; containerWidth: number; containerHeight: number };
 type TooltipRows = { title: string; items: FilledDetailItem[] };
+type AssetRecordCounts = {
+  findings: Record<number, number>;
+  activeWorkItems: Record<number, number>;
+  attackPaths: Record<number, number>;
+};
 
 type FcoseLayoutOptions = CytoscapeLayoutOptions & {
   name: "fcose";
@@ -69,15 +75,35 @@ type FcoseLayoutOptions = CytoscapeLayoutOptions & {
   numIter: number;
 };
 
-export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset[]; edges: WorkProjectGraphEdge[] }) {
+export function ProjectGraphCanvas({
+  assets,
+  relations,
+  findingCounts = {},
+  activeWorkItemCounts = {},
+  attackPathCounts = {},
+}: {
+  assets: WorkProjectAsset[];
+  relations: WorkProjectRelation[];
+  findingCounts?: Record<number, number>;
+  activeWorkItemCounts?: Record<number, number>;
+  attackPathCounts?: Record<number, number>;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const recordCounts = useMemo<AssetRecordCounts>(() => ({
+    findings: findingCounts,
+    activeWorkItems: activeWorkItemCounts,
+    attackPaths: attackPathCounts,
+  }), [activeWorkItemCounts, attackPathCounts, findingCounts]);
   const assetById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
   const visibleEdges = useMemo(
-    () => edges.filter((edge) => assetById.has(edge.source_asset_id) && assetById.has(edge.target_asset_id)),
-    [edges, assetById],
+    () => relations.filter((edge) => assetById.has(edge.source_asset_id) && assetById.has(edge.target_asset_id)),
+    [relations, assetById],
   );
   const edgeById = useMemo(() => new Map(visibleEdges.map((edge) => [edge.id, edge])), [visibleEdges]);
-  const elements = useMemo(() => graphElements(assets, visibleEdges), [assets, visibleEdges]);
+  const elements = useMemo(
+    () => graphElements(assets, visibleEdges, recordCounts),
+    [assets, recordCounts, visibleEdges],
+  );
   const stylesheet = useMemo(graphStyles, []);
   const layoutOptions = useMemo(
     () => graphLayoutOptions(assets.length, visibleEdges.length),
@@ -139,7 +165,7 @@ export function ProjectGraphCanvas({ assets, edges }: { assets: WorkProjectAsset
         bindEvents={bindEvents}
       >
         <GraphLegend />
-        {hover ? <GraphTooltip hover={hover} assetById={assetById} /> : null}
+        {hover ? <GraphTooltip hover={hover} assetById={assetById} recordCounts={recordCounts} /> : null}
       </CytoscapeGraph>
     </div>
   );
@@ -181,26 +207,39 @@ function graphLayoutOptions(assetCount: number, edgeCount: number): FcoseLayoutO
 
 function graphElements(
   assets: WorkProjectAsset[],
-  edges: WorkProjectGraphEdge[],
+  edges: WorkProjectRelation[],
+  recordCounts: AssetRecordCounts,
 ): cytoscape.ElementDefinition[] {
-  return [...assets.map(nodeElement), ...edges.map(edgeElement)];
+  return [...assets.map((asset) => nodeElement(asset, recordCounts)), ...edges.map(edgeElement)];
 }
 
-function nodeElement(asset: WorkProjectAsset): cytoscape.ElementDefinition {
+function nodeElement(asset: WorkProjectAsset, recordCounts: AssetRecordCounts): cytoscape.ElementDefinition {
+  const findingCount = recordCounts.findings[asset.id] ?? 0;
+  const activeWorkItemCount = recordCounts.activeWorkItems[asset.id] ?? 0;
+  const attackPathCount = recordCounts.attackPaths[asset.id] ?? 0;
+  const recordCount = findingCount + activeWorkItemCount + attackPathCount;
   return {
     group: "nodes",
     data: {
       id: assetNodeId(asset.id),
       assetId: asset.id,
       label: truncate(formatWorkProjectAsset(asset), 28),
-      accent: ASSET_TYPE_COLOR[asset.type],
-      border: ASSET_TYPE_BORDER[asset.type],
+      accent: ASSET_KIND_COLOR[asset.kind],
+      border: findingCount > 0
+        ? "#ff7d8a"
+        : activeWorkItemCount > 0
+          ? "#42d6c5"
+          : attackPathCount > 0
+            ? "#a78bfa"
+            : ASSET_KIND_BORDER[asset.kind],
+      borderWidth: recordCount > 0 ? 2 : 1,
+      size: NODE_SIZE + Math.min(Math.sqrt(recordCount) * 2, 8),
     },
   };
 }
 
-function edgeElement(edge: WorkProjectGraphEdge): cytoscape.ElementDefinition {
-  const category = workProjectEdgeCategory(edge.type);
+function edgeElement(edge: WorkProjectRelation): cytoscape.ElementDefinition {
+  const category = workProjectRelationCategory(edge.type);
   return {
     group: "edges",
     data: {
@@ -208,9 +247,9 @@ function edgeElement(edge: WorkProjectGraphEdge): cytoscape.ElementDefinition {
       edgeId: edge.id,
       source: assetNodeId(edge.source_asset_id),
       target: assetNodeId(edge.target_asset_id),
-      label: WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL[edge.type],
+      label: WORK_PROJECT_RELATION_TYPE_LABEL[edge.type],
       category,
-      color: EDGE_CATEGORY_COLOR[category],
+      color: RELATION_CATEGORY_COLOR[category],
     },
   };
 }
@@ -234,13 +273,13 @@ function graphStyles(): cytoscape.StylesheetJson {
     {
       selector: "node",
       style: {
-        width: NODE_SIZE,
-        height: NODE_SIZE,
+        width: "data(size)",
+        height: "data(size)",
         shape: "ellipse",
         "background-color": "data(accent)",
         "background-opacity": 0.94,
         "border-color": "data(border)",
-        "border-width": 1,
+        "border-width": "data(borderWidth)",
         content: "data(label)",
         "font-size": 8.5,
         "font-weight": 600,
@@ -299,14 +338,6 @@ function graphStyles(): cytoscape.StylesheetJson {
       },
     },
     {
-      selector: 'edge[category = "offensive"]',
-      style: {
-        width: 1.85,
-        "line-style": "dashed",
-        "opacity": 0.9,
-      },
-    },
-    {
       selector: "edge:selected, edge.is-hovered",
       style: {
         width: 2.7,
@@ -323,22 +354,31 @@ function GraphLegend() {
     <div className="project-graph-legend">
       <div className="project-graph-legend-group">
         <span className="project-graph-legend-title">Nodes</span>
-        {WORK_PROJECT_ASSET_TYPE_VALUES.map((type) => (
-          <span key={type} className="project-graph-legend-item">
-            <i className="project-graph-legend-dot" style={graphColorStyle(ASSET_TYPE_COLOR[type])} />
-            {WORK_PROJECT_ASSET_TYPE_LABEL[type]}
+        {WORK_PROJECT_ASSET_KIND_VALUES.map((kind) => (
+          <span key={kind} className="project-graph-legend-item">
+            <i className="project-graph-legend-dot" style={graphColorStyle(ASSET_KIND_COLOR[kind])} />
+            {WORK_PROJECT_ASSET_KIND_LABEL[kind]}
           </span>
         ))}
       </div>
       <div className="project-graph-legend-group">
         <span className="project-graph-legend-title">Edges</span>
-        {WORK_PROJECT_GRAPH_EDGE_CATEGORY_VALUES.map((category) => (
+        {WORK_PROJECT_RELATION_CATEGORY_VALUES.map((category) => (
           <span key={category} className="project-graph-legend-item">
             <i
-              className={`project-graph-legend-line${category === "offensive" ? " project-graph-legend-line-offensive" : ""}`}
-              style={graphColorStyle(EDGE_CATEGORY_COLOR[category])}
+              className="project-graph-legend-line"
+              style={graphColorStyle(RELATION_CATEGORY_COLOR[category])}
             />
-            {WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL[category]}
+            {WORK_PROJECT_RELATION_CATEGORY_LABEL[category]}
+          </span>
+        ))}
+      </div>
+      <div className="project-graph-legend-group">
+        <span className="project-graph-legend-title">Signals</span>
+        {RECORD_SIGNALS.map(([label, color]) => (
+          <span key={label} className="project-graph-legend-item">
+            <i className="project-graph-legend-ring" style={graphColorStyle(color)} />
+            {label}
           </span>
         ))}
       </div>
@@ -352,14 +392,22 @@ function graphColorStyle(color: string): GraphColorStyle {
   return { "--graph-color": color };
 }
 
-function GraphTooltip({ hover, assetById }: { hover: HoverState; assetById: Map<number, WorkProjectAsset> }) {
+function GraphTooltip({
+  hover,
+  assetById,
+  recordCounts,
+}: {
+  hover: HoverState;
+  assetById: Map<number, WorkProjectAsset>;
+  recordCounts: AssetRecordCounts;
+}) {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const rows = useMemo(
     () => hover.target.kind === "node"
-      ? nodeRows(hover.target.asset)
+      ? nodeRows(hover.target.asset, recordCounts)
       : edgeRows(hover.target.edge, assetById),
-    [assetById, hover.target],
+    [assetById, hover.target, recordCounts],
   );
 
   useLayoutEffect(() => {
@@ -383,10 +431,10 @@ function GraphTooltip({ hover, assetById }: { hover: HoverState; assetById: Map<
     <div ref={tooltipRef} className="project-graph-tooltip" style={style}>
       <strong>{rows.title}</strong>
       <dl>
-        {rows.items.map(([label, value]) => (
+        {rows.items.map(([label, value, markdown]) => (
           <Fragment key={label}>
             <dt>{label}</dt>
-            <dd>{value}</dd>
+            <dd>{markdown ? <WorkProjectMarkdown content={value} /> : value}</dd>
           </Fragment>
         ))}
       </dl>
@@ -411,27 +459,31 @@ function tooltipStyle(hover: HoverState, size: { width: number; height: number }
   };
 }
 
-function nodeRows(asset: WorkProjectAsset): TooltipRows {
+function nodeRows(asset: WorkProjectAsset, recordCounts: AssetRecordCounts): TooltipRows {
   const items: DetailItem[] = [
-    ["Type", WORK_PROJECT_ASSET_TYPE_LABEL[asset.type]],
+    ["Kind", WORK_PROJECT_ASSET_KIND_LABEL[asset.kind]],
     ["Origin", WORK_PROJECT_ASSET_ORIGIN_LABEL[asset.origin]],
-    asset.type === WORK_PROJECT_ASSET_TYPE.BINARY ? ["Path", asset.path] : ["Host", asset.host],
-    ["Port", asset.port ? String(asset.port) : undefined],
-    ["Banner", asset.extra?.banner],
+    ["Scope", WORK_PROJECT_ASSET_SCOPE_LABEL[asset.scope]],
+    ["Locator", asset.locator],
+    ["Active WorkItems", formatRecordCount(recordCounts.activeWorkItems[asset.id])],
+    ["Findings", formatRecordCount(recordCounts.findings[asset.id])],
+    ["Attack Paths", formatRecordCount(recordCounts.attackPaths[asset.id])],
+    ["Summary", asset.summary, true],
   ];
   return { title: formatWorkProjectAsset(asset), items: filledDetailItems(items) };
 }
 
-function edgeRows(edge: WorkProjectGraphEdge, assetById: Map<number, WorkProjectAsset>): TooltipRows {
+function edgeRows(edge: WorkProjectRelation, assetById: Map<number, WorkProjectAsset>): TooltipRows {
   const source = assetById.get(edge.source_asset_id);
   const target = assetById.get(edge.target_asset_id);
   const items: DetailItem[] = [
-    ["Category", WORK_PROJECT_GRAPH_EDGE_CATEGORY_LABEL[workProjectEdgeCategory(edge.type)]],
+    ["Category", WORK_PROJECT_RELATION_CATEGORY_LABEL[workProjectRelationCategory(edge.type)]],
+    ["Status", WORK_PROJECT_ASSERTION_STATUS_LABEL[edge.status]],
     ["From", source ? formatWorkProjectAsset(source) : `#${edge.source_asset_id}`],
     ["To", target ? formatWorkProjectAsset(target) : `#${edge.target_asset_id}`],
-    ["Label", edge.label],
+    ["Summary", edge.summary, true],
   ];
-  return { title: WORK_PROJECT_GRAPH_EDGE_TYPE_LABEL[edge.type], items: filledDetailItems(items) };
+  return { title: WORK_PROJECT_RELATION_TYPE_LABEL[edge.type], items: filledDetailItems(items) };
 }
 
 function assetNodeId(id: number): string {
@@ -456,4 +508,8 @@ function clamp(value: number, min: number, max: number): number {
 
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}...`;
+}
+
+function formatRecordCount(value: number | undefined): string | undefined {
+  return value ? String(value) : undefined;
 }

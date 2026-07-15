@@ -1,18 +1,17 @@
-import { Select, Spin, Tag } from "@douyinfe/semi-ui";
+import { Tag } from "@douyinfe/semi-ui";
 import { Box } from "lucide-react";
-import type { UIEvent } from "react";
 import type { SandboxContainer } from "../../shared/api/types";
+import { OptionListSelect } from "../../shared/components/OptionListSelect";
+import type { OptionListResult } from "../../shared/hooks/useOptionList";
 import { cx } from "../../shared/lib/className";
 import { SANDBOX_CONTAINER_STATUS_COLOR, SANDBOX_CONTAINER_STATUS_LABEL } from "../../shared/lib/labels";
 
 type SandboxSelectorProps = {
   containers: SandboxContainer[];
-  loading: boolean;
+  source: OptionListResult<SandboxContainer>;
   value: number | null;
   className?: string;
   disabled?: boolean;
-  onSearch: (keyword: string) => void;
-  onListScroll: (event: UIEvent<HTMLDivElement>) => void;
   onChange: (containerId: number | null) => void;
 };
 
@@ -20,12 +19,10 @@ const CONTAINER_ID_PREVIEW_LENGTH = 12;
 
 export function SandboxSelector({
   containers,
-  loading,
+  source,
   value,
   className = "",
   disabled = false,
-  onSearch,
-  onListScroll,
   onChange,
 }: SandboxSelectorProps) {
   const optionList = containers.map((container) => ({
@@ -36,17 +33,15 @@ export function SandboxSelector({
 
   return (
     <div className={cx("sandbox-selector", className)}>
-      <Select
+      <OptionListSelect
+        source={source}
         prefix={<Box size={15} />}
         value={value ?? undefined}
         optionList={optionList}
         renderSelectedItem={() => renderContainerId(selectedContainer?.container_hash ?? "")}
-        placeholder={loading ? "Loading sandboxes" : "Select sandbox"}
-        emptyContent={loading ? <Spin size="small" /> : "No sandbox"}
+        placeholder={source.busy ? "Loading sandboxes" : "Select sandbox"}
+        emptyContent="No sandbox"
         disabled={disabled || containers.length === 0}
-        remote
-        onSearch={onSearch}
-        onListScroll={onListScroll}
         showClear={!disabled}
         onClear={() => onChange(null)}
         onChange={(nextValue) => onChange(typeof nextValue === "number" ? nextValue : null)}

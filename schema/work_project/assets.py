@@ -1,50 +1,51 @@
 import ipaddress
+import re
 from datetime import datetime
 from enum import StrEnum
+from urllib.parse import urlsplit, urlunsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-class WorkProjectAssetType(StrEnum):
-    SERVICE = "service"
-    DOMAIN = "domain"
+
+class WorkProjectAssetKind(StrEnum):
     NETWORK = "network"
-    BINARY = "binary"
+    HOST = "host"
+    DOMAIN = "domain"
+    SERVICE = "service"
+    APPLICATION = "application"
+    ENDPOINT = "endpoint"
+    REPOSITORY = "repository"
+    COMPONENT = "component"
+    ARTIFACT = "artifact"
+    IDENTITY = "identity"
+    DATA_STORE = "data_store"
+    CLOUD_RESOURCE = "cloud_resource"
 
 
 class WorkProjectAssetOrigin(StrEnum):
-    SCOPE = "scope"
+    DECLARED = "declared"
     DISCOVERED = "discovered"
 
 
-class WorkProjectAssetExtraSchema(BaseModel):
-    """Recon metadata attached to an asset. Kept small on purpose."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    banner: str = Field(default="", max_length=512)
-
-    @field_validator("banner", mode="before")
-    @classmethod
-    def normalize_text(cls, value: object) -> object:
-        if isinstance(value, str):
-            return value.strip()
-        return value
+class WorkProjectAssetScope(StrEnum):
+    IN_SCOPE = "in_scope"
+    CONTEXT = "context"
+    OUT_OF_SCOPE = "out_of_scope"
 
 
-def build_asset_identifier(
-    asset_type: WorkProjectAssetType,
-    host: str,
-    port: int | None,
-    path: str,
-) -> str:
-    """Canonical primary identifier used to distinguish assets within a project."""
-    host = host.strip().lower()
-    path = path.strip()
-    if asset_type == WorkProjectAssetType.BINARY:
-        return path
-    if asset_type == WorkProjectAssetType.SERVICE:
-        return f"{host}:{port}" if port else host
-    return host
+class WorkProjectAssetCriticality(StrEnum):
+    UNKNOWN = "unknown"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class WorkProjectAssetState(StrEnum):
+    UNKNOWN = "unknown"
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    RETIRED = "retired"
 
 
 class WorkProjectAssetSchema(BaseModel):
@@ -52,13 +53,14 @@ class WorkProjectAssetSchema(BaseModel):
 
     id: int
     project_id: int
-    type: WorkProjectAssetType
+    kind: WorkProjectAssetKind
+    locator: str
+    name: str = ""
+    summary: str = ""
     origin: WorkProjectAssetOrigin
-    identifier: str
-    host: str = ""
-    port: int | None = None
-    path: str = ""
-    extra: WorkProjectAssetExtraSchema = Field(default_factory=WorkProjectAssetExtraSchema)
+    scope: WorkProjectAssetScope
+    criticality: WorkProjectAssetCriticality
+    state: WorkProjectAssetState
     created_by_agent_code: str = ""
     created_from_session_id: str = ""
     created_at: datetime
@@ -68,53 +70,89 @@ class WorkProjectAssetSchema(BaseModel):
 class WorkProjectAssetRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    type: WorkProjectAssetType
-    host: str = Field(default="", max_length=255)
-    port: int | None = Field(default=None, ge=1, le=65535)
-    path: str = Field(default="", max_length=500)
-    extra: WorkProjectAssetExtraSchema = Field(default_factory=WorkProjectAssetExtraSchema)
+    kind: WorkProjectAssetKind
+    locator: str = Field(min_length=1, max_length=1000)
+    name: str = Field(default="", max_length=255)
+    summary: str = Field(default="", max_length=2000)
+    scope: WorkProjectAssetScope = WorkProjectAssetScope.CONTEXT
+    criticality: WorkProjectAssetCriticality = WorkProjectAssetCriticality.UNKNOWN
+    state: WorkProjectAssetState = WorkProjectAssetState.UNKNOWN
 
-    @field_validator("host", "path", mode="before")
+    @field_validator("locator", "name", "summary", mode="before")
     @classmethod
     def normalize_text(cls, value: object) -> object:
-        if isinstance(value, str):
-            return value.strip()
-        return value
+        return value.strip() if isinstance(value, str) else value
 
     @model_validator(mode="after")
-    def validate_required_fields(self) -> "WorkProjectAssetRequest":
-        if self.type == WorkProjectAssetType.BINARY:
-            if not self.path:
-                raise ValueError("binary asset path is required")
-            self.host = ""
-            self.port = None
-            return self
-
-        if not self.host:
-            raise ValueError(f"{self.type.value} asset host is required")
-        self.path = ""
-        if self.type == WorkProjectAssetType.DOMAIN:
-            self.host = self.host.lower()
-            self.port = None
-        elif self.type == WorkProjectAssetType.NETWORK:
-            self.host = _normalize_network(self.host)
-            self.port = None
-        else:  # SERVICE
-            self.host = self.host.lower()
+    def normalize_locator(self) -> "WorkProjectAssetRequest":
+        self.locator = canonicalize_asset_locator(self.kind, self.locator)
         return self
 
     @property
-    def identifier(self) -> str:
-        return build_asset_identifier(self.type, self.host, self.port, self.path)
-
-    @property
-    def identity(self) -> tuple[WorkProjectAssetType, str]:
-        """Composite identity that distinguishes assets of different types sharing an identifier."""
-        return self.type, self.identifier
+    def identity(self) -> tuple[WorkProjectAssetKind, str]:
+        return self.kind, self.locator
 
 
-def _normalize_network(value: str) -> str:
+def canonicalize_asset_locator(kind: WorkProjectAssetKind, value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("asset locator is required")
+    if kind == WorkProjectAssetKind.NETWORK:
+        try:
+            return str(ipaddress.ip_network(value.removeprefix("cidr:"), strict=False))
+        except ValueError as error:
+            raise ValueError("network locator must be a valid CIDR or IP address") from error
+    if kind == WorkProjectAssetKind.HOST:
+        candidate = value.removeprefix("host:").strip().lower().rstrip(".")
+        _validate_hostname_or_ip(candidate, "host")
+        return candidate
+    if kind == WorkProjectAssetKind.DOMAIN:
+        candidate = value.removeprefix("dns:").strip().lower().rstrip(".")
+        _validate_hostname_or_ip(candidate, "domain", allow_ip=False)
+        return candidate
+    if kind == WorkProjectAssetKind.SERVICE:
+        return _canonicalize_url(value, require_port=True)
+    if kind == WorkProjectAssetKind.ENDPOINT:
+        return _canonicalize_url(value, require_port=False, require_http=True)
+    if kind == WorkProjectAssetKind.REPOSITORY and "://" in value:
+        return _canonicalize_url(value, require_port=False)
+    if kind == WorkProjectAssetKind.ARTIFACT and value.lower().startswith("sha256:"):
+        digest = value.split(":", 1)[1].lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("artifact sha256 locator must contain a 64-character hexadecimal digest")
+        return f"sha256:{digest}"
+    return value
+
+
+def _canonicalize_url(value: str, *, require_port: bool, require_http: bool = False) -> str:
+    parsed = urlsplit(value)
+    if not parsed.scheme or not parsed.hostname:
+        raise ValueError("asset locator must be an absolute URI")
+    scheme = parsed.scheme.lower()
+    if require_http and scheme not in {"http", "https"}:
+        raise ValueError("endpoint locator must use http or https")
+    if require_port and parsed.port is None:
+        raise ValueError("service locator must include an explicit port")
+    host = parsed.hostname.lower().rstrip(".")
+    netloc = host
+    if ":" in host and not host.startswith("["):
+        netloc = f"[{host}]"
+    if parsed.port is not None:
+        netloc = f"{netloc}:{parsed.port}"
+    if parsed.username:
+        raise ValueError("asset locator must not contain credentials")
+    path = parsed.path or ("/" if require_http else "")
+    return urlunsplit((scheme, netloc, path, parsed.query, ""))
+
+
+def _validate_hostname_or_ip(value: str, label: str, *, allow_ip: bool = True) -> None:
     try:
-        return str(ipaddress.ip_network(value, strict=False))
-    except ValueError as error:
-        raise ValueError("network asset host must be a valid CIDR or IP") from error
+        ipaddress.ip_address(value)
+        if allow_ip:
+            return
+        raise ValueError(f"{label} locator must be a DNS name")
+    except ValueError:
+        if not allow_ip and re.fullmatch(r"\d+(?:\.\d+){3}", value):
+            raise ValueError(f"{label} locator must be a DNS name")
+    if len(value) > 253 or not re.fullmatch(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", value):
+        raise ValueError(f"{label} locator must be a valid hostname")

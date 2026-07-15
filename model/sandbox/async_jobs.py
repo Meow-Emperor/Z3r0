@@ -18,6 +18,12 @@ class SandboxAsyncJob(SQLModel, table=True):
     session_id: str = Field(index=True)
     agent_code: str = Field(default="", index=True)
     agent_instance_id: str = Field(default="", index=True)
+    work_item_id: int | None = Field(
+        default=None,
+        foreign_key="work_project_work_items.id",
+        index=True,
+        ondelete="SET NULL",
+    )
     command: str = ""
     output_file: str = ""
     status: SandboxAsyncJobStatus = Field(default=SandboxAsyncJobStatus.RUNNING, sa_column=_ASYNC_JOB_STATUS_COLUMN)

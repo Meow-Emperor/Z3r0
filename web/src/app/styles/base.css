@@ -73,6 +73,8 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-color: var(--z-scrollbar) transparent;
+  scrollbar-width: thin;
 }
 
 html,
@@ -84,13 +86,6 @@ body,
 body {
   min-width: 320px;
   margin: 0;
-}
-
-button, input {
-  font: inherit;
-}
-
-body {
   color: var(--z-text);
   background-color: var(--z-bg);
   background-image:
@@ -175,9 +170,8 @@ body {
   --semi-shadow-elevated: var(--z-shadow);
 }
 
-* {
-  scrollbar-color: var(--z-scrollbar) transparent;
-  scrollbar-width: thin;
+button, input {
+  font: inherit;
 }
 
 *::-webkit-scrollbar {
@@ -654,9 +648,6 @@ a,
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: auto;
-}
-
-.app-modal .semi-modal-body {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -825,11 +816,6 @@ a,
 @keyframes contentFadeUp {
   from { opacity: 0; transform: translate3d(0, 10px, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 @keyframes contentScaleIn {

@@ -1,5 +1,5 @@
-import { Button, Popconfirm, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
-import { Network, Pencil, Server, Trash2, Wifi } from "lucide-react";
+import { Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
+import { Network, Pencil, Server, Wifi } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressProxy, updateEgressProxy } from "../../shared/api/egressProxies";
 import { showApiError } from "../../shared/api/feedback";
@@ -7,14 +7,14 @@ import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPE_VALUES } from "../../shared/api/ge
 import type { CreateEgressProxyRequest, EgressProxy, UpdateEgressProxyRequest } from "../../shared/api/types";
 import { PagedResourceTable } from "../../shared/components/PagedResourceTable";
 import type { ResourceColumn } from "../../shared/components/ResourceTable";
-import { OwnerCell, ResourceIdentity, RowActions, SecretCell } from "../../shared/components/ResourceCells";
+import { DeleteRowAction, OwnerCell, ResourceIdentity, RowActionButton, RowActions, SecretCell } from "../../shared/components/ResourceCells";
 import { useAdminResourceHeader } from "../../shared/hooks/useAdminResourceHeader";
 import { usePagedResourceList } from "../../shared/hooks/usePagedResourceList";
 import { useResourceAction } from "../../shared/hooks/useResourceAction";
 import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { useVisibleResourceIds } from "../../shared/hooks/useVisibleResourceIds";
 import { formatDateTime } from "../../shared/lib/date";
-import { UI_TEXT } from "../../shared/lib/uiText";
+import { countBy } from "../../shared/lib/array";
 import { EgressProxyFormModal } from "./EgressProxyFormModal";
 
 type ModalState = { mode: "create" } | { mode: "edit"; proxy: EgressProxy } | null;
@@ -45,13 +45,7 @@ export function EgressProxiesPage() {
     },
   });
 
-  const summary = useMemo(
-    () => proxies.items.reduce((acc, proxy) => ({
-      ...acc,
-      [proxy.proxy_type]: (acc[proxy.proxy_type] ?? 0) + 1,
-    }), Object.fromEntries(EGRESS_PROXY_TYPE_VALUES.map((type) => [type, 0])) as Record<EgressProxy["proxy_type"], number>),
-    [proxies.items],
-  );
+  const summary = useMemo(() => countBy(proxies.items, EGRESS_PROXY_TYPE_VALUES, (proxy) => proxy.proxy_type), [proxies.items]);
 
   const testProxy = async (proxy: EgressProxy) => {
     if (testingRef.current) return;
@@ -103,20 +97,17 @@ export function EgressProxiesPage() {
       render: (proxy) => (
         <RowActions>
           <Tooltip content="Test proxy">
-            <Button icon={<Wifi size={15} />} theme="borderless" type="tertiary"
+            <RowActionButton icon={<Wifi size={15} />} label={`Test ${proxy.proxy_host}`}
               loading={testingId === proxy.id}
-              aria-label={`Test ${proxy.proxy_host}`}
               onClick={() => void testProxy(proxy)}
             />
           </Tooltip>
-          <Button icon={<Pencil size={15} />} theme="borderless" type="tertiary"
-            aria-label={`Edit ${proxy.proxy_host}`} onClick={() => setModal({ mode: "edit", proxy })}
+          <RowActionButton icon={<Pencil size={15} />} label={`Edit ${proxy.proxy_host}`}
+            onClick={() => setModal({ mode: "edit", proxy })}
           />
-          <Popconfirm title="Delete egress proxy" content={`Delete ${proxy.proxy_host}:${proxy.proxy_port}?`} okType="danger" cancelText={UI_TEXT.cancel} onConfirm={() => void deleteProxy(proxy)}>
-            <Button icon={<Trash2 size={15} />} theme="borderless" type="danger"
-              loading={deletingId === proxy.id} aria-label={`Delete ${proxy.proxy_host}`}
-            />
-          </Popconfirm>
+          <DeleteRowAction title="Delete egress proxy" content={`Delete ${proxy.proxy_host}:${proxy.proxy_port}?`} label={`Delete ${proxy.proxy_host}`}
+            loading={deletingId === proxy.id} onConfirm={() => void deleteProxy(proxy)}
+          />
         </RowActions>
       ),
     },
@@ -139,19 +130,14 @@ export function EgressProxiesPage() {
         emptyTitle="No egress proxies found"
       />
 
-      {modal?.mode === "edit" ? (
-        <EgressProxyFormModal
-          open mode="edit" proxy={modal.proxy} saving={saving}
-          onCancel={() => setModal(null)}
-          onSubmit={(payload: UpdateEgressProxyRequest) => submit(() => updateEgressProxy(modal.proxy.id, payload))}
-        />
-      ) : (
-        <EgressProxyFormModal
-          open={modal?.mode === "create"} mode="create" proxy={null} saving={saving}
-          onCancel={() => setModal(null)}
-          onSubmit={(payload: CreateEgressProxyRequest) => submit(() => createEgressProxy(payload))}
-        />
-      )}
+      <EgressProxyFormModal
+        open={Boolean(modal)}
+        proxy={modal?.mode === "edit" ? modal.proxy : null}
+        saving={saving}
+        onCancel={() => setModal(null)}
+        onCreate={(payload: CreateEgressProxyRequest) => submit(() => createEgressProxy(payload))}
+        onUpdate={(proxy, payload: UpdateEgressProxyRequest) => submit(() => updateEgressProxy(proxy.id, payload))}
+      />
     </>
   );
 }

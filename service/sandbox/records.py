@@ -7,7 +7,7 @@ from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
-from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
+from model.work_project.projects import WorkProject, WorkProjectOwner
 from schema.sandbox.containers import (
     SandboxContainerHostOptionSchema,
     SandboxContainerSchema,
@@ -245,8 +245,8 @@ def _apply_user_available_scope(statement, user_id: int, work_project_id: int | 
     if work_project_id is None:
         return statement.where(SandboxContainer.owner_id == user_id)
     bound_to_accessible_project = exists().where(
-        WorkProjectSandboxContainer.project_id == work_project_id,
-        WorkProjectSandboxContainer.sandbox_container_id == SandboxContainer.id,
+        WorkProject.id == work_project_id,
+        WorkProject.sandbox_container_id == SandboxContainer.id,
     )
     return statement.where(or_(SandboxContainer.owner_id == user_id, bound_to_accessible_project))
 
@@ -256,12 +256,12 @@ def _apply_available_filter(
     work_project_id: int | None,
     include_non_running: bool,
 ):
-    bound_elsewhere = exists().where(WorkProjectSandboxContainer.sandbox_container_id == SandboxContainer.id)
+    bound_elsewhere = exists().where(WorkProject.sandbox_container_id == SandboxContainer.id)
     if work_project_id is not None:
-        bound_elsewhere = bound_elsewhere.where(WorkProjectSandboxContainer.project_id != work_project_id)
+        bound_elsewhere = bound_elsewhere.where(WorkProject.id != work_project_id)
         bound_to_project = exists().where(
-            WorkProjectSandboxContainer.sandbox_container_id == SandboxContainer.id,
-            WorkProjectSandboxContainer.project_id == work_project_id,
+            WorkProject.sandbox_container_id == SandboxContainer.id,
+            WorkProject.id == work_project_id,
         )
         if include_non_running:
             return statement.where(~bound_elsewhere)

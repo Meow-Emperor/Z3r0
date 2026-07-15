@@ -5,108 +5,132 @@ editLink: true
 
 # Overview
 
-Z3r0 is an open-source red team collaboration workbench built around specialist Agent collaboration for authorized penetration testing, vulnerability discovery, code auditing, and security research.
+Z3r0 is an open-source red team collaboration workbench for authorized penetration testing, vulnerability research, code auditing, reverse engineering, cryptographic review, and controlled security research.
 
-The platform follows a professional red team operating model. A lead Agent coordinates specialist Agents for intelligence gathering, penetration testing, code auditing, reverse analysis, and cryptanalysis. As work progresses, assets, relationships, vulnerability findings, and attack paths are captured as structured evidence, making the security workflow observable, auditable, and reproducible.
+The platform follows a specialist operating model: a lead Agent governs scope, decomposes graph-targeted WorkItems, coordinates specialist Agents, reviews evidence-backed outputs, and closes the engagement. The project record remains useful beyond the conversation because scope, environment relationships, workflow decisions, evidence, findings, and attack paths are retained as explicit application data.
 
 > :warning: Security Notice
 >
-> This project is intended only for security testing, risk assessment, and academic research within legal and explicitly authorized scopes. It must not be used for unlawful, unauthorized, or destructive purposes, including but not limited to unauthorized intrusion into computer systems or theft of others' data.
+> This project is intended only for security testing, risk assessment, and academic research within legal and explicitly authorized scopes. It must not be used for unlawful, unauthorized, or destructive purposes.
 >
-> This project does not grant permission to test, access, scan, or affect any third-party systems, networks, services, accounts, or data.
+> This project does not grant permission to test, access, scan, or affect third-party systems, networks, services, accounts, or data.
 >
-> **The author is not responsible for any consequences, losses, damages, legal liabilities, or unlawful behavior caused by users.**
+> **The author is not responsible for consequences, losses, damages, legal liabilities, or unlawful behavior caused by users.**
 
 ## Core Capabilities
 
 | Capability | Description |
 | --- | --- |
-| Multi-Agent orchestration | A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis. |
-| Project evidence plane | WorkProject turns transient investigation output into persistent records, graph relationships, paths, tasks, and summaries. |
-| Retrieval context plane | Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs. |
-| Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
-| Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
-| Preloaded sandbox toolchain | The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills. |
-| Unified egress layer | Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface. |
-| Operator workbench | The frontend combines chat, project records, graph review, sandbox selector, terminal, files, and noVNC into one workflow. |
+| Multi-Agent orchestration | A lead Agent assigns WorkItems to intelligence, penetration, code audit, reverse engineering, and cryptography specialists. |
+| Graph-driven workflow | Each WorkItem identifies in-scope assets, test surfaces, dependencies, completion criteria, and an optional relation, finding, or attack-path focus. |
+| Durable evidence chain | Immutable Evidence references command output, HTTP exchanges, code locations, artifacts, external sources, and useful negative results. |
+| Findings and attack paths | Findings separate validation from disposition; attack paths retain continuous, evidence-backed steps from entry to target. |
+| Replayable runtime | Normalized session events support live streaming, interruption, long-running work, recovery, and historical replay. |
+| Controlled execution | Managed Docker sandboxes provide shell, files, browser/noVNC, skills, preloaded tooling, and container-level egress policy. |
+| Retrieval context | LightRAG provides matching source chunks and knowledge-graph context for task-oriented inputs. |
+| Operator workbench | Overview, Workflow, Graph, Assets, Findings, Attack Paths, Evidence, and Activity views support professional review. |
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  Operator["Authorized Security Operator"]
+  Operator["Authorized Operator"]
   API["FastAPI Control Plane"]
-  Runtime["Agent Session Runtime"]
-  Graph["Session Agent Graph"]
-  Agents["Lead and Expert Agents"]
-  RAG["LightRAG Core"]
-  Tools["Tool Orchestration Layer"]
-  Sandbox["Distributed Sandbox Resources"]
-  Hosts["Hosts / Containers / Proxy Egress"]
-  Project["WorkProject Records"]
-  Evidence["Assets / Vulnerability Findings / Attack Paths"]
-  Async["Async Task Notifications"]
-  Timeline["Event Timeline"]
-  Store[("PostgreSQL Persistence")]
+  Runtime["Session Runtime"]
+  Agents["Lead and Specialist Agents"]
+  RAG["LightRAG Context"]
+  Tools["Project and Sandbox Tools"]
+  Sandbox["Managed Sandbox Resources"]
+  Project["WorkProject"]
+  Graph["Asset Graph"]
+  Workflow["WorkItems and WorkLog"]
+  Evidence["Evidence"]
+  Conclusions["Findings and Attack Paths"]
+  Timeline["Replayable Timeline"]
+  Store[("PostgreSQL")]
 
-  Operator --> API --> Runtime --> Graph --> Agents --> Tools
+  Operator --> API --> Runtime --> Agents --> Tools
   Runtime --> RAG --> Store
-
-  Tools --> Sandbox --> Hosts --> Store
-  Tools --> Project --> Evidence --> Store
-  Tools --> Async --> Store
-  Runtime --> Timeline --> Store
+  Tools --> Sandbox --> Store
+  Tools --> Project
+  Project --> Graph --> Workflow
+  Workflow --> Evidence --> Conclusions
+  Evidence --> Graph
+  Workflow --> Timeline
+  Graph --> Store
+  Workflow --> Store
+  Evidence --> Store
+  Conclusions --> Store
+  Timeline --> Store
 ```
 
-The architecture uses FastAPI as the control plane for sessions, projects, knowledge management, and execution resources. Agent sessions organize the lead Agent and specialist Agents through the session Agent graph. For task-oriented inputs, the session runtime retrieves semantically related context through LightRAG Core and receives matching documents, entities, and relationships before Agent execution. The tool orchestration layer connects sandbox execution, project records, asynchronous tasks, and the event timeline. Distributed sandbox resources provide isolated execution environments with browser access, file access, controlled egress, sandbox-local skills, and a preloaded security toolchain for authorized testing. WorkProject persists assets, vulnerability findings, and attack paths as traceable, reviewable project evidence. PostgreSQL stores session state, LightRAG documents, vectors, graph data, project evidence, and replayable events.
+The control plane manages identities, projects, sessions, knowledge collections, execution resources, and outbound policy. Specialists receive assigned WorkItems together with the relevant project and graph context. The evidence plane distinguishes environment facts from offensive actions: Relations describe structure, connectivity, dependencies, identity, trust, data flow, and provenance; AttackPath steps describe exploitation and movement. PostgreSQL retains the shared operating record and session timeline.
 
-## Expert Team
+## WorkProject Model
 
-| Code | Name | Role | Responsibilities |
-| --- | --- | --- | --- |
-| `cso` | Z3r0 | Chief Security Lead | Task decomposition, team coordination, result integration |
-| `cae` | V3ra | Code Audit Engineer | Source code auditing, dependency review, remediation verification |
-| `cie` | L1ly | Intelligence Gathering Engineer | Intelligence gathering, asset discovery, relationship mapping |
-| `cpe` | Fr4nk | Penetration Testing Engineer | Penetration testing, vulnerability validation, impact confirmation |
-| `cre` | J4m3 | Reverse Analysis Engineer | Reverse analysis, firmware disassembly, binary unpacking |
-| `cce` | Nu1L | Cryptography Engineer | Cryptographic analysis, key review, security assessment |
+```mermaid
+flowchart LR
+  Scope["Authorized Scope"]
+  Assets["Assets"]
+  Relations["Environment Relations"]
+  Work["Graph-targeted WorkItems"]
+  Evidence["WorkItem-linked Evidence"]
+  Findings["Security Findings"]
+  Paths["Attack Paths"]
+  Review["Review and Retest"]
+
+  Scope --> Assets --> Relations
+  Assets --> Work
+  Relations --> Work
+  Work --> Evidence
+  Evidence --> Relations
+  Evidence --> Findings
+  Findings --> Paths
+  Evidence --> Paths
+  Work --> Review
+  Paths --> Review
+  Review --> Work
+```
+
+Assets give the team a stable inventory of in-scope, contextual, and out-of-scope entities. WorkItems turn the graph into coordinated assignments by connecting specialists, target assets, test surfaces, dependencies, and review outcomes. Each specialist receives the current project context needed for its assignment, while Evidence keeps observations attributable and traceable to source material. Findings bring together validation, impact, remediation, CWE/CVSS, and affected assets; attack paths reconstruct demonstrated offensive progression with optional ATT&CK mappings.
 
 ## Runtime Sequence
 
 ```mermaid
 sequenceDiagram
   participant UI as Operator Workbench
-  participant API as Control Plane
-  participant Session as Session Runtime
-  participant RAG as LightRAG Core
-  participant Agent as Agent Team
-  participant Tool as Tool Layer
-  participant Project as WorkProject
-  participant Sandbox as Sandbox Resources
+  participant Lead as Lead Agent
+  participant Work as WorkProject
+  participant Expert as Specialist Agent
+  participant Sandbox as Sandbox
   participant DB as PostgreSQL
 
-  UI->>API: Submit, interrupt, or cancel a turn
-  API->>Session: Start or resume the session
-  Session->>DB: Load session state and timeline
-  Session->>RAG: Retrieve relevant knowledge context
-  RAG-->>Session: Return document and graph context
-  Session->>Agent: Run the selected Agent workflow
-  Agent->>Tool: Invoke project, sandbox, or delegation capabilities
-
-  alt Project evidence
-    Tool->>Project: Read or update structured records
-    Project->>DB: Persist evidence and progress
-  else Sandbox execution
-    Tool->>Sandbox: Execute commands or inspect files and screens
-    Sandbox-->>Agent: Return execution results
-  else Background work
-    Tool->>DB: Persist resumable work
-    DB-->>Session: Signal completion
-    Session->>Agent: Resume result integration
-  end
-
-  Agent-->>Session: Stream normalized events
-  Session->>DB: Persist the replayable timeline
-  Session-->>API: Publish live session events
-  API-->>UI: Render live output and history
+  UI->>Lead: Submit authorized objective
+  Lead->>Work: Read scope and graph state
+  Lead->>Work: Finalize queued WorkItem plans and dependencies
+  Lead->>Expert: Delegate a graph-targeted WorkItem
+  Work-->>Expert: Inject current targets, evidence, and graph context
+  Expert->>Sandbox: Perform authorized assessment action
+  Sandbox-->>Expert: Return output reference
+  Expert->>Work: Record immutable Evidence
+  Expert->>Work: Update Relations, Findings, or AttackPath
+  Expert->>Work: Update target coverage and result
+  Expert->>Work: Submit concluded WorkItem for review
+  Work-->>Lead: Present the WorkItem for review
+  Lead->>Work: Accept or reopen named targets for changes
+  Lead-->>UI: Report confirmed results and residual gaps
+  Work->>DB: Persist workflow, evidence, and conclusions
 ```
+
+New assets, credentials, trust relationships, code paths, versions, keys, and routes surface relevant retest opportunities. The workbench keeps blocked assignments, deferred or suspected Findings, and open path hypotheses visible alongside the surrounding graph and evidence, helping operators understand what changed and where follow-up work is most valuable. Search and structured filters provide direct access to the relevant workflow, asset, Finding, and Evidence records during review.
+
+## Expert Team
+
+| Code | Name | Role | Responsibilities |
+| --- | --- | --- | --- |
+| `cso` | Z3r0 | Chief Security Lead | Scope governance, WorkItem planning, coordination, review, and closure |
+| `cae` | V3ra | Code Audit Engineer | Source review, dependency analysis, vulnerability tracing, and remediation review |
+| `cie` | L1ly | Intelligence Engineer | Asset discovery, ownership correlation, exposure analysis, and relationship mapping |
+| `cpe` | Fr4nk | Penetration Engineer | Live testing, vulnerability validation, attack progression, and impact confirmation |
+| `cre` | J4m3 | Reverse Engineer | Binary, firmware, mobile, protocol, and artifact analysis |
+| `cce` | Nu1L | Cryptography Engineer | Protocol, primitive, certificate, token, and key-management review |

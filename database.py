@@ -1,6 +1,6 @@
 from agents.extensions.memory import SQLAlchemySession
-from sqlalchemy import URL, text
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from sqlalchemy import URL
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -19,25 +19,41 @@ from model.sandbox.containers import SandboxContainer
 from model.sandbox.images import SandboxImage
 from model.system_user.users import SystemUser
 from model.work_project.assets import WorkProjectAsset
-from model.work_project.findings import WorkProjectFinding
+from model.work_project.evidence import (
+    WorkProjectAttackPathStepEvidence,
+    WorkProjectEvidence,
+    WorkProjectFindingEvidence,
+    WorkProjectRelationEvidence,
+)
+from model.work_project.findings import WorkProjectFinding, WorkProjectFindingAsset
 from model.work_project.graph import (
     WorkProjectAttackPath,
     WorkProjectAttackPathStep,
-    WorkProjectGraphEdge,
+    WorkProjectRelation,
 )
-from model.work_project.projects import WorkProject, WorkProjectOwner, WorkProjectSandboxContainer
+from model.work_project.projects import WorkProject, WorkProjectOwner
+from model.work_project.workflow import (
+    WorkProjectWorkItem,
+    WorkProjectWorkItemDependency,
+    WorkProjectWorkItemTarget,
+    WorkProjectWorkLog,
+)
+from utils.sdk_tables import agent_messages, agent_sessions
 
 
 logger = get_logger(__name__)
 
 # registered so SQLModel.metadata picks every table up at create_all time
 _registered_models = [
-    SystemUser, ManagedHost, EgressProxy, SandboxImage, SandboxContainer, WorkProject, WorkProjectOwner, WorkProjectSandboxContainer,
-    WorkProjectAsset, WorkProjectFinding,
-    WorkProjectGraphEdge, WorkProjectAttackPath, WorkProjectAttackPathStep,
+    SystemUser, ManagedHost, EgressProxy, SandboxImage, SandboxContainer, WorkProject, WorkProjectOwner,
+    WorkProjectAsset, WorkProjectRelation, WorkProjectFinding, WorkProjectFindingAsset,
+    WorkProjectAttackPath, WorkProjectAttackPathStep,
+    WorkProjectWorkItem, WorkProjectWorkItemTarget, WorkProjectWorkItemDependency, WorkProjectWorkLog,
+    WorkProjectEvidence, WorkProjectRelationEvidence, WorkProjectFindingEvidence, WorkProjectAttackPathStepEvidence,
     AgentSessionMeta, AgentMessageMeta, AgentContextCompaction,
     AgentSubordinateTask, AgentNotification, SandboxAsyncJob, AgentEventLog,
 ]
+_registered_sdk_tables = [agent_sessions, agent_messages]
 
 _engine: AsyncEngine | None = None
 
@@ -58,58 +74,8 @@ async def create_all_tables() -> None:
 
     async with _engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-        await _upgrade_application_schema(conn)
 
     logger.info("all tables created")
-
-
-async def _upgrade_application_schema(conn: AsyncConnection) -> None:
-    """Apply small idempotent upgrades that metadata.create_all cannot express."""
-    await conn.execute(text("SELECT pg_advisory_xact_lock(8743162202)"))
-    await _normalize_system_user_identities(conn)
-    for column in ("email", "username"):
-        index_name = f"ix_system_users_{column}"
-        existing = (await conn.execute(text("""
-            SELECT indexdef
-            FROM pg_indexes
-            WHERE schemaname = current_schema()
-              AND tablename = 'system_users'
-              AND indexname = :index_name
-        """), {"index_name": index_name})).scalar_one_or_none()
-        if existing and "CREATE UNIQUE INDEX" not in existing.upper():
-            await conn.execute(text(f'DROP INDEX "{index_name}"'))
-            existing = None
-        if not existing:
-            await conn.execute(text(
-                f'CREATE UNIQUE INDEX "{index_name}" ON system_users ("{column}")'
-            ))
-
-
-async def _normalize_system_user_identities(conn: AsyncConnection) -> None:
-    duplicate_email = (await conn.execute(text("""
-        SELECT lower(btrim(email))
-        FROM system_users
-        GROUP BY lower(btrim(email))
-        HAVING count(*) > 1
-        LIMIT 1
-    """))).scalar_one_or_none()
-    duplicate_username = (await conn.execute(text("""
-        SELECT btrim(username)
-        FROM system_users
-        GROUP BY btrim(username)
-        HAVING count(*) > 1
-        LIMIT 1
-    """))).scalar_one_or_none()
-    if duplicate_email is not None or duplicate_username is not None:
-        raise RuntimeError(
-            "system user identities contain duplicates after normalization; "
-            "resolve duplicate email addresses or usernames before startup"
-        )
-    await conn.execute(text("""
-        UPDATE system_users
-        SET email = lower(btrim(email)), username = btrim(username)
-        WHERE email <> lower(btrim(email)) OR username <> btrim(username)
-    """))
 
 
 async def close_engine() -> None:

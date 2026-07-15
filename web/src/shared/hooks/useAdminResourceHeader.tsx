@@ -11,7 +11,6 @@ type AdminResourceHeaderOptions = {
   onRefresh: () => unknown | Promise<unknown>;
   createIcon?: ReactNode;
   extraActions?: ReactNode;
-  appendExtraActions?: boolean;
 };
 
 export function useAdminResourceHeader({
@@ -22,7 +21,6 @@ export function useAdminResourceHeader({
   onRefresh,
   createIcon,
   extraActions,
-  appendExtraActions = false,
 }: AdminResourceHeaderOptions) {
   const setHeaderActions = useAdminHeaderActions();
   const onCreateRef = useRef(onCreate);
@@ -50,15 +48,13 @@ export function useAdminResourceHeader({
 
     setHeaderActions(
       <>
-        {appendExtraActions ? null : extraActions}
         {refreshButton}
         {createButton}
-        {appendExtraActions ? extraActions : null}
+        {extraActions}
       </>,
     );
     return () => setHeaderActions(null);
   }, [
-    appendExtraActions,
     createIcon,
     createLabel,
     extraActions,

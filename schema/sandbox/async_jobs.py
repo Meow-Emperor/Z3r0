@@ -16,6 +16,7 @@ class SandboxAsyncJobSnapshot(BaseModel):
     session_id: str
     agent_code: str
     agent_instance_id: str
+    work_item_id: int | None = None
     command: str = ""
     output_file: str = ""
     status: SandboxAsyncJobStatus

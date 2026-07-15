@@ -49,6 +49,7 @@ def _subagent_finished_prompt(notification: AgentNotificationSnapshot) -> str:
     agent_code = str(payload.get("agent_code") or "")
     agent_name = str(payload.get("agent_name") or agent_code or "subagent")
     run_id = str(payload.get("run_id") or notification.run_id)
+    work_item_id = payload.get("work_item_id")
 
     event_lines = [
         "- kind: delegated_task_completed",
@@ -57,6 +58,8 @@ def _subagent_finished_prompt(notification: AgentNotificationSnapshot) -> str:
         f"- subagent: {agent_name}",
         f"- status: {status}",
     ]
+    if isinstance(work_item_id, int) and work_item_id > 0:
+        event_lines.append(f"- work_item_id: {work_item_id}")
 
     sections = [
         _RESUMPTION_HEADER,
@@ -77,6 +80,7 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
     output_lines = int(payload.get("output_lines") or 0)
     output_bytes = int(payload.get("output_bytes") or 0)
     exit_code = payload.get("exit_code")
+    work_item_id = payload.get("work_item_id")
     # Sandbox errors are short free-form strings without a paginated reader,
     # so inlining a capped preview is the only way to expose them here.
     error_preview = _truncate_inline(payload.get("error"), _SANDBOX_ERROR_PREVIEW_CHARS)
@@ -86,6 +90,8 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
         f"- run_id: {run_id}",
         f"- status: {status}",
     ]
+    if isinstance(work_item_id, int) and work_item_id > 0:
+        event_lines.append(f"- work_item_id: {work_item_id}")
     if exit_code is not None:
         event_lines.append(f"- exit_code: {exit_code}")
     if output_file:

@@ -3,7 +3,7 @@ export const landingSeo = {
   siteName: "Z3r0",
   title: "Z3r0 - Red Team Collaboration Workbench for Authorized Security Work",
   description:
-    "Z3r0 is an open-source red team collaboration workbench with multi-agent orchestration, WorkProject evidence records, distributed Docker sandboxes, preloaded sandbox security tooling, controlled egress, and replayable timelines.",
+    "Z3r0 is an open-source red team collaboration workbench with graph-driven specialist assignments, attributable evidence chains, lead review, validated findings and attack paths, distributed Docker sandboxes, controlled egress, and replayable timelines.",
   imagePath: "assets/z3r0-logo.png",
   imageAlt: "Z3r0 logo",
   keywords: [
@@ -31,6 +31,8 @@ export const landingSeo = {
     "SecLists wordlists",
     "evidence records",
     "asset relationship graph",
+    "graph-driven red team workflow",
+    "security evidence chain",
     "WorkProject records",
     "code audit automation",
     "source code security audit",

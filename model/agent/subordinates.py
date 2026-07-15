@@ -36,6 +36,12 @@ class AgentSubordinateTask(SQLModel, table=True):
     result: str = ""
     error: str = ""
     progress: str = ""
+    work_item_id: int | None = Field(
+        default=None,
+        foreign_key="work_project_work_items.id",
+        index=True,
+        ondelete="SET NULL",
+    )
     nested_call_id: str = Field(default="", index=True)
     owner_id: int = Field(default=0, index=True)
     created_at: datetime = Field(default_factory=datetime.now)

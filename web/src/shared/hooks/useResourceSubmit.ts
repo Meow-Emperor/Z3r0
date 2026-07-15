@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { showApiError, showApiSuccess } from "../api/feedback";
 import type { CommonResponsePayload } from "../api/types";
+import { useMountedRef } from "./useMountedRef";
 
 type ResourceSubmitOptions<Response extends CommonResponsePayload> = {
   onSuccess?: (response: Response) => unknown | Promise<unknown>;
@@ -11,14 +12,7 @@ export function useResourceSubmit<Response extends CommonResponsePayload = Commo
 ) {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const mountedRef = useMountedRef();
 
   const submit = useCallback(
     async (action: () => Promise<Response>) => {

@@ -10,7 +10,7 @@ from database import get_async_session
 from logger import get_logger
 from model.host.hosts import ManagedHost
 from model.sandbox.containers import SandboxContainer
-from model.work_project.projects import WorkProjectSandboxContainer
+from model.work_project.projects import WorkProject
 from schema.sandbox.containers import SandboxContainerStatus
 from schema.system_user.users import SystemUserRole
 from service.sandbox.docker_ops import (
@@ -363,8 +363,8 @@ async def _resolve_sandbox_container_tool_binding(
 
 async def _sandbox_container_has_project_binding(session, id: int) -> bool:
     result = await session.exec(
-        select(WorkProjectSandboxContainer.project_id)
-        .where(WorkProjectSandboxContainer.sandbox_container_id == id)
+        select(WorkProject.id)
+        .where(WorkProject.sandbox_container_id == id)
         .limit(1)
     )
     return result.first() is not None
