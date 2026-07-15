@@ -18,7 +18,7 @@ from handler.common.websocket import (
     finish_ws_reader_task,
 )
 from logger import get_logger
-from middleware.auth import AuthUser, resolve_current_user
+from middleware.system_user import AuthUser, resolve_current_user
 from model.sandbox.containers import SandboxContainer
 from schema.common.responses import CommonResponse
 from schema.sandbox.containers import (

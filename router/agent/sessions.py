@@ -14,7 +14,7 @@ from handler.agent.sessions import (
     update_agent_session_sandbox_container_handler,
     update_agent_session_title_handler,
 )
-from middleware.auth import AuthUser, require_user
+from middleware.system_user import AuthUser, require_user
 from router.common.responses import COMMON_ERROR_RESPONSES, not_found_response
 from schema.agent.sessions import (
     AgentSessionSummarySchema,

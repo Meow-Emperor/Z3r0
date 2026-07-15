@@ -10,7 +10,7 @@ from handler.knowledge.resources import (
     search_knowledge_graph_handler,
     upload_knowledge_documents_handler,
 )
-from middleware.auth import require_admin
+from middleware.system_user import require_admin
 from router.common.responses import (
     BAD_REQUEST_RESPONSE,
     COMMON_ERROR_RESPONSES,

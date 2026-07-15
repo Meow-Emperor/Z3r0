@@ -1,6 +1,6 @@
 from core.runtime.session import get_agent_pool
 from logger import get_logger
-from middleware.auth import AuthUser
+from middleware.system_user import AuthUser
 from service.agent.session_state import (
     force_mark_session_stopped,
     has_outstanding_session_work,

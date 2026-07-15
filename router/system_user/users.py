@@ -7,7 +7,7 @@ from handler.system_user.users import (
     system_user_login_handler,
     update_system_user_handler,
 )
-from middleware.auth import require_admin
+from middleware.system_user import require_admin
 from router.common.responses import (
     BAD_REQUEST_RESPONSE,
     COMMON_ERROR_RESPONSES,

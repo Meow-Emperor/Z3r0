@@ -4,7 +4,7 @@ from handler.system_config.config import (
     get_instance_config_handler,
     update_instance_config_handler,
 )
-from middleware.auth import require_admin
+from middleware.system_user import require_admin
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES
 from schema.common.responses import CommonResponse
 from schema.system_config.config import (

@@ -7,7 +7,7 @@ from core.runtime.input_items import display_text_from_content
 from core.runtime.session import AgentSessionAgentSwitchError, get_agent_pool
 from core.tools.sandbox import SANDBOX_SKILLS_DIR
 from logger import get_logger
-from middleware.auth import AuthUser
+from middleware.system_user import AuthUser
 from model.agent.sessions import AgentSessionMeta
 from schema.agent.events import AgentEventSchema, AgentInputPart
 from schema.agent.sessions import AgentSessionSummarySchema

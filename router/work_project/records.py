@@ -10,7 +10,7 @@ from handler.work_project.records import (
     query_work_project_findings_handler,
     query_work_project_work_items_handler,
 )
-from middleware.auth import AuthUser, require_user
+from middleware.system_user import AuthUser, require_user
 from router.common.responses import COMMON_ERROR_RESPONSES, not_found_response
 from schema.common.responses import CommonResponse
 from schema.work_project.assets import WorkProjectAssetKind, WorkProjectAssetScope

@@ -13,7 +13,7 @@ from handler.common.websocket import (
     close_ws_silently as _close_silently,
 )
 from logger import get_logger
-from middleware.auth import AuthUser, resolve_current_user
+from middleware.system_user import AuthUser, resolve_current_user
 from schema.agent.events import AgentEventSchema
 from schema.agent.sessions import (
     AgentSessionSummarySchema,

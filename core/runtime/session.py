@@ -30,7 +30,7 @@ from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
 from core.runtime.timeline import TimelineLogWriter, is_persistable, timeline_item_key
 from core.sandbox.command_jobs import cancel_sandbox_async_commands, cancel_session_async_sandbox_commands
 from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, replace_trigger, run_until_idle
-from core.work_project_context import activate_work_project_context
+from core.work_project import activate_work_project_context
 from database import get_engine
 from logger import get_logger
 from schema.agent.events import (

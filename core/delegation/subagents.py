@@ -36,7 +36,7 @@ from core.runtime.partial_context import DeltaBuffer, discard_partial_stream, in
 from core.runtime.streaming import StreamIdleTimeout, next_segment_scope
 from core.sandbox.command_jobs import cancel_agent_async_sandbox_commands
 from core.task_runtime import InterruptSignal, TurnTrigger, iter_interruptible_events, run_until_idle
-from core.work_project_context import activate_work_project_context
+from core.work_project import activate_work_project_context
 from database import get_async_session, get_engine
 from logger import get_logger
 from model.work_project.workflow import WorkProjectWorkItem

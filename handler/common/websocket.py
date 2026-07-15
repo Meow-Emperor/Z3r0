@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import WebSocket, status as ws_status
 
 from logger import get_logger
-from middleware.auth import AuthUser, authenticate_access_token
+from middleware.system_user import AuthUser, authenticate_access_token
 
 
 logger = get_logger(__name__)

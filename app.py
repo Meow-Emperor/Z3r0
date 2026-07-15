@@ -16,12 +16,12 @@ from core.runtime.session import get_agent_pool
 from core.sandbox.command_jobs import start_async_sandbox_runtime, stop_async_sandbox_commands
 from database import close_engine, create_all_tables, init_engine
 from logger import get_logger
-from middleware.auth import JwtAuthMiddleware
-from middleware.response import (
+from middleware.common import (
     http_exception_handler,
     request_validation_exception_handler,
     unhandled_exception_handler,
 )
+from middleware.system_user import JwtAuthMiddleware
 from router.agent.agents import router as agent_router
 from router.agent.sessions import router as agent_session_router
 from router.common.fallback import api_not_found_router

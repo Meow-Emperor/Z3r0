@@ -26,7 +26,7 @@ from handler.sandbox.containers import (
     stop_sandbox_container_handler,
     update_sandbox_container_egress_handler,
 )
-from middleware.auth import AuthUser, require_user
+from middleware.system_user import AuthUser, require_user
 from router.common.responses import (
     BAD_REQUEST_RESPONSE,
     COMMON_ERROR_RESPONSES,

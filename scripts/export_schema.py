@@ -14,7 +14,7 @@ if str(ROOT_PATH) not in sys.path:
     sys.path.insert(0, str(ROOT_PATH))
 
 from app import create_app
-from middleware.auth import ACCESS_TOKEN_HEADER, require_admin, require_user
+from middleware.system_user import ACCESS_TOKEN_HEADER, require_admin, require_user
 from pydantic import TypeAdapter
 from schema.agent.events import (
     AgentEventTypeSchema,

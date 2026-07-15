@@ -6,7 +6,7 @@ from dataclasses import replace
 from agents import RunContextWrapper, function_tool
 
 from core.runtime.context import AgentRuntimeContext
-from core.work_project_context import validate_specialist_execution_context
+from core.work_project import validate_specialist_execution_context
 from core.sandbox import command_output
 from core.sandbox.command_jobs import cancel_async_sandbox_command, start_async_sandbox_command
 from core.sandbox.command_output import COMMAND_TIMEOUT_ERROR

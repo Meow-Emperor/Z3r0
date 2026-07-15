@@ -7,7 +7,7 @@ from handler.egress_proxy.proxies import (
     test_egress_proxy_handler,
     update_egress_proxy_handler,
 )
-from middleware.auth import require_admin
+from middleware.system_user import require_admin
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, not_found_response
 from schema.common.responses import CommonResponse
 from schema.egress_proxy.proxies import (

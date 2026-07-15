@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from handler.common.http import raise_api_error
-from middleware.auth import AuthUser
+from middleware.system_user import AuthUser
 from schema.common.responses import CommonResponse
 from schema.work_project.assets import WorkProjectAssetKind, WorkProjectAssetScope
 from schema.work_project.evidence import WorkProjectEvidenceKind, WorkProjectEvidenceStatus

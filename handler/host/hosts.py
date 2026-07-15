@@ -14,7 +14,7 @@ from handler.common.websocket import (
     finish_ws_reader_task,
 )
 from logger import get_logger
-from middleware.auth import resolve_current_user
+from middleware.system_user import resolve_current_user
 from schema.common.responses import CommonResponse
 from schema.host.hosts import (
     CreateManagedHostRequest,

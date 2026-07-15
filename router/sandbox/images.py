@@ -5,7 +5,7 @@ from handler.sandbox.images import (
     delete_sandbox_image_handler,
     query_sandbox_images_handler,
 )
-from middleware.auth import require_admin
+from middleware.system_user import require_admin
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, not_found_response
 from schema.common.responses import CommonResponse
 from schema.sandbox.images import (

@@ -5,7 +5,7 @@ from sqlmodel import select
 
 from core.agent.constants import DEFAULT_AGENT_CODE
 from core.runtime.context import AgentRuntimeContext
-from core.work_project_context import build_work_project_context
+from core.work_project import build_work_project_context
 from database import get_async_session
 from model.work_project.assets import WorkProjectAsset
 from model.work_project.graph import WorkProjectAttackPathStep

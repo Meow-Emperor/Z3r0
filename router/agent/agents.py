@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from handler.agent.agents import list_agents_handler
-from middleware.auth import require_user
+from middleware.system_user import require_user
 from router.common.responses import COMMON_ERROR_RESPONSES
 from schema.agent.sessions import ListAgentsResponse
 from schema.common.responses import CommonResponse

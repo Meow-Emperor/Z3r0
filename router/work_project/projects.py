@@ -12,7 +12,7 @@ from handler.work_project.projects import (
     retry_work_project_handler,
     update_work_project_metadata_handler,
 )
-from middleware.auth import AuthUser, require_admin, require_user
+from middleware.system_user import AuthUser, require_admin, require_user
 from router.common.responses import BAD_REQUEST_RESPONSE, COMMON_ERROR_RESPONSES, not_found_response
 from schema.common.responses import CommonResponse
 from schema.work_project.projects import (
