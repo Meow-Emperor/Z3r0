@@ -10,7 +10,7 @@ services:
     ports:
       - 5432:5432
     # volumes:
-    #   - ./.postgres-data:/var/lib/postgresql/data
+    #   - ./.postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U root -d z3r0"]
       interval: 5s
