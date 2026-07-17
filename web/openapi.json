@@ -3258,6 +3258,11 @@
             "title": "Labels",
             "type": "array"
           },
+          "matched": {
+            "default": false,
+            "title": "Matched",
+            "type": "boolean"
+          },
           "properties": {
             "additionalProperties": true,
             "title": "Properties",

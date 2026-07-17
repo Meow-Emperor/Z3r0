@@ -98,6 +98,24 @@
   border-top: 2px solid var(--z-brand);
 }
 
+.knowledge-graph-match-summary {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  color: var(--z-text);
+  background: var(--z-surface-strong);
+  border: 1px solid var(--z-line-strong);
+  border-left: 3px solid var(--z-warning);
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .knowledge-graph-inspector > strong,
 .knowledge-graph-inspector > span,
 .knowledge-graph-inspector p {

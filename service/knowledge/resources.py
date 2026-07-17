@@ -12,6 +12,7 @@ from lightrag import QueryParam
 from lightrag.base import DeletionResult, DocStatus
 from lightrag.constants import FULL_DOCS_FORMAT_PENDING_PARSE, PARSED_DIR_NAME
 from lightrag.types import KnowledgeGraph
+from lightrag.utils import sanitize_and_normalize_extracted_text
 
 from config import get_config
 from core.lightrag.runtime import LIGHTRAG_INPUT_DIR, LIGHTRAG_WORKSPACE, lightrag_client
@@ -42,6 +43,8 @@ from service.knowledge.constants import (
 _SOURCE_CLEANUP_ATTEMPTS = 3
 _SOURCE_CLEANUP_RETRY_SECONDS = 0.25
 _VECTOR_DOCUMENT_SCAN_PAGE_SIZE = 200
+_GRAPH_DIRECT_MATCH_LIMIT = 50
+_GRAPH_DIRECT_MATCH_DEPTH = 1
 
 logger = get_logger(__name__)
 
@@ -539,19 +542,115 @@ async def search_knowledge_graph(*, query: str, max_nodes: int) -> KnowledgeGrap
 
     try:
         async with lightrag_client() as rag:
-            result = await rag.aquery_data(
+            matched_labels = await _search_knowledge_graph_labels(
+                rag.chunk_entity_relation_graph,
                 normalized_query,
-                QueryParam(
-                    mode="hybrid",
-                    top_k=max_nodes,
-                    chunk_top_k=1,
-                    enable_rerank=False,
-                ),
+                limit=min(max_nodes, _GRAPH_DIRECT_MATCH_LIMIT),
+            )
+            try:
+                result = await rag.aquery_data(
+                    normalized_query,
+                    QueryParam(
+                        mode="hybrid",
+                        top_k=max_nodes,
+                        chunk_top_k=1,
+                        enable_rerank=False,
+                    ),
+                )
+            except Exception:
+                if not matched_labels:
+                    raise
+                logger.warning(
+                    "LightRAG semantic graph search failed; returning direct label matches",
+                    exc_info=True,
+                )
+                result = {}
+
+            direct_graph = await _knowledge_graph_for_matched_labels(
+                rag,
+                matched_labels,
+                max_nodes=max_nodes,
             )
     except Exception:
         logger.exception("LightRAG knowledge graph search failed")
         raise
-    return _knowledge_graph_from_retrieval(result, max_nodes=max_nodes)
+    semantic_graph = _knowledge_graph_from_retrieval(result, max_nodes=max_nodes)
+    return _merge_knowledge_graphs(
+        (direct_graph, semantic_graph),
+        max_nodes=max_nodes,
+    )
+
+
+async def _search_knowledge_graph_labels(
+    graph_storage: Any,
+    query: str,
+    *,
+    limit: int,
+) -> list[str]:
+    labels: list[str] = []
+    seen: set[str] = set()
+    for term in _knowledge_graph_search_terms(query):
+        remaining = limit - len(labels)
+        if remaining <= 0:
+            break
+        matches = await graph_storage.search_labels(term, limit=remaining)
+        for label in matches:
+            normalized_label = str(label).strip()
+            if not normalized_label or normalized_label in seen:
+                continue
+            seen.add(normalized_label)
+            labels.append(normalized_label)
+    return labels
+
+
+def _knowledge_graph_search_terms(query: str) -> tuple[str, ...]:
+    original = query.strip()
+    canonical = sanitize_and_normalize_extracted_text(
+        original,
+        remove_inner_quotes=True,
+    )
+    compact = "".join(canonical.split()) if _contains_cjk(canonical) else ""
+    return tuple(
+        dict.fromkeys(
+            term
+            for term in (original, canonical, compact)
+            if term
+        )
+    )
+
+
+def _contains_cjk(value: str) -> bool:
+    return any("\u3400" <= character <= "\u9fff" for character in value)
+
+
+async def _knowledge_graph_for_matched_labels(
+    rag: Any,
+    labels: list[str],
+    *,
+    max_nodes: int,
+) -> KnowledgeGraphSchema:
+    matched_ids = frozenset(labels)
+    graph = KnowledgeGraphSchema(nodes=[], edges=[], is_truncated=False)
+    for label in labels:
+        remaining = max_nodes - len(graph.nodes)
+        if remaining <= 0:
+            return graph.model_copy(update={"is_truncated": True})
+        neighborhood = await rag.get_knowledge_graph(
+            label,
+            max_depth=_GRAPH_DIRECT_MATCH_DEPTH,
+            max_nodes=remaining,
+        )
+        graph = _merge_knowledge_graphs(
+            (
+                graph,
+                _normalize_knowledge_graph(
+                    neighborhood,
+                    matched_node_ids=matched_ids,
+                ),
+            ),
+            max_nodes=max_nodes,
+        )
+    return graph
 
 
 def _knowledge_graph_from_retrieval(
@@ -570,13 +669,19 @@ def _knowledge_graph_from_retrieval(
     nodes: dict[str, KnowledgeGraphNodeSchema] = {}
     truncated = False
 
-    def add_node(node_id: str, properties: dict[str, Any]) -> bool:
+    def add_node(
+        node_id: str,
+        properties: dict[str, Any],
+        *,
+        matched: bool = False,
+    ) -> bool:
         nonlocal truncated
         if not node_id:
             return False
         if node_id in nodes:
             nodes[node_id] = nodes[node_id].model_copy(update={
                 "properties": {**nodes[node_id].properties, **properties},
+                "matched": nodes[node_id].matched or matched,
             })
             return True
         if len(nodes) >= max_nodes:
@@ -586,6 +691,7 @@ def _knowledge_graph_from_retrieval(
             id=node_id,
             labels=[node_id],
             properties=properties,
+            matched=matched,
         )
         return True
 
@@ -593,7 +699,7 @@ def _knowledge_graph_from_retrieval(
         if not isinstance(entity, dict):
             continue
         entity_name = str(entity.get("entity_name") or "").strip()
-        add_node(entity_name, entity)
+        add_node(entity_name, entity, matched=True)
 
     edges: list[KnowledgeGraphEdgeSchema] = []
     seen_edges: set[str] = set()
@@ -631,7 +737,11 @@ def _knowledge_graph_from_retrieval(
     )
 
 
-def _normalize_knowledge_graph(graph: KnowledgeGraph) -> KnowledgeGraphSchema:
+def _normalize_knowledge_graph(
+    graph: KnowledgeGraph,
+    *,
+    matched_node_ids: frozenset[str] = frozenset(),
+) -> KnowledgeGraphSchema:
     node_ids: dict[str, str] = {}
     nodes: list[KnowledgeGraphNodeSchema] = []
     seen_labels: set[str] = set()
@@ -646,6 +756,7 @@ def _normalize_knowledge_graph(graph: KnowledgeGraph) -> KnowledgeGraphSchema:
                 id=label,
                 labels=[label],
                 properties=node.properties,
+                matched=label in matched_node_ids,
             )
         )
 
@@ -673,6 +784,51 @@ def _normalize_knowledge_graph(graph: KnowledgeGraph) -> KnowledgeGraphSchema:
         nodes=nodes,
         edges=edges,
         is_truncated=graph.is_truncated,
+    )
+
+
+def _merge_knowledge_graphs(
+    graphs: Iterable[KnowledgeGraphSchema],
+    *,
+    max_nodes: int,
+) -> KnowledgeGraphSchema:
+    nodes: dict[str, KnowledgeGraphNodeSchema] = {}
+    edge_candidates: list[KnowledgeGraphEdgeSchema] = []
+    truncated = False
+
+    for graph in graphs:
+        truncated = truncated or graph.is_truncated
+        for node in graph.nodes:
+            existing = nodes.get(node.id)
+            if existing is not None:
+                nodes[node.id] = existing.model_copy(update={
+                    "labels": list(dict.fromkeys((*existing.labels, *node.labels))),
+                    "properties": {**existing.properties, **node.properties},
+                    "matched": existing.matched or node.matched,
+                })
+                continue
+            if len(nodes) >= max_nodes:
+                truncated = True
+                continue
+            nodes[node.id] = node
+        edge_candidates.extend(graph.edges)
+
+    edges: list[KnowledgeGraphEdgeSchema] = []
+    seen_edges: set[tuple[str, str, str]] = set()
+    for edge in edge_candidates:
+        if edge.source not in nodes or edge.target not in nodes:
+            truncated = True
+            continue
+        edge_key = (edge.source, edge.target, edge.type)
+        if edge_key in seen_edges:
+            continue
+        seen_edges.add(edge_key)
+        edges.append(edge)
+
+    return KnowledgeGraphSchema(
+        nodes=list(nodes.values()),
+        edges=edges,
+        is_truncated=truncated,
     )
 
 

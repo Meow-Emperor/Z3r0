@@ -1,6 +1,6 @@
 import { Button } from "@douyinfe/semi-ui";
 import cytoscape from "cytoscape";
-import { Network } from "lucide-react";
+import { Network, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { KnowledgeGraph, KnowledgeGraphNode } from "../../shared/api/types";
 import { CytoscapeGraph, type CytoscapeLayoutOptions } from "../../shared/components/CytoscapeGraph";
@@ -40,6 +40,16 @@ const GRAPH_STYLES: cytoscape.StylesheetJson = [
     },
   },
   {
+    selector: "node.knowledge-query-match",
+    style: {
+      "background-color": "#f5b942",
+      "border-color": "#fff0b3",
+      "border-width": 3,
+      width: 20,
+      height: 20,
+    },
+  },
+  {
     selector: "node:selected",
     style: { "background-color": "#ff7d8a", "border-color": "#ffe1e4" },
   },
@@ -64,6 +74,10 @@ export function KnowledgeGraphView({
 }: KnowledgeGraphViewProps) {
   const [selected, setSelected] = useState<KnowledgeGraphNode | null>(null);
   const nodeById = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph.nodes]);
+  const matchedCount = useMemo(
+    () => graph.nodes.filter((node) => node.matched).length,
+    [graph.nodes],
+  );
   const layoutOptions = useMemo(
     () => knowledgeGraphLayoutOptions(graph.nodes.length),
     [graph.nodes.length],
@@ -71,6 +85,7 @@ export function KnowledgeGraphView({
   const elements = useMemo<cytoscape.ElementDefinition[]>(() => [
     ...graph.nodes.map((node) => ({
       group: "nodes" as const,
+      classes: node.matched ? "knowledge-query-match" : undefined,
       data: { id: nodeElementId(node.id), nodeId: node.id, label: node.labels[0] || node.id },
     })),
     ...graph.edges
@@ -122,6 +137,14 @@ export function KnowledgeGraphView({
       wheelSensitivity={1.2}
       bindEvents={bindEvents}
     >
+      {matchedCount > 0 ? (
+        <div className="knowledge-graph-match-summary">
+          <Search size={13} />
+          <span>
+            Marked {matchedCount} matched {matchedCount === 1 ? "node" : "nodes"}
+          </span>
+        </div>
+      ) : null}
       {selected ? (
         <aside className="knowledge-graph-inspector">
           <strong>{selected.labels[0] || selected.id}</strong>

@@ -102,6 +102,7 @@ class KnowledgeGraphNodeSchema(BaseModel):
     id: str
     labels: list[str]
     properties: dict[str, Any]
+    matched: bool = False
 
 
 class KnowledgeGraphEdgeSchema(BaseModel):

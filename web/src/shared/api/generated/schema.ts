@@ -2693,6 +2693,11 @@ export interface components {
             id: string;
             /** Labels */
             labels: string[];
+            /**
+             * Matched
+             * @default false
+             */
+            matched: boolean;
             /** Properties */
             properties: {
                 [key: string]: unknown;
