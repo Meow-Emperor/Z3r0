@@ -44,7 +44,7 @@ Build the sandbox image used for isolated task execution:
 cd sandbox && bash build.sh
 ```
 
-The build produces `sandbox-runtime:latest`. Add a matching image record in `Sandbox Images` before creating a container.
+The build produces `penetration-runtime:latest`. Add a matching image record in `Sandbox Images` before creating a container.
 
 ## Production Environment
 

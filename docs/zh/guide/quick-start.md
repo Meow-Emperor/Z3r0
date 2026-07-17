@@ -44,7 +44,7 @@ git clone https://github.com/yv1ing/Z3r0.git && cd Z3r0
 cd sandbox && bash build.sh
 ```
 
-构建完成后将生成 `sandbox-runtime:latest`。创建容器前，需要在 `Sandbox Images` 中添加名称一致的镜像记录。
+构建完成后将生成 `penetration-runtime:latest`。创建容器前，需要在 `Sandbox Images` 中添加名称一致的镜像记录。
 
 ## 生产环境
 

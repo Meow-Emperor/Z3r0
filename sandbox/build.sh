@@ -2,4 +2,4 @@
 
 set -eu
 
-docker build -t sandbox-runtime:latest .
+docker build -t penetration-runtime:latest .
