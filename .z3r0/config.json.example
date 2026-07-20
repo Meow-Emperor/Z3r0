@@ -6,7 +6,7 @@
         "bootstrap_admin": {
             "enabled": true,
             "username": "admin",
-            "email": "admin@z3r0.fans",
+            "email": "admin@z3r0.local",
             "password": "replace-with-a-strong-password"
         }
     },

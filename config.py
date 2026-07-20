@@ -21,7 +21,7 @@ class StrictConfigModel(BaseModel):
 class BootstrapAdminConfig(StrictConfigModel):
     enabled: bool = Field(default=False)
     username: str = Field(default="admin", min_length=1, max_length=64)
-    email: str = Field(default="admin@z3r0.fans", min_length=1, max_length=255)
+    email: str = Field(default="admin@z3r0.local", min_length=1, max_length=255)
     password: str = Field(default="", max_length=128)
 
     @model_validator(mode="after")
