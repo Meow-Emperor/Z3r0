@@ -5,7 +5,7 @@
 !supervisord.conf
 !proxy/
 !proxy/go.mod
-!proxy/main.go
+!proxy/*.go
 !.agents/
 !.agents/skills/
 !.agents/skills/**
