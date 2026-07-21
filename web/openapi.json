@@ -7726,7 +7726,7 @@
   },
   "info": {
     "title": "Z3r0 - A controlled multi-agent workbench for authorized security assessment, code auditing, internal review, and controlled research.",
-    "version": "0.2.1"
+    "version": "0.2.2"
   },
   "openapi": "3.1.0",
   "paths": {

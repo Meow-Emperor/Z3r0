@@ -2,6 +2,29 @@
 
 All notable changes to Z3r0 are documented in this file.
 
+## [0.2.2] - 2026-07-21
+
+### Added
+
+- Added LightRAG-backed knowledge management with Markdown and PDF ingestion, document processing, vector and graph exploration, and contextual retrieval for Agent tasks.
+- Added graph-driven WorkProject orchestration with target-scoped WorkItems, immutable Evidence, coverage tracking, lead review and retesting, and richer asset, Finding, Attack Path, and Activity records.
+- Added downloadable Markdown report exports for Agent sessions with configurable retention and automatic cleanup.
+- Expanded the default sandbox with reconnaissance, DNS, web discovery, credential testing, binary analysis, debugging, Python, browser automation, and wordlist tooling backed by dedicated skills.
+
+### Changed
+
+- Reworked runtime lifecycle, conversation persistence, context budgeting, API contracts, and frontend workflows for more consistent recovery, replay, and long-running task execution.
+- Consolidated backend layer roots into domain packages and centralized OpenAPI and frontend contract generation in the schema export script.
+- Refined the operator workbench with reusable resource components, responsive WorkProject layouts, improved session and transcript views, and updated product documentation.
+- Updated sandbox permissions and project binding, renamed the default sandbox image to `penetration-runtime:latest`, tightened configuration validation, and moved PostgreSQL deployments to the vector-enabled image and data mount layout required by LightRAG.
+
+### Fixed
+
+- Fixed knowledge graph tag retrieval and related graph exploration behavior.
+- Fixed local managed-host Docker connections by falling back to the Unix socket for loopback addresses.
+- Fixed Mermaid guidance and rendering fallback behavior, playground nested-list spacing, and container window render loops.
+- Fixed WorkProject sandbox selection rendering and the PostgreSQL data directory mount path.
+
 ## [0.2.1] - 2026-07-01
 
 ### Added
