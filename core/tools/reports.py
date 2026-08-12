@@ -9,11 +9,14 @@ from service.agent.reports import export_session_report
 async def export_report(ctx: RunContextWrapper[AgentRuntimeContext], content: str) -> str:
     """Export a markdown report for the current session.
 
+    The result reports success or failure and, on success, includes the report
+    identity, filename, byte size, and character count.
+
     Args:
-        content: str complete report content in standard Markdown.
+        content: Complete report body in standard Markdown.
 
     Returns:
-        JSON tool result with report id, filename, byte size, and character count.
+        A JSON tool result containing the export status and report metadata.
     """
     try:
         report = await export_session_report(ctx.context.session_id, content)

@@ -130,13 +130,20 @@ def build_subagent_tools(
     ) -> str:
         """Start a configured subagent task in the background.
 
+        A successful start is turn-terminal: do not call another tool or respond.
+        The runtime resumes the owner after completion. WorkProject sessions require
+        an active WorkItem assigned to the selected subagent, and the run is durably
+        bound to it. The result includes status, persistent run identity, selected
+        agent, timestamps, and completion-resume guidance.
+
         Args:
-            agent_code: str code of the configured subagent to run.
-            brief: str self-contained task brief for the subagent.
-            work_item_id: int WorkItem bound to this run; required in WorkProject sessions.
+            agent_code: Code of the configured subagent to run.
+            brief: Self-contained task brief with objective, scope, constraints,
+                relevant context, and expected output.
+            work_item_id: Active WorkItem to bind; required in WorkProject sessions.
 
         Returns:
-            JSON status including run_id, agent_code, status, timestamps, and automatic completion resume guidance.
+            JSON metadata describing the started subagent task.
         """
         code = agent_code.strip()
         if code not in allowed:
@@ -190,16 +197,17 @@ def build_subagent_tools(
     ) -> str:
         """Read the latest state of a subagent task in the current session.
 
+        The result includes status, progress, one result or error slice, total
+        character counts, and `next_offset` while more content remains. Each slice
+        contains at most 3000 characters. Continue from `next_offset` until it is
+        omitted to read the complete body.
+
         Args:
-            run_id: str subagent run id returned by start_subagent_task or list_subagent_tasks.
-            offset: int starting position into the task's result/error (default 0).
-                Repeat with ``offset=next_offset`` until the response omits ``next_offset``
-                to read the full body.
+            run_id: Persistent identity of the subagent task.
+            offset: Starting character offset into the result or error body.
 
         Returns:
-            JSON status with the task status, progress, the requested slice of result/error,
-            total sizes (``result_chars``/``error_chars``), and ``next_offset`` (the field is
-            omitted once the body is fully read).
+            JSON metadata containing task state and a bounded result or error slice.
         """
         snapshot = await _resolve_task(ctx, run_id)
         if snapshot is None:
@@ -209,11 +217,14 @@ def build_subagent_tools(
     async def list_subagent_tasks(ctx: RunContextWrapper[AgentRuntimeContext], limit: int = 20) -> str:
         """List recent subagent tasks visible to the current session user.
 
+        The result contains recent task snapshots with persistent identity, agent,
+        state, progress, and timestamps.
+
         Args:
-            limit: int maximum number of recent subagent tasks to return.
+            limit: Maximum number of recent tasks, clamped to 1-100.
 
         Returns:
-            JSON status with recent task snapshots including run id, agent code, status, progress, and timestamps.
+            JSON metadata containing the visible task snapshots.
         """
         tasks = await agent_subordinates.list_subagent_tasks(
             session_id=ctx.context.session_id,
@@ -226,11 +237,13 @@ def build_subagent_tools(
     async def cancel_subagent_task(ctx: RunContextWrapper[AgentRuntimeContext], run_id: str) -> str:
         """Request cancellation for a running subagent task in the current session.
 
+        The result contains the latest task state after cancellation is requested.
+
         Args:
-            run_id: str subagent run id returned by start_subagent_task or list_subagent_tasks.
+            run_id: Persistent identity of the subagent task.
 
         Returns:
-            JSON status with the latest task state after cancellation is requested.
+            JSON metadata containing the latest task state.
         """
         snapshot = await _resolve_task(ctx, run_id)
         if snapshot is None:
@@ -243,50 +256,25 @@ def build_subagent_tools(
             start_subagent_task,
             name_override="start_subagent_task",
             description_override=(
-                "Start a configured subagent task.\n\n"
-                "Args:\n"
-                f"    agent_code: str subagent code, one of {allowed_codes}.\n"
-                "    brief: str self-contained task brief with objective, constraints, expected output, and relevant context.\n"
-                "    work_item_id: int required WorkItem id in WorkProject sessions.\n\n"
-                "Returns:\n"
-                "    JSON status with a persistent run id. This agent is resumed automatically after the subagent finishes. "
-                "WorkProject runs are durably bound to work_item_id."
+                "Start a configured subagent task in the background. "
+                f"Allowed agent codes: {allowed_codes}. "
+                "A successful start is turn-terminal, and the runtime resumes the owner after completion. "
+                "WorkProject sessions require an active WorkItem assigned to the selected subagent, "
+                "and the run is durably bound to it. The result includes status, persistent run "
+                "identity, selected agent, timestamps, and completion-resume guidance."
             ),
         ),
         function_tool(
             read_subagent_task,
             name_override="read_subagent_task",
-            description_override=(
-                "Read a subagent task in the current session.\n\n"
-                "Args:\n"
-                "    run_id: str persistent subagent run id returned by start_subagent_task or list_subagent_tasks.\n"
-                "    offset: int starting character offset into result/error, default 0.\n\n"
-                "Returns:\n"
-                "    JSON status with progress, requested result/error slice, total sizes, and optional next_offset. "
-                "Repeat with offset=next_offset until the response omits next_offset."
-            ),
         ),
         function_tool(
             list_subagent_tasks,
             name_override="list_subagent_tasks",
-            description_override=(
-                "List recent subagent tasks visible in the current session.\n\n"
-                "Args:\n"
-                "    limit: int maximum number of recent tasks to return.\n\n"
-                "Returns:\n"
-                "    JSON status with task snapshots containing run id, agent code, status, progress, and timestamps."
-            ),
         ),
         function_tool(
             cancel_subagent_task,
             name_override="cancel_subagent_task",
-            description_override=(
-                "Request cancellation for a subagent task.\n\n"
-                "Args:\n"
-                "    run_id: str persistent subagent run id returned by start_subagent_task or list_subagent_tasks.\n\n"
-                "Returns:\n"
-                "    JSON status with the latest task state after cancellation is requested."
-            ),
         ),
     ]
     return tools

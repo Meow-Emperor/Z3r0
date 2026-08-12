@@ -27,22 +27,18 @@ from model.agent.context_compactions import AgentContextCompaction
 logger = get_logger(__name__)
 
 _SUMMARY_SECTIONS = "\n".join(f"## {section}" for section in CONTEXT_SUMMARY_SECTIONS)
-_SUMMARY_AGENT_INSTRUCTIONS = f"""# Runtime Guidance
+_SUMMARY_AGENT_INSTRUCTIONS = f"""# Context Compression
 
-## Context Compression
-
-Compress earlier agent conversation items for future continuation.
-
-Write a concise but information-dense Markdown summary using exactly these sections:
+Compress earlier conversation items for continuation. Return only a concise Markdown summary with exactly these sections:
 
 {_SUMMARY_SECTIONS}
 
-Write "None" for empty sections. Preserve durable facts, user requests, constraints, decisions,
-code/file references, tool results, errors, pending tasks, and current state. Discard greetings,
-repetitive reasoning, obsolete plans, and low-value narration. Do not invent facts. The summary will
-replace the source messages in the next model context, so include anything required to continue the
-work safely. In `User Goals`, include only user-authored goals, requests, and topics. Never place
-assistant conclusions, retrieved context, tool output, or task-resumption payloads in that section."""
+Write "None" for an empty section. Preserve user requests, constraints, decisions, durable facts,
+file and code references, tool results, errors, open tasks, and current state. Remove greetings,
+repeated reasoning, obsolete plans, and narration. Preserve everything needed to continue safely
+after the source messages are replaced. Do not infer or invent facts. In `User Goals`, include only
+user-authored goals, requests, and topics; place assistant conclusions, retrieved data, tool output,
+and resumption context in their proper sections."""
 
 
 @dataclass(frozen=True, slots=True)

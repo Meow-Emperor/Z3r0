@@ -130,12 +130,10 @@ class AgentRegistry:
             name=cfg.name,
             model=build_openai_model(cfg),
             model_settings=ModelSettings(parallel_tool_calls=False),
-            instructions=lambda run_context, _: "\n\n".join(
-                part for part in (
-                    instructions,
-                    run_context.context.work_project_context,
-                    run_context.context.rag_context,
-                ) if part
+            instructions=lambda run_context, _: _assemble_instructions(
+                stable_prefix=instructions,
+                work_project_context=run_context.context.work_project_context,
+                rag_context=run_context.context.rag_context,
             ),
             tools=tools,
             tool_use_behavior=_end_turn_after_async_dispatch,
@@ -182,6 +180,24 @@ class SessionAgentGraph:
 
 def _has_tool(spec: AgentSpec, tool: Tool) -> bool:
     return any(mount.tool is tool for mount in spec.tools)
+
+
+def _assemble_instructions(
+    *,
+    stable_prefix: str,
+    work_project_context: str,
+    rag_context: str,
+) -> str:
+    """Append changing turn context after the cacheable instruction prefix."""
+    return "\n\n".join(
+        part
+        for part in (
+            stable_prefix,
+            work_project_context,
+            rag_context,
+        )
+        if part
+    )
 
 
 def _has_work_project_tool(spec: AgentSpec) -> bool:

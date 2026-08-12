@@ -22,7 +22,7 @@ CONTEXT_SUMMARY_SECTIONS = (
 )
 
 _CONTEXT_SUMMARY_INTRO = (
-    "This is context, not a new user request. Continue from the summary below."
+    "Continuation context, not a new user request. Continue from the summary below."
 )
 _INTERNAL_CONTEXT_ITEM_IDS = frozenset({
     CONTEXT_SUMMARY_ITEM_ID,

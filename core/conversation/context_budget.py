@@ -19,9 +19,9 @@ logger = get_logger(__name__)
 
 _NOTICE_TEXT = (
     "# Context Budget Notice\n\n"
-    "Older conversation items were omitted from this model call because the active input exceeded "
-    "the configured context window. Use the retained context summary and recent messages. Reload "
-    "specific files, command outputs, or source documents if exact omitted details are needed."
+    "Older items were omitted to fit the context window. Use the retained summary and recent "
+    "messages. Reload the specific source file, command output, or document when an omitted "
+    "exact detail is required."
 )
 _MIN_COMPLETION_SLACK_TOKENS = 2048
 

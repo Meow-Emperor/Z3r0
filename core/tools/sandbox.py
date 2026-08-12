@@ -68,14 +68,18 @@ async def execute_sync_command(
     command: str,
     timeout_seconds: int = _SYNC_COMMAND_TIMEOUT_SECONDS,
 ) -> str:
-    """Execute a short sandbox command and return result metadata.
+    """Execute a short command in the selected sandbox container.
+
+    Command output is captured rather than returned inline. The result includes
+    `status`, `output_file`, `output_bytes`, `output_lines`, `exit_code`, and any
+    `error`. Read relevant captured output with the command-output reader.
 
     Args:
-        command: str shell command to execute in the selected sandbox container.
-        timeout_seconds: int command timeout in seconds, clamped to 1-30.
+        command: Shell command to execute.
+        timeout_seconds: Timeout in seconds, clamped to 1-30.
 
     Returns:
-        JSON metadata with status, output_file, output_bytes, output_lines, exit_code, and optional error.
+        JSON metadata describing command status and captured output.
     """
     container_id = ctx.context.sandbox_container_id
     if container_id is None:
@@ -116,18 +120,20 @@ async def execute_async_command(
     command: str,
     timeout_seconds: int = _ASYNC_COMMAND_TIMEOUT_SECONDS,
 ) -> str:
-    """Start a long-running sandbox command; this ends the current turn.
+    """Start a long-running command in the selected sandbox container.
 
-    Dispatching is turn-terminal: control returns to the runtime and the agent
-    is resumed automatically when the command finishes, with its result and
-    output file delivered as fresh context. Never poll or read a running job.
+    A successful dispatch is turn-terminal: do not call another tool or respond.
+    The runtime resumes the task after completion and supplies terminal result
+    metadata. Never poll or read a running job. The dispatch result includes
+    `status` and the persistent `run_id`; captured output is available after completion.
+    Each Agent may run at most three background commands concurrently.
 
     Args:
-        command: str shell command to execute in the selected sandbox container.
-        timeout_seconds: int command timeout in seconds, clamped to 1-300.
+        command: Shell command to execute.
+        timeout_seconds: Timeout in seconds, clamped to 1-300.
 
     Returns:
-        JSON metadata with status and run_id.
+        JSON metadata containing dispatch status and the persistent job identity.
     """
     container_id = ctx.context.sandbox_container_id
     if container_id is None:
@@ -177,13 +183,18 @@ async def read_sandbox_command_output(
 ) -> str:
     """Read a bounded line range from a sandbox command output file.
 
+    Use the output reference returned by a synchronous command or completion
+    event. Read successive ranges when the captured output exceeds one chunk.
+    The result contains at most 200 lines and includes `output_file`,
+    `start_line`, `end_line`, and `content`.
+
     Args:
-        output_file: str output path returned by execute_sync_command or an async completion notification.
-        start_line: int one-based starting line number.
-        line_count: int number of lines to read, clamped by the output reader to a bounded chunk size.
+        output_file: Captured-output reference returned by a command tool or completion event.
+        start_line: One-based first line to read.
+        line_count: Requested number of lines, clamped to 1-200.
 
     Returns:
-        JSON chunk with output_file, start_line, end_line, and content.
+        A JSON chunk containing the output reference, returned range, and content.
     """
     container_id = ctx.context.sandbox_container_id
     if container_id is None:
@@ -218,11 +229,13 @@ async def read_sandbox_command_output(
 async def cancel_sandbox_async_job(ctx: RunContextWrapper[AgentRuntimeContext], run_id: str) -> str:
     """Cancel a sandbox async command owned by the current session.
 
+    The result contains the latest known job state after the cancellation request.
+
     Args:
-        run_id: str async command run id returned by execute_async_command.
+        run_id: Persistent identity of the background command.
 
     Returns:
-        JSON metadata for the latest known async command state after cancellation is requested.
+        JSON metadata containing the latest known command state.
     """
     snapshot = await sandbox_async_jobs.get_async_job(run_id.strip(), session_id=ctx.context.session_id)
     if snapshot is None or snapshot.agent_instance_id != ctx.context.agent_instance_id:
@@ -316,11 +329,15 @@ def _skill_resource_files_section(files: tuple[str, ...], truncated: bool) -> st
 async def load_skill(ctx: RunContextWrapper[AgentRuntimeContext], name: str) -> str:
     """Load the body of a named skill from the selected sandbox container.
 
+    The result reports success or failure and, on success, includes the skill
+    instructions, its sandbox-relative resource root, and available resource files.
+
     Args:
-        name: str skill directory name under .agents/skills.
+        name: Skill directory name under the sandbox skill root; use only letters,
+            numbers, dots, underscores, or dashes.
 
     Returns:
-        JSON status with the skill body, sandbox-relative skill root, and resource file list.
+        A JSON tool result containing status and the loaded skill data.
     """
     container_id = ctx.context.sandbox_container_id
     if container_id is None:

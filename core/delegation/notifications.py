@@ -35,15 +35,13 @@ def notification_prompt(notification: AgentNotificationSnapshot) -> str:
 
 _RESUMPTION_HEADER = (
     f"{TASK_RESUMPTION_CONTEXT_HEADER}\n\n"
-    "This is task context, not a new user request. "
-    "Continue from the completed background work without mentioning how this context was delivered."
+    "Runtime event, not a new user request. Continue the existing task without describing delivery."
 )
 
 
 def _subagent_finished_prompt(notification: AgentNotificationSnapshot) -> str:
-    # The notification carries metadata only; the body lives in the DB and is
-    # paged through read_subagent_task. This keeps the resumption prompt small
-    # and prevents overlap with the first slice the agent will fetch.
+    # The notification carries metadata only; the result body remains in durable
+    # storage so the resumption prompt stays small.
     payload = notification.payload
     status = str(payload.get("status") or "unknown")
     agent_code = str(payload.get("agent_code") or "")
@@ -52,22 +50,21 @@ def _subagent_finished_prompt(notification: AgentNotificationSnapshot) -> str:
     work_item_id = payload.get("work_item_id")
 
     event_lines = [
-        "- kind: delegated_task_completed",
-        f"- run_id: {run_id}",
-        f"- agent_code: {agent_code or 'unknown'}",
-        f"- subagent: {agent_name}",
-        f"- status: {status}",
+        "- Event: delegated task completed",
+        f"- Task: {run_id}",
+        f"- Agent code: {agent_code or 'unknown'}",
+        f"- Agent: {agent_name}",
+        f"- Status: {status}",
     ]
     if isinstance(work_item_id, int) and work_item_id > 0:
-        event_lines.append(f"- work_item_id: {work_item_id}")
+        event_lines.append(f"- Bound WorkItem: {work_item_id}")
 
     sections = [
         _RESUMPTION_HEADER,
         "## Event\n\n" + "\n".join(event_lines),
         "## Next Step\n\n"
-        "Call `read_subagent_task(run_id, offset=0)` and repeat with `offset=next_offset` "
-        "until the response omits `next_offset` to read the full result/error. "
-        "Report to the user only when there is a useful conclusion, coordination update, or next action.",
+        "Read the complete delegated result before continuing. Report only a useful "
+        "conclusion, coordination update, or next action.",
     ]
     return "\n\n".join(sections)
 
@@ -86,18 +83,18 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
     error_preview = _truncate_inline(payload.get("error"), _SANDBOX_ERROR_PREVIEW_CHARS)
 
     event_lines = [
-        "- kind: async_command_completed",
-        f"- run_id: {run_id}",
-        f"- status: {status}",
+        "- Event: background command completed",
+        f"- Job: {run_id}",
+        f"- Status: {status}",
     ]
     if isinstance(work_item_id, int) and work_item_id > 0:
-        event_lines.append(f"- work_item_id: {work_item_id}")
+        event_lines.append(f"- Bound WorkItem: {work_item_id}")
     if exit_code is not None:
-        event_lines.append(f"- exit_code: {exit_code}")
+        event_lines.append(f"- Exit code: {exit_code}")
     if output_file:
-        event_lines.append(f"- output_file: {output_file}")
-        event_lines.append(f"- output_lines: {output_lines}")
-        event_lines.append(f"- output_bytes: {output_bytes}")
+        event_lines.append(f"- Output reference: {output_file}")
+        event_lines.append(f"- Output lines: {output_lines}")
+        event_lines.append(f"- Output bytes: {output_bytes}")
     sections = [
         _RESUMPTION_HEADER,
         "## Event\n\n" + "\n".join(event_lines),
@@ -107,10 +104,8 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
 
     sections.append(
         "## Next Step\n\n"
-        "The async command has reached a terminal state. "
-        "If `output_lines` is greater than 0 and the result matters, read the output with "
-        "`read_sandbox_command_output` using `output_file` and `start_line: 1`. "
-        "Then continue the task or report the final result.",
+        "The command is terminal. Read any relevant captured output, then continue or report "
+        "the result.",
     )
     return "\n\n".join(sections)
 
