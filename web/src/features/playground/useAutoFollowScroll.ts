@@ -1,4 +1,4 @@
-import { KeyboardEvent, RefObject, TouchEvent, WheelEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { KeyboardEvent, RefObject, WheelEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type UseAutoFollowScrollOptions<T extends HTMLElement> = {
   enabled?: boolean;
@@ -26,7 +26,6 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
   watch = [],
 }: UseAutoFollowScrollOptions<T>) {
   const tailRef = useRef<HTMLDivElement | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
   const lastScrollTopRef = useRef(0);
   const followingRef = useRef(true);
   const [following, setFollowingState] = useState(true);
@@ -79,7 +78,6 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
     if (resetKey == null) return;
     setFollowing(true);
     lastScrollTopRef.current = 0;
-    touchStartYRef.current = null;
   }, [resetKey, setFollowing]);
 
   useEffect(() => {
@@ -125,23 +123,6 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
     }
   }, [resumeIfAtTail, setFollowing, triggerScrollToTop]);
 
-  const handleTouchStart = useCallback((event: TouchEvent<T>) => {
-    touchStartYRef.current = event.touches[0]?.clientY ?? null;
-  }, []);
-
-  const handleTouchMove = useCallback((event: TouchEvent<T>) => {
-    const startY = touchStartYRef.current;
-    const currentY = event.touches[0]?.clientY;
-    if (startY == null || currentY == null || Math.abs(currentY - startY) <= 2) return;
-    onUserScrollIntentRef.current?.();
-    if (currentY > startY) {
-      setFollowing(false);
-      triggerScrollToTop();
-    } else {
-      resumeIfAtTail();
-    }
-  }, [resumeIfAtTail, setFollowing, triggerScrollToTop]);
-
   const handleKeyDown = useCallback((event: KeyboardEvent<T>) => {
     if (event.currentTarget !== event.target) return;
     switch (event.key) {
@@ -171,8 +152,6 @@ export function useAutoFollowScroll<T extends HTMLElement = HTMLDivElement>({
     scrollHandlers: {
       onWheel: handleWheel,
       onKeyDown: handleKeyDown,
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
     },
   };
 }

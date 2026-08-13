@@ -40,44 +40,37 @@
 }
 
 .knowledge-graph {
-  height: calc(100dvh - 330px);
-  min-height: 420px;
+  height: 100%;
+  min-height: 0;
   border: 0;
   border-radius: 0;
 }
 
-@media (min-width: 901px) {
-  .resource-page,
-  .system-config-page,
-  .knowledges-page {
-    height: 100%;
-    grid-template-rows: max-content minmax(0, 1fr);
-    overflow: hidden;
-  }
+.resource-page,
+.system-config-page,
+.knowledges-page {
+  height: 100%;
+  grid-template-rows: max-content minmax(0, 1fr);
+  overflow: hidden;
+}
 
-  .work-project-workspace {
-    height: 100%;
-    grid-template-rows: max-content max-content max-content minmax(0, 1fr);
-    overflow: hidden;
-  }
+.work-project-workspace {
+  height: 100%;
+  grid-template-rows: max-content max-content max-content minmax(0, 1fr);
+  overflow: hidden;
+}
 
-  .knowledge-tabs,
-  .knowledge-tabs > .semi-tabs-content,
-  .knowledge-tabs > .semi-tabs-content > .semi-tabs-pane-active,
-  .knowledge-tabs .semi-tabs-pane-motion-overlay {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-  }
+.knowledge-tabs,
+.knowledge-tabs > .semi-tabs-content,
+.knowledge-tabs > .semi-tabs-content > .semi-tabs-pane-active,
+.knowledge-tabs .semi-tabs-pane-motion-overlay {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
 
-  .knowledge-tabs .table-panel {
-    flex: 1 1 auto;
-  }
-
-  .knowledge-graph {
-    height: 100%;
-    min-height: 0;
-  }
+.knowledge-tabs .table-panel {
+  flex: 1 1 auto;
 }
 
 .knowledge-graph-inspector {
@@ -257,7 +250,7 @@
 }
 
 .knowledge-detail-editor {
-  height: clamp(260px, 38dvh, 420px);
+  height: clamp(260px, 38vh, 420px);
   min-height: 0;
   overflow: hidden;
   background: var(--z-bg-deep);
@@ -266,7 +259,7 @@
 }
 
 .knowledge-detail-editor.is-compact {
-  height: clamp(220px, 30dvh, 320px);
+  height: clamp(220px, 30vh, 320px);
 }
 
 .knowledge-detail-editor .cm-host,
@@ -276,21 +269,6 @@
 
 .knowledge-detail-empty {
   min-height: 220px;
-}
-
-@media (max-width: 720px) {
-  .knowledge-detail-facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .knowledge-detail-identifiers > div {
-    grid-template-columns: 1fr;
-    gap: 3px;
-  }
-
-  .knowledge-detail-editor {
-    height: min(38dvh, 360px);
-  }
 }
 
 .metric-strip {
@@ -510,16 +488,14 @@
   min-height: 100%;
 }
 
-@media (min-width: 901px) {
-  .table-panel .resource-table-spin {
-    min-height: 0;
-  }
+.table-panel .resource-table-spin {
+  min-height: 0;
+}
 
-  .table-panel .resource-table-spin > .semi-spin-children,
-  .table-panel .empty-state {
-    height: 100%;
-    min-height: 0;
-  }
+.table-panel .resource-table-spin > .semi-spin-children,
+.table-panel .empty-state {
+  height: 100%;
+  min-height: 0;
 }
 
 .resource-table {
@@ -1235,19 +1211,16 @@
   max-height: 100%;
 }
 
-@media (min-width: 901px) {
-  .work-project-info-modal .semi-modal-body {
-    display: flex;
-    flex-direction: column;
-    overflow-y: hidden;
-  }
+.work-project-info-modal .semi-modal-body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
+}
 
-  .work-project-info-modal .semi-modal-body > .semi-spin.project-record-spin {
-    flex: 1 1 auto;
-    height: auto;
-    min-height: 0;
-  }
-
+.work-project-info-modal .semi-modal-body > .semi-spin.project-record-spin {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
 }
 
 .project-info-summary {
@@ -1670,7 +1643,6 @@
   width: 100%;
   height: 100%;
   min-height: inherit;
-  touch-action: none;
   cursor: grab;
 }
 
@@ -2071,127 +2043,4 @@
   background: linear-gradient(90deg, var(--z-brand), transparent 34%, var(--z-accent), transparent);
   content: "";
   opacity: 0.7;
-}
-
-@media (max-width: 1200px) {
-  .lightrag-config-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  .project-overview-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .project-asset-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) 32px;
-  }
-
-  .project-asset-row > .semi-button {
-    grid-column: 3;
-    grid-row: 1;
-  }
-
-  .metric-strip {
-    grid-template-columns: 1fr;
-  }
-
-  .project-info-content {
-    height: auto;
-    overflow: visible;
-  }
-
-  .project-info-meta {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .project-record-panel {
-    min-height: 520px;
-  }
-
-  .workspace-title {
-    flex-direction: column;
-  }
-
-  .workspace-title-tags {
-    align-self: flex-start;
-  }
-
-  .config-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .work-project-expanded {
-    height: auto;
-    max-height: min(760px, calc(100vh - 220px));
-    overflow-y: auto;
-  }
-
-  .work-project-detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .work-project-asset-list {
-    max-height: 220px;
-  }
-}
-
-@media (max-width: 560px) {
-  .host-form-row,
-  .table-toolbar,
-  .project-form-grid,
-  .config-grid,
-  .agent-form-grid,
-  .workspace-header,
-  .workspace-title,
-  .work-project-meta,
-  .work-project-detail-grid,
-  .project-info-meta {
-    grid-template-columns: 1fr;
-  }
-
-  .project-asset-row {
-    grid-template-columns: minmax(0, 1fr) 32px;
-  }
-
-  .project-overview-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .project-activity-list > article {
-    gap: 6px;
-  }
-
-  .project-activity-list > article > header,
-  .project-target-list > div > header {
-    grid-template-columns: 1fr;
-  }
-
-  .runtime-config-group .config-value-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .project-asset-row > label {
-    grid-column: 1;
-  }
-
-  .project-asset-row > .semi-button {
-    grid-row: 1;
-    grid-column: 2;
-  }
-
-  .port-mapping-row {
-    grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr) 32px;
-  }
-
-  .port-mapping-row > .semi-select {
-    grid-row: 2;
-    grid-column: 1 / -1;
-  }
-
-  .port-mapping-row > .semi-button {
-    grid-row: 1;
-    grid-column: 4;
-  }
 }

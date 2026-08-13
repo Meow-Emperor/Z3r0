@@ -79,13 +79,3 @@
 .login-form label span {
   color: inherit;
 }
-
-@media (max-width: 560px) {
-  .login-page {
-    padding: 16px;
-  }
-
-  .login-panel {
-    padding: 24px;
-  }
-}

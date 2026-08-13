@@ -84,7 +84,7 @@ body,
 }
 
 body {
-  min-width: 320px;
+  min-width: 1280px;
   margin: 0;
   color: var(--z-text);
   background-color: var(--z-bg);
@@ -556,7 +556,6 @@ a,
   position: relative;
   max-width: 100%;
   max-height: min(680px, calc(100vh - 64px));
-  max-height: min(680px, calc(100dvh - 64px));
   padding: 0 var(--modal-inline-padding);
   overflow: hidden;
   border-radius: 6px;

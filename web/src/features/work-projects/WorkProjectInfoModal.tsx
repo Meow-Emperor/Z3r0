@@ -23,7 +23,7 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "overview",
       titleIcon={<FolderKanban size={17} />}
       className="work-project-info-modal"
       width="min(1440px, calc(100vw - 24px))"
-      height="min(820px, calc(100dvh - 32px))"
+      height="min(820px, calc(100vh - 32px))"
       onCancel={onClose}
     >
       <AsyncContent

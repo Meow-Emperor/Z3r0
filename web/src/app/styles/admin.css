@@ -1,6 +1,5 @@
 .admin-app {
   height: 100vh;
-  height: 100dvh;
   min-height: 0;
   overflow: hidden;
 }
@@ -362,10 +361,8 @@
   min-height: 0;
 }
 
-@media (min-width: 901px) {
-  .admin-route-scroll {
-    height: 100%;
-  }
+.admin-route-scroll {
+  height: 100%;
 }
 
 .admin-route-fixed {
@@ -382,95 +379,4 @@
   min-height: 100%;
   display: grid;
   place-items: center;
-}
-
-@media (max-width: 900px) {
-  .admin-shell {
-    height: 100%;
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .admin-main {
-    height: 100%;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    overflow: hidden;
-  }
-
-  .admin-sidebar {
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 16px;
-  }
-
-  .admin-sidebar-body {
-    flex: 1;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0;
-  }
-
-  .admin-sidebar-top,
-  .admin-nav-bottom {
-    flex: 0 0 auto;
-  }
-
-  .admin-sidebar-secondary {
-    display: none;
-  }
-
-  .brand-lockup {
-    height: auto;
-    flex-basis: auto;
-    padding: 0;
-    border-bottom: 0;
-  }
-
-  .brand-kicker,
-  .admin-nav-copy small,
-  .admin-nav-link::after {
-    display: none;
-  }
-
-  .admin-nav {
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .admin-nav-link {
-    min-height: 40px;
-  }
-
-  .admin-topbar {
-    align-items: flex-start;
-    flex-direction: column;
-    height: auto;
-    padding: 18px;
-  }
-
-  .topbar-actions {
-    width: 100%;
-    align-items: flex-start;
-    justify-content: space-between;
-  }
-
-  .topbar-session-actions {
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .admin-control-state,
-  .admin-user-identity > span {
-    display: none;
-  }
-
-  .admin-content-viewport-scroll {
-    min-height: 0;
-    padding: 18px;
-  }
 }
