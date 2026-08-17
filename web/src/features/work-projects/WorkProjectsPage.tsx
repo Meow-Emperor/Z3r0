@@ -270,7 +270,6 @@ export function WorkProjectsPage() {
             empty={expandedProject === null}
             emptyIcon={<FolderKanban size={42} />}
             emptyTitle="Project details are unavailable"
-            wrapperClassName="work-project-detail-spin"
           >
             {expandedProject ? <WorkProjectExpanded project={expandedProject} /> : null}
           </AsyncContent>

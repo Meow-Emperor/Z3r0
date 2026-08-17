@@ -133,21 +133,208 @@ function ProjectRecordTabs({ projectId, initialTab = "overview", className }: Pr
     return () => { canceled = true; };
   }, [activeTab, graphLoaded, projectId]);
 
-  return <Tabs type="line" className={cx("project-record-tabs", className)} activeKey={activeTab} onChange={(key) => setActiveTab(key as ProjectRecordTab)}>
-    <TabPane tab={<TabLabel icon={<Gauge size={14} />} text="Overview" />} itemKey="overview"><AsyncContent loading={overviewLoading} empty={overviewLoaded && !overview} emptyTitle="No project state." wrapperClassName="project-record-fill">{overview ? <OverviewView value={overview} /> : null}</AsyncContent></TabPane>
-    <TabPane tab={<TabLabel icon={<ClipboardList size={14} />} text="Workflow" />} itemKey="workflow"><Paged state={workItems} empty="No work items." toolbar={<RecordQueryBar state={workItems} placeholder="Search work items"><EnumFilter value={workItemStatus} values={WORK_PROJECT_WORK_ITEM_STATUS_VALUES} labels={WORK_PROJECT_WORK_ITEM_STATUS_LABEL} placeholder="All statuses" onChange={(value) => { workItems.goToFirstPage(); setWorkItemStatus(value); }} /><Input value={workItemAssignee} placeholder="Assignee code" showClear onChange={(value) => { workItems.goToFirstPage(); setWorkItemAssignee(value.trim()); }} /></RecordQueryBar>}><WorkItemList records={workItems.items} /></Paged></TabPane>
-    <TabPane tab={<TabLabel icon={<Network size={14} />} text="Graph" />} itemKey="graph"><AsyncContent loading={graphLoading} empty={graphLoaded && !graph.assets.length} emptyTitle="No graph data." wrapperClassName="project-record-fill"><GraphView graph={graph} /></AsyncContent></TabPane>
-    <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="Assets" />} itemKey="assets"><Paged state={assets} empty="No assets." toolbar={<RecordQueryBar state={assets} placeholder="Search assets"><EnumFilter value={assetKind} values={WORK_PROJECT_ASSET_KIND_VALUES} labels={WORK_PROJECT_ASSET_KIND_LABEL} placeholder="All kinds" onChange={(value) => { assets.goToFirstPage(); setAssetKind(value); }} /><EnumFilter value={assetScope} values={WORK_PROJECT_ASSET_SCOPE_VALUES} labels={WORK_PROJECT_ASSET_SCOPE_LABEL} placeholder="All scopes" onChange={(value) => { assets.goToFirstPage(); setAssetScope(value); }} /></RecordQueryBar>}><AssetList assets={assets.items} /></Paged></TabPane>
-    <TabPane tab={<TabLabel icon={<Bug size={14} />} text="Findings" />} itemKey="findings"><Paged state={findings} empty="No findings." toolbar={<RecordQueryBar state={findings} placeholder="Search findings"><EnumFilter value={findingVerification} values={WORK_PROJECT_FINDING_VERIFICATION_VALUES} labels={WORK_PROJECT_FINDING_VERIFICATION_LABEL} placeholder="All verification" onChange={(value) => { findings.goToFirstPage(); setFindingVerification(value); }} /><EnumFilter value={findingSeverity} values={WORK_PROJECT_FINDING_SEVERITY_VALUES} labels={WORK_PROJECT_FINDING_SEVERITY_LABEL} placeholder="All severities" onChange={(value) => { findings.goToFirstPage(); setFindingSeverity(value); }} /></RecordQueryBar>}><FindingList records={findings.items} /></Paged></TabPane>
-    <TabPane tab={<TabLabel icon={<Route size={14} />} text="Attack Paths" />} itemKey="attack-paths"><Paged state={paths} empty="No attack paths." toolbar={<RecordQueryBar state={paths} placeholder="Search attack paths" />}><AttackPathList records={paths.items} /></Paged></TabPane>
-    <TabPane tab={<TabLabel icon={<FileCheck2 size={14} />} text="Evidence" />} itemKey="evidence"><Paged state={evidence} empty="No evidence." toolbar={<RecordQueryBar state={evidence} placeholder="Search evidence"><EnumFilter value={evidenceKind} values={WORK_PROJECT_EVIDENCE_KIND_VALUES} labels={WORK_PROJECT_EVIDENCE_KIND_LABEL} placeholder="All kinds" onChange={(value) => { evidence.goToFirstPage(); setEvidenceKind(value); }} /><EnumFilter value={evidenceStatus} values={WORK_PROJECT_EVIDENCE_STATUS_VALUES} labels={WORK_PROJECT_EVIDENCE_STATUS_LABEL} placeholder="All statuses" onChange={(value) => { evidence.goToFirstPage(); setEvidenceStatus(value); }} /></RecordQueryBar>}><EvidenceList records={evidence.items} /></Paged></TabPane>
-    <TabPane tab={<TabLabel icon={<Activity size={14} />} text="Activity" />} itemKey="activity"><Paged state={activity} empty="No workflow activity."><ActivityList records={activity.items} /></Paged></TabPane>
-  </Tabs>;
+  return (
+    <Tabs
+      type="line"
+      className={cx("project-record-tabs", className)}
+      activeKey={activeTab}
+      onChange={(key) => setActiveTab(key as ProjectRecordTab)}
+    >
+      <TabPane tab={<TabLabel icon={<Gauge size={14} />} text="Overview" />} itemKey="overview">
+        <AsyncContent
+          loading={overviewLoading}
+          empty={overviewLoaded && !overview}
+          emptyIcon={<Gauge size={42} />}
+          emptyTitle="No project state."
+          fill
+        >
+          {overview ? <OverviewView value={overview} /> : null}
+        </AsyncContent>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<ClipboardList size={14} />} text="Workflow" />} itemKey="workflow">
+        <Paged
+          state={workItems}
+          emptyIcon={<ClipboardList size={42} />}
+          emptyTitle="No work items."
+          toolbar={(
+            <RecordQueryBar state={workItems} placeholder="Search work items">
+              <EnumFilter
+                value={workItemStatus}
+                values={WORK_PROJECT_WORK_ITEM_STATUS_VALUES}
+                labels={WORK_PROJECT_WORK_ITEM_STATUS_LABEL}
+                placeholder="All statuses"
+                onChange={(value) => {
+                  workItems.goToFirstPage();
+                  setWorkItemStatus(value);
+                }}
+              />
+              <Input
+                value={workItemAssignee}
+                placeholder="Assignee code"
+                showClear
+                onChange={(value) => {
+                  workItems.goToFirstPage();
+                  setWorkItemAssignee(value.trim());
+                }}
+              />
+            </RecordQueryBar>
+          )}
+        >
+          <WorkItemList records={workItems.items} />
+        </Paged>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<Network size={14} />} text="Graph" />} itemKey="graph">
+        <AsyncContent
+          loading={graphLoading}
+          empty={graphLoaded && !graph.assets.length}
+          emptyIcon={<Network size={42} />}
+          emptyTitle="No graph data."
+          fill
+        >
+          <GraphView graph={graph} />
+        </AsyncContent>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<Boxes size={14} />} text="Assets" />} itemKey="assets">
+        <Paged
+          state={assets}
+          emptyIcon={<Boxes size={42} />}
+          emptyTitle="No assets."
+          toolbar={(
+            <RecordQueryBar state={assets} placeholder="Search assets">
+              <EnumFilter
+                value={assetKind}
+                values={WORK_PROJECT_ASSET_KIND_VALUES}
+                labels={WORK_PROJECT_ASSET_KIND_LABEL}
+                placeholder="All kinds"
+                onChange={(value) => {
+                  assets.goToFirstPage();
+                  setAssetKind(value);
+                }}
+              />
+              <EnumFilter
+                value={assetScope}
+                values={WORK_PROJECT_ASSET_SCOPE_VALUES}
+                labels={WORK_PROJECT_ASSET_SCOPE_LABEL}
+                placeholder="All scopes"
+                onChange={(value) => {
+                  assets.goToFirstPage();
+                  setAssetScope(value);
+                }}
+              />
+            </RecordQueryBar>
+          )}
+        >
+          <AssetList assets={assets.items} />
+        </Paged>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<Bug size={14} />} text="Findings" />} itemKey="findings">
+        <Paged
+          state={findings}
+          emptyIcon={<Bug size={42} />}
+          emptyTitle="No findings."
+          toolbar={(
+            <RecordQueryBar state={findings} placeholder="Search findings">
+              <EnumFilter
+                value={findingVerification}
+                values={WORK_PROJECT_FINDING_VERIFICATION_VALUES}
+                labels={WORK_PROJECT_FINDING_VERIFICATION_LABEL}
+                placeholder="All verification"
+                onChange={(value) => {
+                  findings.goToFirstPage();
+                  setFindingVerification(value);
+                }}
+              />
+              <EnumFilter
+                value={findingSeverity}
+                values={WORK_PROJECT_FINDING_SEVERITY_VALUES}
+                labels={WORK_PROJECT_FINDING_SEVERITY_LABEL}
+                placeholder="All severities"
+                onChange={(value) => {
+                  findings.goToFirstPage();
+                  setFindingSeverity(value);
+                }}
+              />
+            </RecordQueryBar>
+          )}
+        >
+          <FindingList records={findings.items} />
+        </Paged>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<Route size={14} />} text="Attack Paths" />} itemKey="attack-paths">
+        <Paged
+          state={paths}
+          emptyIcon={<Route size={42} />}
+          emptyTitle="No attack paths."
+          toolbar={<RecordQueryBar state={paths} placeholder="Search attack paths" />}
+        >
+          <AttackPathList records={paths.items} />
+        </Paged>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<FileCheck2 size={14} />} text="Evidence" />} itemKey="evidence">
+        <Paged
+          state={evidence}
+          emptyIcon={<FileCheck2 size={42} />}
+          emptyTitle="No evidence."
+          toolbar={(
+            <RecordQueryBar state={evidence} placeholder="Search evidence">
+              <EnumFilter
+                value={evidenceKind}
+                values={WORK_PROJECT_EVIDENCE_KIND_VALUES}
+                labels={WORK_PROJECT_EVIDENCE_KIND_LABEL}
+                placeholder="All kinds"
+                onChange={(value) => {
+                  evidence.goToFirstPage();
+                  setEvidenceKind(value);
+                }}
+              />
+              <EnumFilter
+                value={evidenceStatus}
+                values={WORK_PROJECT_EVIDENCE_STATUS_VALUES}
+                labels={WORK_PROJECT_EVIDENCE_STATUS_LABEL}
+                placeholder="All statuses"
+                onChange={(value) => {
+                  evidence.goToFirstPage();
+                  setEvidenceStatus(value);
+                }}
+              />
+            </RecordQueryBar>
+          )}
+        >
+          <EvidenceList records={evidence.items} />
+        </Paged>
+      </TabPane>
+      <TabPane tab={<TabLabel icon={<Activity size={14} />} text="Activity" />} itemKey="activity">
+        <Paged state={activity} emptyIcon={<Activity size={42} />} emptyTitle="No workflow activity.">
+          <ActivityList records={activity.items} />
+        </Paged>
+      </TabPane>
+    </Tabs>
+  );
 }
 
 type PagedState = ReturnType<typeof usePagedResourceList<unknown>>;
-function Paged({ state, empty, toolbar, children }: { state: PagedState; empty: string; toolbar?: ReactNode; children: ReactNode }) {
-  return <div className={cx("project-record-paged", Boolean(toolbar) && "has-filters")}>{toolbar}<AsyncContent loading={state.loading} empty={state.loaded && !state.items.length} emptyTitle={empty}>{children}</AsyncContent><ResourcePager state={state} /></div>;
+function Paged({ state, emptyIcon, emptyTitle, toolbar, children }: {
+  state: PagedState;
+  emptyIcon: ReactNode;
+  emptyTitle: string;
+  toolbar?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cx("project-record-paged", Boolean(toolbar) && "has-filters")}>
+      {toolbar}
+      <AsyncContent
+        loading={state.loading}
+        empty={state.loaded && !state.items.length}
+        emptyIcon={emptyIcon}
+        emptyTitle={emptyTitle}
+        fill
+      >
+        {children}
+      </AsyncContent>
+      <ResourcePager state={state} />
+    </div>
+  );
 }
 
 function RecordQueryBar({ state, placeholder, children }: { state: PagedState; placeholder: string; children?: ReactNode }) {

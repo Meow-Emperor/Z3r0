@@ -1,4 +1,4 @@
-import { Button, Empty } from "@douyinfe/semi-ui";
+import { Button } from "@douyinfe/semi-ui";
 import { ArrowLeft, FileText } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,10 +25,6 @@ export function WorkProjectWorkspacePage() {
     { label: "Open Paths", value: project?.active_attack_path_count ?? 0 },
   ], [project]);
 
-  if (!validProjectId) {
-    return <Empty className="empty-state" image={<FileText size={42} />} title="Invalid project" description="" />;
-  }
-
   return (
     <section className="work-project-workspace">
       <div className="workspace-back-row">
@@ -36,32 +32,35 @@ export function WorkProjectWorkspacePage() {
           Back
         </Button>
       </div>
-      <div className="workspace-header">
-        {project ? (
-          <div className="workspace-title">
-            <div className="workspace-title-main">
-              <h2>{project.name}</h2>
-              <WorkProjectMarkdown className="workspace-project-description" content={project.description} />
-              <span>Owners: {workProjectOwnerNames(project)}</span>
-            </div>
-            <div className="workspace-title-tags">
-              <WorkProjectTypeTag project={project} />
-              <WorkProjectStatusTag project={project} />
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      <MetricStrip metrics={metrics} />
 
       <AsyncContent
-        loading={loading}
-        empty={project === null}
+        loading={validProjectId !== null && loading}
+        empty={validProjectId === null || project === null}
         emptyIcon={<FileText size={42} />}
-        emptyTitle="Project is unavailable"
-        wrapperClassName="project-record-spin"
+        emptyTitle={validProjectId === null ? "Invalid project" : "Project is unavailable"}
+        fill
       >
-        {project ? <WorkProjectRecordTabs projectId={project.id} className="workspace-tabs" /> : null}
+        {project ? (
+          <div className="work-project-workspace-content">
+            <div className="workspace-header">
+              <div className="workspace-title">
+                <div className="workspace-title-main">
+                  <h2>{project.name}</h2>
+                  <WorkProjectMarkdown className="workspace-project-description" content={project.description} />
+                  <span>Owners: {workProjectOwnerNames(project)}</span>
+                </div>
+                <div className="workspace-title-tags">
+                  <WorkProjectTypeTag project={project} />
+                  <WorkProjectStatusTag project={project} />
+                </div>
+              </div>
+            </div>
+
+            <MetricStrip metrics={metrics} />
+
+            <WorkProjectRecordTabs projectId={project.id} className="workspace-tabs" />
+          </div>
+        ) : null}
       </AsyncContent>
     </section>
   );

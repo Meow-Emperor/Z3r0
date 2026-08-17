@@ -31,7 +31,7 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "overview",
         empty={project === null}
         emptyIcon={<FileText size={42} />}
         emptyTitle="No project selected."
-        wrapperClassName="project-record-spin"
+        fill
       >
         {project ? (
           <div className="project-info-content">

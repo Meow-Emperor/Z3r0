@@ -56,8 +56,16 @@
 
 .work-project-workspace {
   height: 100%;
-  grid-template-rows: max-content max-content max-content minmax(0, 1fr);
+  grid-template-rows: max-content minmax(0, 1fr);
   overflow: hidden;
+}
+
+.work-project-workspace-content {
+  display: grid;
+  grid-template-rows: max-content max-content minmax(0, 1fr);
+  gap: 18px;
+  height: 100%;
+  min-height: 0;
 }
 
 .knowledge-tabs,
@@ -1217,12 +1225,6 @@
   overflow-y: hidden;
 }
 
-.work-project-info-modal .semi-modal-body > .semi-spin.project-record-spin {
-  flex: 1 1 auto;
-  height: auto;
-  min-height: 0;
-}
-
 .project-info-summary {
   display: grid;
   min-width: 0;
@@ -1285,30 +1287,10 @@
   overflow: hidden;
 }
 
-.semi-spin.project-record-fill,
-.project-record-fill > .semi-spin-children {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-}
-
-.semi-spin.project-record-fill {
-  display: block;
-  flex: 1 1 auto;
-  overflow: hidden;
-}
-
 .project-graph-view,
 .project-record-paged {
   display: grid;
   grid-template-rows: minmax(0, 1fr) max-content;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.semi-spin.project-record-spin,
-.project-record-spin > .semi-spin-children {
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -1370,7 +1352,7 @@
   min-width: 130px;
 }
 
-.project-record-paged > .semi-spin {
+.project-record-paged > .async-content-fill {
   min-height: 0;
   overflow-y: auto;
 }

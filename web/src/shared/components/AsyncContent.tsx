@@ -1,5 +1,6 @@
 import { Empty, Spin } from "@douyinfe/semi-ui";
 import type { ReactNode } from "react";
+import { cx } from "../lib/className";
 
 type AsyncContentProps = {
   loading: boolean;
@@ -8,6 +9,7 @@ type AsyncContentProps = {
   emptyContent?: ReactNode;
   emptyIcon?: ReactNode;
   emptyTitle?: string;
+  fill?: boolean;
   retainContentWhileLoading?: boolean;
   wrapperClassName?: string;
 };
@@ -19,6 +21,7 @@ export function AsyncContent({
   emptyContent,
   emptyIcon,
   emptyTitle = "No data",
+  fill = false,
   retainContentWhileLoading = true,
   wrapperClassName,
 }: AsyncContentProps) {
@@ -30,7 +33,7 @@ export function AsyncContent({
   ) : children;
 
   return (
-    <Spin spinning={loading} wrapperClassName={wrapperClassName}>
+    <Spin spinning={loading} wrapperClassName={cx("async-content", fill && "async-content-fill", wrapperClassName)}>
       {content}
     </Spin>
   );
