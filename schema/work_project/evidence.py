@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
@@ -61,6 +61,16 @@ class WorkProjectEvidenceRequest(BaseModel):
     @classmethod
     def normalize_text(cls, value: Any) -> Any:
         return value.strip() if isinstance(value, str) else value
+
+    @field_validator("captured_at", mode="after")
+    @classmethod
+    def normalize_captured_at(cls, value: datetime) -> datetime:
+        # Postgres stores captured_at as TIMESTAMP WITHOUT TIME ZONE.
+        # Tool/JSON ISO values with Z or offsets parse as aware datetimes;
+        # asyncpg rejects those against a naive column.
+        if value.tzinfo is None:
+            return value
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
 
     @model_validator(mode="after")
     def validate_hash(self) -> "WorkProjectEvidenceRequest":
