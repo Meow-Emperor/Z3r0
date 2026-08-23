@@ -8,7 +8,6 @@
   transition:
     opacity var(--motion-normal) var(--ease-standard),
     transform var(--motion-slow) var(--ease-emphasized);
-  will-change: opacity, transform;
 }
 
 .subagent-side-panel-open {

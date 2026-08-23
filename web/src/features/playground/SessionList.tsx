@@ -20,6 +20,7 @@ import { mergeByKey } from "../../shared/lib/array";
 import { cx } from "../../shared/lib/className";
 import { UI_TEXT } from "../../shared/lib/uiText";
 import { WorkProjectInfoModal } from "../work-projects/WorkProjectInfoModal";
+import "../../app/styles/playground-layout.css";
 
 const PROJECT_REFRESH_INTERVAL_MS = 5_000;
 

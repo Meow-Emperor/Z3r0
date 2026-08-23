@@ -140,7 +140,8 @@ const MarkdownText = memo(function MarkdownText({ text, streaming }: { text: str
       return;
     }
     const timer = setInterval(() => {
-      setRenderText(latestTextRef.current);
+      const next = latestTextRef.current;
+      setRenderText((current) => (current === next ? current : next));
     }, STREAM_RENDER_INTERVAL_MS);
     return () => {
       clearInterval(timer);
@@ -157,7 +158,7 @@ const MarkdownText = memo(function MarkdownText({ text, streaming }: { text: str
     [renderText, streaming],
   );
   if (!renderText && !streaming) return null;
-  return <MarkdownContent className="agent-text" content={markdown} mode="document" mermaid />;
+  return <MarkdownContent className="agent-text" content={markdown} mode="document" mermaid={!streaming} />;
 });
 
 function ThinkingGroup({

@@ -91,13 +91,9 @@ body {
   background-image:
     linear-gradient(rgba(156, 199, 203, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(156, 199, 203, 0.035) 1px, transparent 1px),
-    linear-gradient(118deg, transparent 16%, rgba(217, 45, 58, 0.13) 38%, transparent 58%),
-    linear-gradient(62deg, transparent 34%, rgba(125, 219, 211, 0.09) 56%, transparent 76%),
     linear-gradient(145deg, var(--z-bg) 0%, var(--z-bg-mid) 48%, var(--z-bg-deep) 100%);
-  background-position: 0 0, 0 0, 0% 34%, 100% 66%, center;
-  background-size: 52px 52px, 52px 52px, 180% 180%, 180% 180%, cover;
-  background-attachment: fixed;
-  animation: globalBackdropDrift 26s ease-in-out infinite alternate;
+  background-position: 0 0, 0 0, center;
+  background-size: 52px 52px, 52px 52px, cover;
   --semi-color-bg-0: var(--z-bg);
   --semi-color-bg-1: var(--z-surface-strong);
   --semi-color-bg-2: var(--z-surface-strong);

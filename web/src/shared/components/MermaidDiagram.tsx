@@ -6,6 +6,8 @@ mermaid.initialize({
   securityLevel: "strict",
   theme: "base",
   suppressErrorRendering: true,
+  maxTextSize: 50_000,
+  flowchart: { htmlLabels: true, useMaxWidth: true },
   themeVariables: {
     primaryColor: "#161f2e",
     primaryTextColor: "#f8fafc",

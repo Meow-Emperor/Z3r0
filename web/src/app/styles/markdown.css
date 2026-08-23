@@ -164,6 +164,11 @@
   margin: 0 auto;
 }
 
+.markdown-content .mermaid-diagram svg * {
+  animation: none !important;
+  transition: none !important;
+}
+
 .markdown-content .mermaid-diagram[aria-busy="true"] {
   min-height: 96px;
   background: var(--z-surface-muted);
