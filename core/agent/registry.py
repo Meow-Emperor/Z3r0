@@ -16,7 +16,7 @@ from agents import (
 
 from config import AgentConfig, WORKSPACE, get_config
 from core.agent.instructions import build_instructions
-from core.agent.models import build_openai_model
+from core.agent.models import build_model_retry_settings, build_openai_model
 from core.agent.specs import AGENT_SPECS, AgentSpec, ToolMount
 from core.agent.tool_snapshot import AgentToolSnapshot
 from core.delegation.subagents import build_subagent_tools
@@ -129,7 +129,10 @@ class AgentRegistry:
         return Agent(
             name=cfg.name,
             model=build_openai_model(cfg),
-            model_settings=ModelSettings(parallel_tool_calls=False),
+            model_settings=ModelSettings(
+                parallel_tool_calls=False,
+                retry=build_model_retry_settings(),
+            ),
             instructions=lambda run_context, _: _assemble_instructions(
                 stable_prefix=instructions,
                 work_project_context=run_context.context.work_project_context,

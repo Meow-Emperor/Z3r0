@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+import httpx
 from agents import (
     AgentOutputSchemaBase,
     Handoff,
@@ -11,18 +12,45 @@ from agents import (
     ModelResponse,
     ModelRetryAdvice,
     ModelRetryAdviceRequest,
+    ModelRetryBackoffSettings,
+    ModelRetrySettings,
     ModelSettings,
     ModelTracing,
     TResponseInputItem,
     Tool,
+    retry_policies,
 )
 from agents.models.openai_provider import OpenAIProvider
 from agents.stream_events import TResponseStreamEvent
+from openai import DEFAULT_TIMEOUT, AsyncOpenAI
 from openai.types.responses.response_prompt_param import ResponsePromptParam
-from openai import AsyncOpenAI
 
 from config import AgentConfig
 from core.agent.model_input import ModelInputAdapter
+
+
+_MODEL_CONNECT_TIMEOUT_SECONDS = 15.0
+_MODEL_REQUEST_MAX_RETRIES = 8
+_TRANSIENT_HTTP_STATUSES = (408, 409, 429, *range(500, 600))
+
+
+def build_model_retry_settings() -> ModelRetrySettings:
+    """Build the provider-neutral retry policy used by every Agent model call."""
+    return ModelRetrySettings(
+        max_retries=_MODEL_REQUEST_MAX_RETRIES,
+        backoff=ModelRetryBackoffSettings(
+            initial_delay=1.0,
+            max_delay=30.0,
+            multiplier=2.0,
+            jitter=True,
+        ),
+        policy=retry_policies.any(
+            retry_policies.provider_suggested(),
+            retry_policies.network_error(),
+            retry_policies.retry_after(),
+            retry_policies.http_status(_TRANSIENT_HTTP_STATUSES),
+        ),
+    )
 
 
 class Z3r0OpenAIModel(Model):
@@ -32,6 +60,15 @@ class Z3r0OpenAIModel(Model):
         self._client = AsyncOpenAI(
             api_key=cfg.api_key or ("unused" if cfg.base_url else None),
             base_url=cfg.base_url or None,
+            timeout=httpx.Timeout(
+                connect=_MODEL_CONNECT_TIMEOUT_SECONDS,
+                read=DEFAULT_TIMEOUT.read,
+                write=DEFAULT_TIMEOUT.write,
+                pool=DEFAULT_TIMEOUT.pool,
+            ),
+            # Agent runner retries are replay-aware; do not multiply them with
+            # transport retries hidden inside the provider client.
+            max_retries=0,
         )
         self._provider = OpenAIProvider(
             openai_client=self._client,

@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import AgentConfig, get_config
-from core.agent.models import build_openai_model
+from core.agent.models import build_model_retry_settings, build_openai_model
 from core.conversation.formats import (
     CONTEXT_SUMMARY_ITEM_ID,
     CONTEXT_SUMMARY_SECTIONS,
@@ -361,7 +361,10 @@ async def _summarize_items(items: list[TResponseInputItem], agent_config: AgentC
     agent = Agent(
         name="Context Compressor",
         model=build_openai_model(agent_config),
-        model_settings=ModelSettings(max_tokens=cfg.context_compression_summary_max_tokens),
+        model_settings=ModelSettings(
+            max_tokens=cfg.context_compression_summary_max_tokens,
+            retry=build_model_retry_settings(),
+        ),
         instructions=_SUMMARY_AGENT_INSTRUCTIONS,
     )
     try:
