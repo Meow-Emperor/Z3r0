@@ -211,7 +211,7 @@ flowchart TB
 
 Sandbox resources are managed infrastructure. Administrators manage Docker hosts, sandbox images, running containers, exposed ports, and project bindings. Operators and Agents work through selected running containers, and the same sandbox boundary supports command execution, Shell sessions, file management, browser/noVNC review, and sandbox-local skills.
 
-The default sandbox image provides a preloaded security workspace. It includes reconnaissance and DNS tools (`subfinder`, `amass`, `dnsx`, `dig`, `whois`), HTTP probing and web discovery tools (`httpx`, `ffuf`, `gobuster`, `observer_ward`, `sqlmap`, `nmap`), bounded credential-testing support (`hydra`), Android and firmware analysis tools (`jadx`, `apktool`, `Ghidra`, `binwalk`), binary and pwn tooling (`gdb`, Pwndbg, `strace`, `ltrace`, `pwntools`, and the `pwntools`-provided `checksec`), browser automation through `agent-browser-cli`, and a built-in SecLists wordlist corpus. Python workflows use `uv` for managed task environments, one-off runs, and persistent Python CLIs.
+The default sandbox image provides a focused security workspace with targeted DNS and ownership checks (`dnsx`, `dig`, `nslookup`, `whois`), low-volume HTTP inspection (`curl`, `wget`, `httpx`, `openssl`), focused service diagnostics (`nc`, `nmap`), local file and archive triage (`file`, `sha256sum`, `7z`, `unzip`, `tar`, `readelf`), Android and firmware analysis (`jadx`, `apktool`, Ghidra, `binwalk`), binary and pwn tooling (`gdb`, Pwndbg, `strace`, `ltrace`, `pwntools`, and the `pwntools`-provided `checksec`), browser automation through `agent-browser-cli`, and Python workflows through `uv`.
 
 Outbound traffic is normalized through a container-level egress profile. The sandbox runtime exports proxy environment variables to a local proxy inside the container; the control plane can update the upstream policy to direct access or a managed HTTP, HTTPS, or SOCKS5 proxy. This gives the platform a unified place to manage network identity, traffic routing, and operator-environment isolation.
 
@@ -224,7 +224,7 @@ Outbound traffic is normalized through a container-level egress profile. The san
 | Retrieval context plane | Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs. |
 | Replayable event timeline | The UI consumes normalized timeline events that can be streamed live or loaded later as history. |
 | Distributed sandbox resources | Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects. |
-| Preloaded sandbox toolchain | The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills. |
+| Preloaded sandbox toolchain | The default image provides targeted DNS, HTTP, and service diagnostics plus local artifact, Android, firmware, reverse engineering, browser, and Python capabilities behind sandbox-local skills. |
 | Unified egress layer | Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface. |
 | Operator workbench | The frontend combines chat, workflow state, graph review, evidence chains, attack paths, sandbox selector, terminal, files, and noVNC. |
 

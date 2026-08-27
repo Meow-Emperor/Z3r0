@@ -211,7 +211,7 @@ flowchart TB
 
 Sandbox 资源作为基础设施统一管理。管理员可以管理 Docker 主机、sandbox 镜像、运行容器、端口映射和项目绑定。操作者与 Agent 通过选定的运行中容器工作，同一 sandbox 边界承载命令执行、Shell 会话、文件管理、浏览器/noVNC 复核和 sandbox 内 skills。
 
-默认 sandbox 镜像提供预装的安全工作空间。它包含侦察与 DNS 工具（`subfinder`、`amass`、`dnsx`、`dig`、`whois`）、HTTP 探测与 Web 发现工具（`httpx`、`ffuf`、`gobuster`、`observer_ward`、`sqlmap`、`nmap`）、受控凭据测试能力（`hydra`）、Android 与固件分析工具（`jadx`、`apktool`、`Ghidra`、`binwalk`）、二进制与 pwn 工具链（`gdb`、Pwndbg、`strace`、`ltrace`、`pwntools` 以及由 `pwntools` 提供的 `checksec`）、通过 `agent-browser-cli` 支持的浏览器自动化能力，以及内置 SecLists 字典语料。Python 工作流使用 `uv` 管理任务环境、一次性运行和持久 Python CLI。
+默认 sandbox 镜像提供聚焦的安全工作空间，包含定向 DNS 与归属查询（`dnsx`、`dig`、`nslookup`、`whois`）、低流量 HTTP 检查（`curl`、`wget`、`httpx`、`openssl`）、聚焦的服务诊断（`nc`、`nmap`）、本地文件与归档分析（`file`、`sha256sum`、`7z`、`unzip`、`tar`、`readelf`）、Android 与固件分析（`jadx`、`apktool`、Ghidra、`binwalk`）、二进制与 pwn 工具链（`gdb`、Pwndbg、`strace`、`ltrace`、`pwntools` 以及由 `pwntools` 提供的 `checksec`）、通过 `agent-browser-cli` 支持的浏览器自动化，以及通过 `uv` 管理的 Python 工作流。
 
 出站流量通过容器级 egress 配置归一化。sandbox 运行时将 proxy 环境变量指向容器内本地 proxy，控制平面可以将上游策略更新为 Direct 或托管的 HTTP、HTTPS、SOCKS5 proxy。该设计为网络身份、流量路由和操作者环境隔离提供统一策略面。
 
@@ -224,7 +224,7 @@ Sandbox 资源作为基础设施统一管理。管理员可以管理 Docker 主�
 | 检索上下文平面 | 通过 LightRAG Core 构建知识图谱，为任务型输入提供匹配的原始文档分块与图谱上下文。 |
 | 可回放事件时间线 | 前端消费标准化时间线事件，同一模型支持实时流和历史回放。 |
 | 分布式 sandbox 资源 | 托管 Docker 主机、镜像和容器使执行环境可以隔离、扩展并绑定到项目。 |
-| 预装 sandbox 工具链 | 默认 sandbox 镜像围绕 sandbox 内 skills 提供侦察、DNS、Web 发现、凭据测试、Android、固件、逆向、浏览器、Python 和字典能力。 |
+| 预装 sandbox 工具链 | 默认 sandbox 镜像围绕 sandbox 内 skills 提供定向 DNS、HTTP 和服务诊断，以及本地制品、Android、固件、逆向、浏览器和 Python 能力。 |
 | 统一出口层 | 容器流量可通过直连、HTTP、HTTPS 或 SOCKS5 模式路由，并由平台统一管理策略。 |
 | 操作者工作台 | 前端将对话、工作流状态、图谱复核、证据链、攻击路径、sandbox 选择、终端、文件和 noVNC 组织为统一流程。 |
 

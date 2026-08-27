@@ -1,6 +1,6 @@
 ---
 name: dnsx
-description: Use ProjectDiscovery dnsx for authorized batch DNS resolution, record lookup, and validation of discovered hostnames.
+description: Use ProjectDiscovery dnsx for authorized, small-batch DNS resolution, record lookup, and hostname validation at conservative rates.
 ---
 
 # dnsx
@@ -18,10 +18,11 @@ dnsx -h
 ## Usage Rules
 
 - Work only on in-scope domains, hostnames, or resolver tests.
-- Prefer file or stdin input for host lists and keep batches bounded.
+- Prefer a small, reviewed file or stdin batch. Do not feed unbounded discovery output directly into `dnsx`.
+- Confirm the input count before execution and split unexpectedly large lists into reviewed batches.
 - Use JSON output when results will be parsed or attached as evidence.
 - Treat DNS answers as time-sensitive and resolver-dependent.
-- Save large outputs to files rather than streaming them into the conversation.
+- Keep concurrency and query rates low by default, and save non-trivial outputs to files.
 - Use `dnsx` for batch validation and DNS records from discovered host lists; use `dig`, `nslookup`, or `whois` for targeted manual triage.
 
 ## Common Workflows
@@ -29,19 +30,19 @@ dnsx -h
 Resolve a discovered host list:
 
 ```sh
-dnsx -l names.txt -silent -o resolved.txt
+dnsx -l names.txt -silent -threads 3 -rate-limit 10 -o resolved.txt
 ```
 
 Write JSONL evidence when later parsing matters:
 
 ```sh
-dnsx -l names.txt -silent -json -o dnsx.jsonl
+dnsx -l names.txt -silent -threads 3 -rate-limit 10 -json -o dnsx.jsonl
 ```
 
 Use a resolver file only when the task requires controlled resolver behavior:
 
 ```sh
-dnsx -l names.txt -r resolvers.txt -silent -o resolved.txt
+dnsx -l names.txt -r resolvers.txt -silent -threads 3 -rate-limit 10 -o resolved.txt
 ```
 
 ## Output

@@ -23,12 +23,11 @@ export const landingSeo = {
     "sandbox skills",
     "controlled egress",
     "proxy egress",
-    "subdomain enumeration",
-    "web discovery",
+    "targeted DNS diagnostics",
+    "low-volume HTTP inspection",
     "reverse engineering sandbox",
     "pwntools sandbox",
     "Ghidra sandbox",
-    "SecLists wordlists",
     "evidence records",
     "asset relationship graph",
     "graph-driven red team workflow",
@@ -87,7 +86,7 @@ export const structuredData = [
         name: "How does Z3r0 run security tooling?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Z3r0 binds agent tools and manual review workflows to controlled Docker sandbox containers with command execution, file access, shell access, browser workflows, noVNC review, sandbox-local skills, controlled egress, and preloaded security tooling for recon, DNS, web discovery, credential testing, Android and firmware analysis, reverse engineering, pwn workflows, Python tasks, and wordlist use.",
+          text: "Z3r0 binds agent tools and manual review workflows to controlled Docker sandbox containers with command execution, file access, shell access, browser workflows, noVNC review, sandbox-local skills, controlled egress, targeted network diagnostics, local artifact triage, Android and firmware analysis, reverse engineering, pwn workflows, and Python tasks.",
         },
       },
       {

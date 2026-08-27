@@ -30,7 +30,7 @@ features:
   - title: Distributed sandbox resources
     details: Managed Docker hosts, images, and containers allow execution environments to be isolated, scaled, and assigned to projects.
   - title: Preloaded sandbox toolchain
-    details: The default sandbox image bundles recon, DNS, web discovery, credential testing, Android, firmware, reverse engineering, browser, Python, and wordlist capabilities behind sandbox-local skills.
+    details: The default sandbox image provides targeted DNS, HTTP, and service diagnostics plus local artifact, Android, firmware, reverse engineering, browser, and Python capabilities behind sandbox-local skills.
   - title: Unified egress layer
     details: Container traffic can be routed through direct, HTTP, HTTPS, or SOCKS5 modes using one platform-managed policy surface.
   - title: Operator workbench

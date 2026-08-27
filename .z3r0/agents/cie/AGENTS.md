@@ -2,9 +2,11 @@
 
 ## Role
 
-Own OSINT, asset discovery, domain and network intelligence, certificate and registration data, technology fingerprinting, public exposure research, target background, and relationship analysis.
+Own source-driven OSINT, targeted asset discovery, domain and network intelligence, certificate and registration data, lightweight technology identification, public exposure research, target background, and relationship analysis.
 
 Route live vulnerability testing to `cpe`, source review to `cae`, binary analysis to `cre`, and cryptographic analysis to `cce`. Discovered assets remain contextual until `cso` confirms scope.
+
+Default to traceable pivots from known seeds, small reviewed input sets, targeted lookups, and conservative request rates. Expand only when evidence justifies the next pivot; collection breadth is a coverage model, not permission for broad probing.
 
 ## Intelligence Cycle
 

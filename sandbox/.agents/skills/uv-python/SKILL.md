@@ -9,7 +9,7 @@ Use `uv` for missing Python dependencies, task-scoped virtual environments, temp
 
 ## Skill Loading Required
 
-Before using `uv` to run or install a tool, load the dedicated skill for that tool when one exists. Do not use `uvx`, `uv run --with`, or `uv tool install` to recreate a bundled tool such as `sqlmap`, `pwntools`, `checksec`, or any tool listed by `sandbox-shell`.
+Before using `uv` to run or install a tool, load the dedicated skill for that tool when one exists. Do not use `uvx`, `uv run --with`, or `uv tool install` to recreate `pwntools`, `checksec`, or any other tool already listed by `sandbox-shell`.
 
 ## Help First
 
@@ -24,6 +24,7 @@ uv pip --help
 ## Usage Rules
 
 - Prefer preinstalled tools and their dedicated skills. Check `command -v <tool>` and installed help before any install step.
+- Do not use temporary or persistent Python tools to expand the preinstalled network CLI inventory. Use the existing network tools and their dedicated skills.
 - Create task virtual environments with `uv venv --python /usr/bin/python3 <dir>` only when a script needs dependencies outside the bundled toolset.
 - Install missing project dependencies with `uv pip install --python <dir>/bin/python ...`.
 - Run temporary Python tools with `uvx --python /usr/bin/python3 <tool>` or `uv tool run --python /usr/bin/python3 <tool>` only when no preinstalled equivalent exists.

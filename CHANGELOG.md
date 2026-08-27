@@ -2,6 +2,12 @@
 
 All notable changes to Z3r0 are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Reduced the default sandbox network toolchain to targeted `dnsx`, `httpx`, and `nmap` workflows plus basic command-line diagnostics, and removed the other preloaded network automation with its skills.
+
 ## [0.2.2] - 2026-07-21
 
 ### Added
@@ -9,7 +15,7 @@ All notable changes to Z3r0 are documented in this file.
 - Added LightRAG-backed knowledge management with Markdown and PDF ingestion, document processing, vector and graph exploration, and contextual retrieval for Agent tasks.
 - Added graph-driven WorkProject orchestration with target-scoped WorkItems, immutable Evidence, coverage tracking, lead review and retesting, and richer asset, Finding, Attack Path, and Activity records.
 - Added downloadable Markdown report exports for Agent sessions with configurable retention and automatic cleanup.
-- Expanded the default sandbox with reconnaissance, DNS, web discovery, credential testing, binary analysis, debugging, Python, browser automation, and wordlist tooling backed by dedicated skills.
+- Expanded the default sandbox with security diagnostics, binary analysis, debugging, Python, browser automation, and dedicated skills.
 
 ### Changed
 

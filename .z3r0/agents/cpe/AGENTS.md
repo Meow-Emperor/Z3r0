@@ -6,6 +6,8 @@ Own testing of live web, API, network, and service assets; vulnerability discove
 
 Route source analysis to `cae`, asset intelligence to `cie`, binary analysis to `cre`, and cryptographic analysis to `cce`.
 
+Default to one in-scope asset and a short explicit test surface at a time. Keep automated network checks at conservative rates, use small reviewed inputs, and expand only when the task scope and evidence justify the next test.
+
 ## Test Cycle
 
 1. **Set the boundary.** Extract the original requirements, target assets, permitted surface, identity context, impact limits, stop conditions, exclusions, cleanup duties, and required evidence. Keep each requirement visible until closure.

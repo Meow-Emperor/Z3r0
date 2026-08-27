@@ -155,22 +155,22 @@ const workbenchSurfaces: CardItem[] = [
 
 const sandboxToolchain: CardItem[] = [
   {
-    title: "Recon and DNS",
-    text: "Passive discovery, deeper asset intelligence, batch DNS validation, and targeted ownership triage.",
+    title: "DNS diagnostics",
+    text: "Targeted DNS validation and focused record, ownership, and registration triage.",
     icon: Network,
-    items: ["subfinder", "amass", "dnsx", "dig / whois"],
+    items: ["dnsx", "dig", "nslookup", "whois"],
   },
   {
-    title: "Web discovery",
-    text: "HTTP liveness, fingerprinting, content discovery, virtual-host checks, service scanning, and injection validation.",
+    title: "HTTP and services",
+    text: "Low-volume HTTP inspection, TLS review, connection checks, and focused service diagnostics.",
     icon: FileSearch,
-    items: ["httpx", "observer_ward", "ffuf / gobuster", "nmap / sqlmap"],
+    items: ["curl / wget", "httpx", "openssl / nc", "nmap"],
   },
   {
-    title: "Credential testing",
-    text: "Bounded authentication checks with explicit scope, account limits, and lockout-aware execution.",
-    icon: LockKeyhole,
-    items: ["hydra", "SecLists directories", "rate-conscious workflows"],
+    title: "Local artifacts",
+    text: "Local file identification, hashing, archive inspection, and structured artifact triage.",
+    icon: Boxes,
+    items: ["file / sha256sum", "7z / unzip / tar", "archive-file-triage", "readelf"],
   },
   {
     title: "Reverse and pwn",
@@ -185,10 +185,10 @@ const sandboxToolchain: CardItem[] = [
     items: ["jadx", "apktool", "binwalk", "Ghidra"],
   },
   {
-    title: "Browser, Python, wordlists",
-    text: "Chrome automation, noVNC review, managed Python environments, and integrated SecLists wordlists.",
+    title: "Browser and Python",
+    text: "Chrome automation, noVNC review, managed Python environments, and task-scoped dependencies.",
     icon: SquareTerminal,
-    items: ["agent-browser-cli", "uv / uvx", "SecLists", "sandbox skills"],
+    items: ["agent-browser-cli", "Chrome / noVNC", "uv / uvx", "sandbox skills"],
   },
 ];
 
@@ -260,7 +260,7 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
       <Section
         eyebrow="Sandbox toolchain"
         title="The default sandbox image provides a ready-to-use security workspace."
-        description="Sandbox-local skills organize workflows for reconnaissance, web discovery, credential checks, reverse analysis, browser review, Python tasks, and wordlist use."
+        description="Sandbox-local skills organize targeted, low-volume network diagnostics, local artifact analysis, reverse engineering, browser review, and Python tasks."
       >
         <div className="landing-card-grid landing-card-grid-3">
           {sandboxToolchain.map((item) => <Card key={item.title} item={item} accent />)}

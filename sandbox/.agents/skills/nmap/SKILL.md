@@ -1,6 +1,6 @@
 ---
 name: nmap
-description: Use for authorized host discovery, port scanning, service/version detection, NSE script checks, network inventory, and local network diagnostics with the nmap CLI.
+description: Use nmap for authorized, targeted port checks, lightweight service detection, and local network diagnostics at conservative rates.
 ---
 
 # nmap
@@ -19,7 +19,8 @@ nmap --help
 
 - Work only on explicitly authorized hosts, networks, or local diagnostics.
 - Keep scan scope, timing, ports, scripts, and output files explicit.
-- Prefer targeted service checks over broad scans unless the user authorizes the broader scope.
+- Default to one host and a short explicit port list. Broader host ranges or port sets require explicit user authorization and conservative timing or rate limits.
+- Do not use broad host discovery, full-port scans, OS detection, aggressive mode, or NSE categories by default.
 - Save larger scan outputs to files rather than streaming them into the conversation.
 - Treat NSE results and service versions as evidence to validate before reporting impact.
 
@@ -28,19 +29,19 @@ nmap --help
 Targeted service/version scan for known ports:
 
 ```sh
-nmap -sV -p 22,80,443 -oA nmap-target 192.0.2.10
+nmap -sV --version-light -T2 --max-rate 20 -p 22,80,443 -oA nmap-target 192.0.2.10
 ```
 
-Default script and version check for web ports:
+Lightweight version check for web ports:
 
 ```sh
-nmap -sC -sV -p 80,443 -oN nmap-web.txt example.com
+nmap -sV --version-light -T2 --max-rate 20 -p 80,443 -oN nmap-web.txt example.com
 ```
 
-Bounded TCP discovery when host discovery is unreliable or blocked:
+Targeted TCP check when host discovery is unreliable or blocked:
 
 ```sh
-nmap -Pn --open -p 1-1000 -oA nmap-tcp 192.0.2.0/28
+nmap -Pn --open -T2 --max-rate 20 -p 22,80,443 -oA nmap-tcp 192.0.2.10
 ```
 
 Use NSE scripts only when the script purpose, target service, and authorization are explicit.

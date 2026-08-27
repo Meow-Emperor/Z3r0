@@ -53,7 +53,7 @@ Every skill must use:
 - A `description` beginning with `Use` and ending with a period.
 - One of `## Help First`, `## Resource Paths`, `## Core Rules`, or `## Tool Contract`.
 - One of `## Usage Rules` or `## Core Rules`.
-- One of `## Common Workflows`, `## Command Selection`, `## Wordlist Selection`, `## Quick Reference`, or `## Choosing Execution`.
+- One of `## Common Workflows`, `## Command Selection`, `## Quick Reference`, or `## Choosing Execution`.
 - `## Output`.
 
 Prefer preinstalled sandbox tools. Do not tell agents to install, upgrade, reinstall, or replace an available tool. Use `uv` only for missing Python dependencies, task-scoped virtual environments, or non-preinstalled Python tools required by the task.

@@ -20,6 +20,8 @@ SANDBOX_COMMAND_INSTRUCTIONS = """## Sandbox Commands
 2. A successful background dispatch ends the turn. Do not call another tool or respond.
 3. The runtime resumes the task when background work reaches a terminal state. Never poll a running job.
 4. On resumption, read any relevant captured output before continuing.
+5. Keep network work targeted and low-volume. Use the preinstalled network tools with small reviewed inputs, conservative rates, explicit targets, and the matching loaded skill.
+6. Treat the preinstalled network inventory as the normal execution boundary; do not add network CLIs during task execution.
 """
 
 
@@ -113,6 +115,7 @@ def _build_sandbox_skill_instructions(skill_metadata: tuple[str, ...]) -> str:
     usage = (
         "This index contains metadata only. Load a matching skill before using its workflow.\n\n"
         "- Before any command, load `sandbox-shell` when it is listed.\n"
+        "- Treat Available Items as the complete preinstalled workflow catalog for this sandbox.\n"
         "- The loaded skill body is authoritative. Use sandbox command tools to inspect or run "
         "files under its `Skill Resource Root`."
     )

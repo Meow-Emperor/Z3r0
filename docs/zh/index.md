@@ -30,7 +30,7 @@ features:
   - title: 分布式 sandbox 资源
     details: 托管 Docker 主机、镜像和容器使执行环境可以隔离、扩展并绑定到项目。
   - title: 预装 sandbox 工具链
-    details: 默认 sandbox 镜像围绕 sandbox 内 skills 提供侦察、DNS、Web 发现、凭据测试、Android、固件、逆向、浏览器、Python 和字典能力。
+    details: 默认 sandbox 镜像围绕 sandbox 内 skills 提供定向 DNS、HTTP 和服务诊断，以及本地制品、Android、固件、逆向、浏览器和 Python 能力。
   - title: 统一出口层
     details: 容器流量可通过直连、HTTP、HTTPS 或 SOCKS5 模式路由，并由平台统一管理策略。
   - title: 操作者工作台

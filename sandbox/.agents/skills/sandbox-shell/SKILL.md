@@ -1,6 +1,6 @@
 ---
 name: sandbox-shell
-description: Use when a task requires shell-level work inside the sandbox, including environment setup, script writing, code execution, running preinstalled programs, downloads, missing dependency setup, scanning, or browser/tool CLIs.
+description: Use when a task requires shell-level work inside the sandbox, including environment setup, script writing, code execution, preinstalled programs, bounded network diagnostics, or browser/tool CLIs.
 ---
 
 # sandbox-shell
@@ -10,7 +10,7 @@ Use sandbox command tools for authorized task work inside the selected sandbox c
 ## Skill Loading Required
 
 - Before using any domain-specific tool, load and follow that tool's matching skill when one exists.
-- Loading only `sandbox-shell` is not enough for specialized tools such as `agent-browser-cli`, `amass`, `apktool`, `binwalk`, `checksec`, `dnsx`, `ffuf`, `gdb-pwndbg`, `ghidra`, `gobuster`, `hydra`, `httpx`, `jadx`, `nmap`, `observer-ward`, `openssl`, `pwntools`, `seclists`, `sqlmap`, `strace-ltrace`, or `subfinder`.
+- Loading only `sandbox-shell` is not enough for specialized tools such as `agent-browser-cli`, `apktool`, `binwalk`, `checksec`, `dnsx`, `gdb-pwndbg`, `ghidra`, `httpx`, `jadx`, `nmap`, `openssl`, `pwntools`, or `strace-ltrace`.
 - If no dedicated skill exists for a needed command, use this skill plus the installed command help as the source of truth.
 
 ## Usage Rules
@@ -18,6 +18,7 @@ Use sandbox command tools for authorized task work inside the selected sandbox c
 - Prefer the sandbox image's preinstalled tools. Do not install, upgrade, reinstall, or replace a tool that is already available.
 - Check an existing command with `command -v`, `--version`, or installed help before considering any install step.
 - Use `uv` only for missing Python dependencies, task-scoped virtual environments, or tools that are not already present and are required for the task.
+- Treat the preinstalled network inventory as the normal execution boundary. Use its listed tools with small reviewed inputs and conservative rates; do not add network CLIs during ordinary task work.
 - Keep environment changes task-scoped. Do not use `apt`, global `pip`, curl-piped installers, or language package managers to overwrite bundled tools unless the user explicitly asks.
 
 ## Tool Contract
@@ -38,8 +39,8 @@ Use `execute_sync_command` for short, local, bounded commands expected to finish
 
 Use `execute_async_command` for anything slow, remote, stateful, or externally dependent:
 
-- HTTP requests, downloads, scans, probes, brute-force checks, browser automation, missing dependency installs, builds, servers, watchers, REPLs
-- loops around network, browser, dependency setup, build, scan, or other external resources
+- HTTP requests, downloads, bounded network diagnostics, browser automation, missing dependency installs, builds, servers, watchers, REPLs
+- loops around network, browser, dependency setup, build, diagnostics, or other external resources
 - consolidated scripts that run several slow checks and write structured output
 
 Always pass timing arguments explicitly via `timeout_seconds`.
@@ -75,13 +76,8 @@ Dispatching `execute_async_command` ends the current turn immediately.
 ## Available Tools
 
 - Archives: `7z`, `unzip`, `tar`
-- Shell/runtime: `python3`, `uv`, `uvx`, `node`, `npm`, `nc`, `jq`, `rg`, `git`, `sha256sum`
-- Network: `curl`, `wget`, `dig`, `nslookup`, `whois`, `openssl`, `httpx`, `nmap`, `sqlmap`
-- Recon: `subfinder`, `amass`, `dnsx`
-- Web discovery: `ffuf`, `gobuster`
-- Wordlists: `/usr/share/seclists`
-- Credential testing: `hydra`
-- Fingerprinting: `observer_ward`
+- Shell/runtime: `python3`, `uv`, `uvx`, `node`, `npm`, `jq`, `rg`, `git`, `sha256sum`
+- Network: `curl`, `wget`, `nc`, `dig`, `nslookup`, `whois`, `openssl`, `httpx`, `dnsx`, `nmap`
 - Android/reversing: `jadx`, `apktool`, `ghidra`, `analyzeHeadless`
 - Reverse/pwn: `gdb`, `pwndbg`, `strace`, `ltrace`, `pwntools`, `checksec` from `pwntools`
 - File/firmware: `file`, `binwalk`, `readelf`
@@ -90,10 +86,8 @@ Dispatching `execute_async_command` ends the current turn immediately.
 ## Tool Selection Boundaries
 
 - `checksec` is provided by `pwntools`; do not install a separate checksec package.
-- Use `subfinder` for the first passive subdomain pass, `amass` for deeper asset intelligence, and `dnsx` for batch DNS validation.
-- Use `dns-whois` tools for targeted manual DNS or registration triage, not bulk validation.
-- Use `httpx` for HTTP liveness and normalization, then `observer_ward` for product or middleware fingerprints.
-- Use `ffuf` for flexible `FUZZ` placement and structured fuzzing output; use `gobuster` for simple mode-specific directory, DNS, or virtual-host enumeration.
+- Use `dnsx` only for bounded batch DNS validation; use `dns-whois` tools for targeted manual DNS or registration triage.
+- Use `httpx` for bounded HTTP liveness and normalization, and `nmap` for targeted port or service checks.
 - Use `gdb`/`pwndbg` for debugger state, `strace`/`ltrace` for runtime traces, and `pwntools` for repeatable binary interaction.
 
 ## Skill Resource Paths

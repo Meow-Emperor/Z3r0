@@ -1,6 +1,6 @@
 ---
 name: jadx
-description: Use jadx for authorized Android APK, DEX, AAR, and JAR decompilation, app logic review, API endpoint discovery, credential checks, and mobile reverse engineering.
+description: Use jadx for authorized Android APK, DEX, AAR, and JAR decompilation, app logic review, endpoint discovery, embedded-secret review, and mobile reverse engineering.
 ---
 
 # jadx
@@ -76,7 +76,7 @@ grep -r "extends Activity\|extends AppCompatActivity\|extends Application\|exten
 grep -rE 'https?://[^"'"'"']+' "$out/sources/" "$out/resources/"
 grep -r "@GET\|@POST\|@PUT\|@DELETE\|@PATCH\|baseUrl\|BASE_URL\|API_URL" "$out/sources/"
 
-# Secrets and credentials
+# Embedded secrets and authentication material
 grep -ri "api.*key\|apikey\|secret\|password\|passwd\|token\|bearer" "$out/sources/" "$out/resources/"
 
 # Crypto, storage, WebView, TLS handling
@@ -102,7 +102,7 @@ grep -r "@GET\|@POST\|@PUT\|@DELETE\|@PATCH" app-jadx/sources/ | sort -u
 grep -r "baseUrl\|BASE_URL\|API_BASE\|API_URL" app-jadx/sources/ app-jadx/resources/ | sort -u
 ```
 
-### Credential Check
+### Embedded Secret Review
 
 ```bash
 jadx --no-res --deobf app.apk -d app-code
