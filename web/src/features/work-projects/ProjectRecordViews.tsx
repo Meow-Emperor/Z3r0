@@ -347,11 +347,27 @@ function EnumFilter<T extends string>({ value, values, labels, placeholder, onCh
 
 function OverviewView({ value }: { value: WorkProjectOverview }) {
   const metrics = [
-    ["In-scope assets", value.in_scope_asset_total], ["Untouched assets", value.untouched_asset_total],
+    ["All assets", value.asset_total], ["In-scope assets", value.in_scope_asset_total],
+    ["Untouched assets", value.untouched_asset_total],
     ["Covered targets", value.covered_target_total], ["Blocked targets", value.blocked_target_total],
     ["Evidence", value.evidence_total], ["Running agents", value.running_agent_count],
   ] as const;
-  return <div className="project-overview"><div className="project-overview-metrics">{metrics.map(([label, count]) => <div key={label}><span>{label}</span><strong>{count}</strong></div>)}</div><StateBuckets title="Work Items" values={value.work_item_status_counts} labels={WORK_PROJECT_WORK_ITEM_STATUS_LABEL} /><StateBuckets title="Findings" values={value.finding_verification_counts} labels={WORK_PROJECT_FINDING_VERIFICATION_LABEL} /><StateBuckets title="Attack Paths" values={value.attack_path_status_counts} labels={WORK_PROJECT_ATTACK_PATH_STATUS_LABEL} /></div>;
+  return (
+    <div className="project-overview">
+      <div className="project-overview-heading">
+        <div><span>Project overview</span><strong>Operational coverage and current security state</strong></div>
+        <small>{value.asset_total} tracked assets across the project scope</small>
+      </div>
+      <div className="project-overview-metrics">
+        {metrics.map(([label, count]) => <div key={label}><span>{label}</span><strong>{count}</strong></div>)}
+      </div>
+      <div className="project-overview-buckets">
+        <StateBuckets title="Work Items" values={value.work_item_status_counts} labels={WORK_PROJECT_WORK_ITEM_STATUS_LABEL} />
+        <StateBuckets title="Findings" values={value.finding_verification_counts} labels={WORK_PROJECT_FINDING_VERIFICATION_LABEL} />
+        <StateBuckets title="Attack Paths" values={value.attack_path_status_counts} labels={WORK_PROJECT_ATTACK_PATH_STATUS_LABEL} />
+      </div>
+    </div>
+  );
 }
 
 function GraphView({ graph }: { graph: WorkProjectGraphView }) {
@@ -368,7 +384,8 @@ function GraphView({ graph }: { graph: WorkProjectGraphView }) {
 }
 
 function StateBuckets({ title, values, labels }: { title: string; values: Record<string, number>; labels: Record<string, string> }) {
-  return <section className="project-state-buckets"><h3>{title}</h3><div>{Object.entries(values).map(([label, count]) => <span key={label}><b>{count}</b>{labels[label] ?? label}</span>)}</div></section>;
+  const total = Object.values(values).reduce((sum, count) => sum + count, 0);
+  return <section className="project-state-buckets"><header><h3>{title}</h3><small>{total} total</small></header><div>{Object.entries(values).map(([label, count]) => <span key={label}><b>{count}</b>{labels[label] ?? label}</span>)}</div></section>;
 }
 
 function AssetList({ assets }: { assets: WorkProjectAsset[] }) {

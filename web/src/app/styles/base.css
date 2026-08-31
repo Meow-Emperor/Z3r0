@@ -73,7 +73,7 @@
 
 * {
   box-sizing: border-box;
-  scrollbar-color: var(--z-scrollbar) transparent;
+  scrollbar-color: transparent transparent;
   scrollbar-width: thin;
 }
 
@@ -180,13 +180,17 @@ button, input {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--z-scrollbar);
+  background: transparent;
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: content-box;
 }
 
-*::-webkit-scrollbar-thumb:hover {
+.z-scrollbar-active {
+  scrollbar-color: var(--z-scrollbar) transparent;
+}
+
+.z-scrollbar-active::-webkit-scrollbar-thumb {
   background: var(--z-scrollbar-hover);
   background-clip: content-box;
 }
@@ -573,7 +577,7 @@ a,
 .app-modal .semi-modal-content {
   position: relative;
   max-width: 100%;
-  max-height: min(680px, calc(100vh - 64px));
+  max-height: calc(100vh - 32px);
   padding: 0 var(--modal-inline-padding);
   overflow: hidden;
   border-radius: 6px;
@@ -665,14 +669,6 @@ a,
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.app-modal .semi-modal-body::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
 }
 
 .app-modal .semi-modal-footer {
@@ -892,15 +888,6 @@ a,
 @keyframes gridDrift {
   from { background-position: 0 0; }
   to { background-position: 48px 48px; }
-}
-
-@keyframes globalBackdropDrift {
-  from {
-    background-position: 0 0, 0 0, 0% 34%, 100% 66%, center;
-  }
-  to {
-    background-position: 52px 52px, 52px 52px, 100% 48%, 0% 52%, center;
-  }
 }
 
 @keyframes scanline {

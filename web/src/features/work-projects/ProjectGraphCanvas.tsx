@@ -1,6 +1,7 @@
 import cytoscape from "cytoscape";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { Info } from "lucide-react";
 import {
   WORK_PROJECT_ASSET_KIND_VALUES,
   WORK_PROJECT_RELATION_CATEGORY_VALUES,
@@ -351,36 +352,38 @@ function graphStyles(): cytoscape.StylesheetJson {
 
 function GraphLegend() {
   return (
-    <div className="project-graph-legend">
-      <div className="project-graph-legend-group">
-        <span className="project-graph-legend-title">Nodes</span>
-        {WORK_PROJECT_ASSET_KIND_VALUES.map((kind) => (
-          <span key={kind} className="project-graph-legend-item">
-            <i className="project-graph-legend-dot" style={graphColorStyle(ASSET_KIND_COLOR[kind])} />
-            {WORK_PROJECT_ASSET_KIND_LABEL[kind]}
-          </span>
-        ))}
-      </div>
-      <div className="project-graph-legend-group">
-        <span className="project-graph-legend-title">Edges</span>
-        {WORK_PROJECT_RELATION_CATEGORY_VALUES.map((category) => (
-          <span key={category} className="project-graph-legend-item">
-            <i
-              className="project-graph-legend-line"
-              style={graphColorStyle(RELATION_CATEGORY_COLOR[category])}
-            />
-            {WORK_PROJECT_RELATION_CATEGORY_LABEL[category]}
-          </span>
-        ))}
-      </div>
-      <div className="project-graph-legend-group">
-        <span className="project-graph-legend-title">Signals</span>
-        {RECORD_SIGNALS.map(([label, color]) => (
-          <span key={label} className="project-graph-legend-item">
-            <i className="project-graph-legend-ring" style={graphColorStyle(color)} />
-            {label}
-          </span>
-        ))}
+    <div className="project-graph-legend-wrap">
+      <button className="project-graph-legend-trigger" type="button" aria-label="Show graph legend" title="Show graph legend">
+        <Info size={15} />
+      </button>
+      <div className="project-graph-legend">
+        <div className="project-graph-legend-group">
+          <span className="project-graph-legend-title">Nodes</span>
+          {WORK_PROJECT_ASSET_KIND_VALUES.map((kind) => (
+            <span key={kind} className="project-graph-legend-item">
+              <i className="project-graph-legend-dot" style={graphColorStyle(ASSET_KIND_COLOR[kind])} />
+              {WORK_PROJECT_ASSET_KIND_LABEL[kind]}
+            </span>
+          ))}
+        </div>
+        <div className="project-graph-legend-group">
+          <span className="project-graph-legend-title">Edges</span>
+          {WORK_PROJECT_RELATION_CATEGORY_VALUES.map((category) => (
+            <span key={category} className="project-graph-legend-item">
+              <i className="project-graph-legend-line" style={graphColorStyle(RELATION_CATEGORY_COLOR[category])} />
+              {WORK_PROJECT_RELATION_CATEGORY_LABEL[category]}
+            </span>
+          ))}
+        </div>
+        <div className="project-graph-legend-group">
+          <span className="project-graph-legend-title">Signals</span>
+          {RECORD_SIGNALS.map(([label, color]) => (
+            <span key={label} className="project-graph-legend-item">
+              <i className="project-graph-legend-ring" style={graphColorStyle(color)} />
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

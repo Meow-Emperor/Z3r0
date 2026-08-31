@@ -9,6 +9,7 @@ import {
   loadLoginPage,
   loadProtectedAdminShell,
 } from "./routePreload";
+import { useAutoHideScrollbars } from "../shared/hooks/useAutoHideScrollbars";
 
 function lazyRoute<TModule extends Record<TKey, ComponentType>, TKey extends keyof TModule>(
   loader: () => Promise<TModule>,
@@ -48,6 +49,8 @@ function PublicOnlyRoute() {
 }
 
 export function App() {
+  useAutoHideScrollbars();
+
   return (
     <AuthProvider>
       <BrowserRouter>

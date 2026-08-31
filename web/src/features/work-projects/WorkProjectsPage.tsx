@@ -1,8 +1,5 @@
-import { Button } from "../../shared/ui/semi";
 import {
   Ban,
-  ChevronDown,
-  ChevronRight,
   Edit3,
   FolderKanban,
   FolderOpen,
@@ -27,7 +24,6 @@ import type {
   WorkProject,
   WorkProjectSummary,
 } from "../../shared/api/types";
-import { AsyncContent } from "../../shared/components/AsyncContent";
 import { ResourcePageShell } from "../../shared/components/ResourcePageShell";
 import { ResourceTable, type ResourceColumn } from "../../shared/components/ResourceTable";
 import { DeleteRowAction, ResourceIdentity, ResourceText, RowActionButton, RowActions } from "../../shared/components/ResourceCells";
@@ -38,8 +34,6 @@ import { useResourceSubmit } from "../../shared/hooks/useResourceSubmit";
 import { formatDateTime } from "../../shared/lib/date";
 import { WorkProjectFormModal } from "./WorkProjectFormModal";
 import {
-  WorkProjectAssets,
-  WorkProjectPanel,
   WorkProjectStatusTag,
   WorkProjectTypeTag,
   workProjectOwnerNames,
@@ -51,8 +45,6 @@ export function WorkProjectsPage() {
   const projects = usePagedResourceList<WorkProjectSummary>({ query: queryWorkProjects });
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<WorkProject | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [expandedProject, setExpandedProject] = useState<WorkProject | null>(null);
   const [detailLoadingId, setDetailLoadingId] = useState<number | null>(null);
   const detailRequestRef = useRef(0);
   const refreshProjectSidebar = useRefreshWorkProjects();
@@ -117,20 +109,6 @@ export function WorkProjectsPage() {
     }
   }, []);
 
-  const toggleProject = async (project: WorkProjectSummary) => {
-    if (expandedId === project.id) {
-      detailRequestRef.current += 1;
-      setExpandedId(null);
-      setExpandedProject(null);
-      setDetailLoadingId(null);
-      return;
-    }
-    setExpandedId(project.id);
-    setExpandedProject(null);
-    const detail = await loadProjectDetail(project.id);
-    if (detail) setExpandedProject(detail);
-  };
-
   const openProjectEditor = async (project: WorkProjectSummary) => {
     const detail = await loadProjectDetail(project.id);
     if (!detail) return;
@@ -153,15 +131,8 @@ export function WorkProjectsPage() {
           : await deleteWorkProject(project.id);
       if (!mountedRef.current) return;
       showApiSuccess(response);
-      if (type === "delete") {
-        setExpandedId((current) => (current === project.id ? null : current));
-      }
       await projects.loadItems();
       if (!mountedRef.current) return;
-      if (expandedId === project.id && type !== "delete") {
-        const detail = await loadProjectDetail(project.id);
-        setExpandedProject(detail);
-      }
       refreshProjectSidebar();
     } catch (error) {
       if (mountedRef.current) showApiError(error);
@@ -176,18 +147,6 @@ export function WorkProjectsPage() {
       key: "project", header: "Project", width: "minmax(210px, 0.9fr)",
       render: (project) => (
         <ResourceIdentity
-          before={(
-            <Button
-              icon={expandedId === project.id ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-              theme="borderless"
-              type="tertiary"
-              size="small"
-              disabled={adminAction !== null}
-              loading={detailLoadingId === project.id && expandedId === project.id}
-              onClick={() => void toggleProject(project)}
-              aria-label={`${expandedId === project.id ? "Collapse" : "Expand"} ${project.name}`}
-            />
-          )}
           icon={<FolderKanban size={18} />}
           title={project.name}
           detail={`${workProjectOwnerNames(project)} · ${project.session_count} sessions`}
@@ -215,7 +174,7 @@ export function WorkProjectsPage() {
             icon={<Edit3 size={15} />}
             label={`Edit ${project.name}`}
             disabled={adminAction !== null}
-            loading={detailLoadingId === project.id && expandedId !== project.id}
+            loading={detailLoadingId === project.id}
             onClick={() => void openProjectEditor(project)}
           />
           <RowActionButton
@@ -264,16 +223,6 @@ export function WorkProjectsPage() {
           rows={projects.items}
           rowKey={(project) => project.id}
         />
-        {expandedId ? (
-          <AsyncContent
-            loading={detailLoadingId === expandedId}
-            empty={expandedProject === null}
-            emptyIcon={<FolderKanban size={42} />}
-            emptyTitle="Project details are unavailable"
-          >
-            {expandedProject ? <WorkProjectExpanded project={expandedProject} /> : null}
-          </AsyncContent>
-        ) : null}
       </ResourcePageShell>
 
       <WorkProjectFormModal
@@ -284,49 +233,5 @@ export function WorkProjectsPage() {
         onSubmit={handleSubmit}
       />
     </>
-  );
-}
-
-function WorkProjectExpanded({
-  project,
-}: {
-  project: WorkProject;
-}) {
-  return (
-    <div className="work-project-expanded">
-      <section className="work-project-meta">
-        <div>
-          <span>Owner</span>
-          <strong>{workProjectOwnerNames(project)}</strong>
-        </div>
-        <div>
-          <span>Sandbox</span>
-          <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
-        </div>
-        <div>
-          <span>Scope Coverage</span>
-          <strong>{project.untouched_asset_count} untouched / {project.in_scope_asset_count} in scope</strong>
-        </div>
-      </section>
-
-      <section className="work-project-detail-grid">
-        <WorkProjectPanel title="Assets" empty={project.assets.length === 0 ? "No assets." : ""}>
-          <WorkProjectAssets project={project} />
-        </WorkProjectPanel>
-        <WorkProjectPanel title="Workflow" empty="">
-          <div className="work-project-asset-list">
-            <div><strong>{project.active_work_item_count}</strong><span>Active or review</span></div>
-            <div><strong>{project.blocked_work_item_count}</strong><span>Blocked</span></div>
-            <div><strong>{project.work_item_count}</strong><span>Total work items</span></div>
-          </div>
-        </WorkProjectPanel>
-        <WorkProjectPanel title="Security State" empty="">
-          <div className="work-project-asset-list">
-            <div><strong>{project.validated_finding_count}</strong><span>Validated findings</span></div>
-            <div><strong>{project.active_attack_path_count}</strong><span>Open attack paths</span></div>
-          </div>
-        </WorkProjectPanel>
-      </section>
-    </div>
   );
 }
