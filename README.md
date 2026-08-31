@@ -269,3 +269,13 @@ Thanks to the [Linux.do](https://linux.do/) website and its community for their 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=yv1ing%2FZ3r0&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=yv1ing/Z3r0&type=date&theme=dark&legend=top-left&sealed_token=RN0abSf855BePOEmL59e0_3n0YNDKD7dv3YlNcCsCAQv2bCz3UEFtxcnM6pt2l_7PDeTINHHEaGJtf3PMbTJSs2rGE7ruvJKT6s0tFpFz588h9_ZogUu4XPVByE_gHQOsVy1a5xePtlj3byoP9YmQaybaeuPDNU-jMZDLf_jgmr06wzD6VdL0zHD4HB7" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=yv1ing/Z3r0&type=date&legend=top-left&sealed_token=RN0abSf855BePOEmL59e0_3n0YNDKD7dv3YlNcCsCAQv2bCz3UEFtxcnM6pt2l_7PDeTINHHEaGJtf3PMbTJSs2rGE7ruvJKT6s0tFpFz588h9_ZogUu4XPVByE_gHQOsVy1a5xePtlj3byoP9YmQaybaeuPDNU-jMZDLf_jgmr06wzD6VdL0zHD4HB7" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=yv1ing/Z3r0&type=date&legend=top-left&sealed_token=RN0abSf855BePOEmL59e0_3n0YNDKD7dv3YlNcCsCAQv2bCz3UEFtxcnM6pt2l_7PDeTINHHEaGJtf3PMbTJSs2rGE7ruvJKT6s0tFpFz588h9_ZogUu4XPVByE_gHQOsVy1a5xePtlj3byoP9YmQaybaeuPDNU-jMZDLf_jgmr06wzD6VdL0zHD4HB7" />
+ </picture>
+</a>
