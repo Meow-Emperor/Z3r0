@@ -1,4 +1,4 @@
-import { Input, Select } from "@douyinfe/semi-ui";
+import { Input, Select } from "../../shared/ui/semi";
 import { KeyRound, Mail, Shield, User, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getSystemUserRoles, isSystemUserRole } from "../../shared/api/contract";

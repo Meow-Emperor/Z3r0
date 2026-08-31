@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../../shared/ui/semi";
 import { Maximize2, Minimize2, Minus, Monitor, FolderOpen, SquareTerminal, X } from "lucide-react";
 import {
   CSSProperties,

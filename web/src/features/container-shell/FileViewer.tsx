@@ -1,4 +1,4 @@
-import { Button, Toast } from "@douyinfe/semi-ui";
+import { Button, Toast } from "../../shared/ui/semi";
 import { Download, Edit3, Save, X } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { downloadContainerFiles, readContainerFile, writeContainerFile } from "../../shared/api/sandboxContainers";

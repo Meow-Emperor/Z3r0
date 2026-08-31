@@ -1,4 +1,4 @@
-import { Button, Tag } from "@douyinfe/semi-ui";
+import { Button, Tag } from "../../shared/ui/semi";
 import { ChevronDown, ChevronRight, GitBranch, PanelRightOpen, Wrench } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { NestedTranscript, SubagentExecutionItem, ToolExecutionItem } from "./chatState";

@@ -1,4 +1,4 @@
-import { Button, InputNumber, Select } from "@douyinfe/semi-ui";
+import { Button, InputNumber, Select } from "../../shared/ui/semi";
 import { Plug, Plus, Trash2 } from "lucide-react";
 import type { SandboxContainerPortMapping } from "../../shared/api/types";
 import { createClientId } from "../../shared/lib/id";

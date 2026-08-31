@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../../shared/ui/semi";
 import {
   Ban,
   ChevronDown,

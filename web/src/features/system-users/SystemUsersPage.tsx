@@ -1,4 +1,4 @@
-import { Tag } from "@douyinfe/semi-ui";
+import { Tag } from "../../shared/ui/semi";
 import { Pencil, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { createSystemUser, deleteSystemUser, querySystemUsers, updateSystemUser } from "../../shared/api/systemUsers";

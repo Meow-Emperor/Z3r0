@@ -1,4 +1,4 @@
-import { Input, Select, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
+import { Input, Select, TabPane, Tabs, Tag } from "../../shared/ui/semi";
 import { Activity, Boxes, Bug, ClipboardList, FileCheck2, Gauge, Network, Route } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from "react";
 import { showApiError } from "../../shared/api/feedback";

@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../../shared/ui/semi";
 import cytoscape from "cytoscape";
 import { Network, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";

@@ -1,4 +1,4 @@
-import { Select, Spin } from "@douyinfe/semi-ui";
+import { Select, Spin } from "../ui/semi";
 import type { ComponentProps, ReactNode, UIEvent } from "react";
 
 type SelectProps = NonNullable<ComponentProps<typeof Select>>;

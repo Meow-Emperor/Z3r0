@@ -1,4 +1,4 @@
-import { Input, InputNumber, Select } from "@douyinfe/semi-ui";
+import { Input, InputNumber, Select } from "../../shared/ui/semi";
 import { Network, Package, Route } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateSandboxImageRequest } from "../../shared/api/types";

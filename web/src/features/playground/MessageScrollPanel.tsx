@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../../shared/ui/semi";
 import { ArrowDown } from "lucide-react";
 import { ReactNode, RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cx } from "../../shared/lib/className";

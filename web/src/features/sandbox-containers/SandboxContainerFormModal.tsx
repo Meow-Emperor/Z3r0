@@ -1,4 +1,4 @@
-import { Select } from "@douyinfe/semi-ui";
+import { Select } from "../../shared/ui/semi";
 import { Boxes, Network, Route, Server, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { queryEgressProxies } from "../../shared/api/egressProxies";

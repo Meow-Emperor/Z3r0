@@ -1,4 +1,4 @@
-import { Button, Input } from "@douyinfe/semi-ui";
+import { Button, Input } from "../../shared/ui/semi";
 import { Crosshair, KeyRound, Mail } from "lucide-react";
 import { FormEvent, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";

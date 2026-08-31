@@ -1,4 +1,4 @@
-import { Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
+import { Tag, Toast, Tooltip } from "../../shared/ui/semi";
 import { Network, Pencil, Server, Wifi } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { createEgressProxy, deleteEgressProxy, queryEgressProxies, testEgressProxy, updateEgressProxy } from "../../shared/api/egressProxies";

@@ -1,4 +1,4 @@
-import { Button, Input, Select, TextArea } from "@douyinfe/semi-ui";
+import { Button, Input, Select, TextArea } from "../../shared/ui/semi";
 import { FolderKanban, Plus, ScanSearch, Server, Trash2, UserRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {

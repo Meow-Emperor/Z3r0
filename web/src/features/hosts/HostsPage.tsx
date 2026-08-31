@@ -1,4 +1,4 @@
-import { Button, Table, Tag } from "@douyinfe/semi-ui";
+import { Button, Table, Tag } from "../../shared/ui/semi";
 import { Boxes, Download, Pencil, Server, SquareTerminal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createManagedHost, deleteManagedHost, listManagedHostImages, pullManagedHostImages, removeManagedHostImage, queryManagedHosts, updateManagedHost } from "../../shared/api/hosts";

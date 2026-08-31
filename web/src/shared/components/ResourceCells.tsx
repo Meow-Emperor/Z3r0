@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Tooltip } from "../ui/semi";
 import { Eye, EyeOff, Trash2, User } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { UI_TEXT } from "../lib/uiText";

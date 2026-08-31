@@ -1,4 +1,4 @@
-import { Modal } from "@douyinfe/semi-ui";
+import { Modal } from "../ui/semi";
 import type { ComponentProps, ReactNode } from "react";
 import { cx } from "../lib/className";
 

@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../../shared/ui/semi";
 import { ArrowLeft, FileText } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";

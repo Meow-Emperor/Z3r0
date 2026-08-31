@@ -1,4 +1,4 @@
-import { Avatar, Button } from "@douyinfe/semi-ui";
+import { Avatar, Button } from "../../shared/ui/semi";
 import { Activity, LogOut } from "lucide-react";
 import { ReactNode, Suspense, useCallback, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";

@@ -1,5 +1,5 @@
 import "@douyinfe/semi-ui/react19-adapter";
-import { LocaleProvider } from "@douyinfe/semi-ui";
+import { LocaleProvider } from "./shared/ui/semi";
 import enUS from "@douyinfe/semi-ui/lib/es/locale/source/en_US";
 import React from "react";
 import ReactDOM from "react-dom/client";

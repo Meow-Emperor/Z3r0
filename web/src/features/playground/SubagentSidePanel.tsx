@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../../shared/ui/semi";
 import { GitBranch, X } from "lucide-react";
 import { useMemo } from "react";
 import type { AgentInfo } from "../../shared/api/types";

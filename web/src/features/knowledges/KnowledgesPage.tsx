@@ -1,4 +1,4 @@
-import { Select, TabPane, Tabs, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
+import { Select, TabPane, Tabs, Tag, Toast, Tooltip } from "../../shared/ui/semi";
 import { Braces, DatabaseZap, Eye, FileText, Network, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {

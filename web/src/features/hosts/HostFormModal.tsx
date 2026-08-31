@@ -1,4 +1,4 @@
-import { Input, InputNumber, Select, TextArea } from "@douyinfe/semi-ui";
+import { Input, InputNumber, Select, TextArea } from "../../shared/ui/semi";
 import { KeyRound, Network, PlugZap, Server, ShieldCheck, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CreateManagedHostRequest, ManagedHost, UpdateManagedHostRequest } from "../../shared/api/types";

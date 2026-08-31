@@ -1,4 +1,4 @@
-import { Button, Input, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Input, Tooltip } from "../ui/semi";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { FormEvent, ReactNode } from "react";
 import { cx } from "../lib/className";

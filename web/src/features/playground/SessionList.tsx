@@ -1,4 +1,4 @@
-import { Button, Input, Popconfirm } from "@douyinfe/semi-ui";
+import { Button, Input, Popconfirm } from "../../shared/ui/semi";
 import { ChevronDown, ChevronRight, Edit3, FolderKanban, Info, MessageCircle, MessageSquarePlus, Play, Trash2 } from "lucide-react";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { updateAgentSessionTitle } from "../../shared/api/agentSessions";

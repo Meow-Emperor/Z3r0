@@ -1,4 +1,4 @@
-import { Tag } from "@douyinfe/semi-ui";
+import { Tag } from "../../shared/ui/semi";
 import { Box } from "lucide-react";
 import type { SandboxContainer } from "../../shared/api/types";
 import { OptionListSelect } from "../../shared/components/OptionListSelect";

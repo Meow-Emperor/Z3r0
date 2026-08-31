@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../ui/semi";
 import { type FormEvent, type ReactNode, useId } from "react";
 import { UI_TEXT } from "../lib/uiText";
 import { AppModal, type AppModalSize } from "./AppModal";

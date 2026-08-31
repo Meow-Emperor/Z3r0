@@ -1,4 +1,4 @@
-import { Select, Tag, Tooltip } from "@douyinfe/semi-ui";
+import { Select, Tag, Tooltip } from "../../shared/ui/semi";
 import {
   Box,
   Boxes,

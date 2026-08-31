@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Tooltip } from "../../shared/ui/semi";
 import {
   Activity,
   Box,

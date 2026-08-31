@@ -1,4 +1,4 @@
-import { Empty, Spin } from "@douyinfe/semi-ui";
+import { Empty, Spin } from "../ui/semi";
 import type { ReactNode } from "react";
 import { cx } from "../lib/className";
 

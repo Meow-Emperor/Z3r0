@@ -1,4 +1,4 @@
-import { Button, TextArea, Toast } from "@douyinfe/semi-ui";
+import { Button, TextArea, Toast } from "../../shared/ui/semi";
 import { AtSign, ImagePlus, OctagonX, Send, Square, X } from "lucide-react";
 import { ClipboardEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentPicker } from "./AgentPicker";

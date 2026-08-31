@@ -1,4 +1,4 @@
-import { Input, InputNumber, Select } from "@douyinfe/semi-ui";
+import { Input, InputNumber, Select } from "../../shared/ui/semi";
 import { KeyRound, Network, Server, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { EGRESS_PROXY_TYPE, EGRESS_PROXY_TYPE_VALUES } from "../../shared/api/generated/constants";

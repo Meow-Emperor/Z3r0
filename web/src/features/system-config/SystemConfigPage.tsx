@@ -1,4 +1,4 @@
-import { Button, Input, InputNumber, Switch, TextArea } from "@douyinfe/semi-ui";
+import { Button, Input, InputNumber, Switch, TextArea } from "../../shared/ui/semi";
 import { Bot, DatabaseZap, RotateCcw, Save, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getInstanceConfig, updateInstanceConfig } from "../../shared/api/systemConfig";

@@ -1,4 +1,4 @@
-import { Toast } from "@douyinfe/semi-ui";
+import { Toast } from "../ui/semi";
 import { ApiError } from "./client";
 import type { CommonResponsePayload } from "./types";
 

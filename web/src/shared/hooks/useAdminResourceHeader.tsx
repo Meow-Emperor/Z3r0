@@ -1,4 +1,4 @@
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "../ui/semi";
 import { Plus, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useAdminHeaderActions } from "../../app/layouts/AdminLayout";

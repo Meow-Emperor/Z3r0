@@ -1,4 +1,4 @@
-import { Empty, Spin, Tag } from "@douyinfe/semi-ui";
+import { Empty, Spin, Tag } from "../../shared/ui/semi";
 import { Braces, FileText } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { getKnowledgeDocument, getKnowledgeVector } from "../../shared/api/knowledges";

@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Tag, Toast, Tooltip } from "@douyinfe/semi-ui";
+import { Button, Popconfirm, Tag, Toast, Tooltip } from "../../shared/ui/semi";
 import {
   ArrowLeft, ArrowRight, ArrowUp, Clipboard, ClipboardPaste,
   Copy, Download, File, FilePlus, Folder, FolderOpen, FolderPlus, Grid3X3, List,
