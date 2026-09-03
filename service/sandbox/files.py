@@ -97,7 +97,7 @@ async def upload_container_files(
 async def download_container_paths(container_id: int, paths: list[str]) -> ContainerDownloadStream:
     target = await _resolve_running_target(container_id)
     if target is None:
-        raise FileNotFoundError("sandbox container not found")
+        raise FileNotFoundError("Sandbox container not found")
     params = [("path", path) for path in paths]
     stream = _get_http_client().stream(
         "GET",
@@ -156,7 +156,7 @@ async def _request_json(
 ) -> dict:
     target = await _resolve_running_target(container_id)
     if target is None:
-        raise FileNotFoundError("sandbox container not found")
+        raise FileNotFoundError("Sandbox container not found")
     response = await _get_http_client().request(
         method,
         f"{target.base_url}{path}",
@@ -170,7 +170,7 @@ async def _request_json(
     try:
         payload = response.json()
     except json_module.JSONDecodeError as exc:
-        raise RuntimeError("invalid sandbox control proxy response") from exc
+        raise RuntimeError("Invalid sandbox control proxy response") from exc
     return payload if isinstance(payload, dict) else {}
 
 
@@ -180,20 +180,20 @@ async def _resolve_running_target(container_id: int) -> SandboxControlProxyTarge
 
 def _raise_for_control_proxy_response(response: httpx.Response) -> None:
     if response.status_code == 404:
-        raise FileNotFoundError("path not found")
+        raise FileNotFoundError("Path not found")
     if response.status_code == 409:
         raise FileExistsError(response.text)
     if response.status_code >= 400:
-        raise RuntimeError(response.text or "sandbox control proxy request failed")
+        raise RuntimeError(response.text or "Sandbox control proxy request failed")
 
 
 async def _raise_for_control_proxy_stream_response(response: httpx.Response) -> None:
     if response.status_code == 404:
-        raise FileNotFoundError("path not found")
+        raise FileNotFoundError("Path not found")
     if response.status_code < 400:
         return
     content = await response.aread()
-    message = content.decode(errors="replace") if content else "sandbox control proxy request failed"
+    message = content.decode(errors="replace") if content else "Sandbox control proxy request failed"
     if response.status_code == 409:
         raise FileExistsError(message)
     raise RuntimeError(message)

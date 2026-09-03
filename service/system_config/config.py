@@ -44,7 +44,7 @@ async def update_instance_config(request: UpdateInstanceConfigRequest) -> Instan
         if set(request.agents) != set(current.agents):
             raise HTTPException(
                 status_code=HTTPStatus.BAD_REQUEST.value,
-                detail="agent set cannot be changed",
+                detail="Agent set cannot be changed",
             )
 
         agents = {}
@@ -73,8 +73,8 @@ async def update_instance_config(request: UpdateInstanceConfigRequest) -> Instan
             try:
                 write_config_file(current)
             except Exception as rollback_error:
-                logger.exception("failed to roll back instance config file")
-                exc.add_note(f"config file rollback also failed: {rollback_error}")
+                logger.exception("Failed to roll back instance config file")
+                exc.add_note(f"Config file rollback also failed: {rollback_error}")
             raise
 
 
@@ -98,15 +98,15 @@ async def _apply_instance_config_from_file(file_cfg: GlobalConfig) -> InstanceCo
                 try:
                     await restart_lightrag(previous.lightrag)
                 except Exception as rollback_error:
-                    logger.exception("failed to roll back LightRAG after agent rebuild failure")
+                    logger.exception("Failed to roll back LightRAG after agent rebuild failure")
                     exc.add_note(f"LightRAG rollback also failed: {rollback_error}")
             try:
                 await rebuild_agent_instances()
             except BaseException as rollback_error:
-                logger.exception("failed to restore agent runtime after rebuild failure")
-                exc.add_note(f"agent runtime rollback also failed: {rollback_error}")
+                logger.exception("Failed to restore agent runtime after rebuild failure")
+                exc.add_note(f"Agent runtime rollback also failed: {rollback_error}")
             raise
-        logger.info("instance config applied and agent instances rebuilt")
+        logger.info("Instance config applied and agent instances rebuilt")
     return InstanceConfigApplyResult(
         config=_instance_config_from_global(get_config()),
         restarted=agent_runtime_changed or lightrag_runtime_changed,
@@ -155,7 +155,7 @@ async def _ensure_embedding_storage_compatible(current: LightRAGConfig, next_cfg
     if any(int(count) > 0 for count in status_counts.values()):
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST.value,
-            detail="embedding API, model, and dimension cannot change while LightRAG documents exist",
+            detail="Embedding API, model, and dimension cannot change while LightRAG documents exist",
         )
 
 
@@ -198,7 +198,7 @@ async def rebuild_agent_instances() -> None:
         await start_subagent_runtime()
         await replacement_pool.start()
     except BaseException as exc:
-        logger.exception("agent instance rebuild failed")
+        logger.exception("Agent instance rebuild failed")
         for name, cleanup in (
             ("subagent runtime", stop_subagent_runtime),
             ("replacement agent pool", replacement_pool.stop),
@@ -207,8 +207,8 @@ async def rebuild_agent_instances() -> None:
             try:
                 await cleanup()
             except BaseException as cleanup_error:
-                logger.exception("failed to clean up %s", name)
-                exc.add_note(f"{name} cleanup also failed: {cleanup_error}")
+                logger.exception("Failed to clean up %s", name)
+                exc.add_note(f"{name.capitalize()} cleanup also failed: {cleanup_error}")
         raise
 
 

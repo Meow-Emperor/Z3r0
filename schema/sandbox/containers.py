@@ -48,11 +48,11 @@ class SandboxContainerSchema(BaseModel):
     image_id: int
     image_name: str
     supports_tor: bool
-    control_proxy_port: int = Field(title="Control Port")
+    control_proxy_port: int = Field(title="Control port")
     egress_mode: SandboxContainerEgressMode
     egress_proxy_id: int | None
     egress_label: str
-    control_proxy_host_port: int = Field(title="Control Host Port")
+    control_proxy_host_port: int = Field(title="Control host port")
     port_mappings: list[SandboxContainerPortMapping]
     status: SandboxContainerStatus
     owner_id: int
@@ -79,9 +79,9 @@ class QuerySandboxContainerImageOptionsResponse(PaginatedResponse[SandboxImageSc
 # create sandbox container request schema
 def _validate_egress_contract(egress_mode: SandboxContainerEgressMode, egress_proxy_id: int | None) -> None:
     if egress_mode != SandboxContainerEgressMode.PROXY and egress_proxy_id is not None:
-        raise ValueError("egress_proxy_id is only valid when egress_mode is proxy")
+        raise ValueError("The `egress_proxy_id` field is only valid when `egress_mode` is `proxy`")
     if egress_mode == SandboxContainerEgressMode.PROXY and egress_proxy_id is None:
-        raise ValueError("egress_proxy_id is required when egress_mode is proxy")
+        raise ValueError("The `egress_proxy_id` field is required when `egress_mode` is `proxy`")
 
 
 class CreateSandboxContainerRequest(BaseModel):
@@ -101,9 +101,9 @@ class CreateSandboxContainerRequest(BaseModel):
             container_key = (mapping.container_port, mapping.protocol)
             host_key = (mapping.host_port, mapping.protocol)
             if container_key in container_ports:
-                raise ValueError("container ports must be unique per protocol")
+                raise ValueError("Container ports must be unique per protocol")
             if host_key in host_ports:
-                raise ValueError("host ports must be unique per protocol")
+                raise ValueError("Host ports must be unique per protocol")
             container_ports.add(container_key)
             host_ports.add(host_key)
 

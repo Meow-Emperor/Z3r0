@@ -1,4 +1,4 @@
-"""Complete WorkItem record projections without user or runtime dependencies."""
+"""Complete work item record projections without user or runtime dependencies."""
 
 from sqlmodel import select
 

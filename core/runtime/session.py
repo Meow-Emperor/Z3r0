@@ -123,7 +123,7 @@ class AgentSession:
             if self.is_running():
                 if self._active_agent_code and agent_code != self._active_agent_code:
                     raise AgentSessionAgentSwitchError(
-                        "stop running tasks before switching agent"
+                        "Stop running tasks before switching agent"
                     )
                 return await self._enqueue_user_message(content, agent_code, context)
             await _mark_session_running(
@@ -390,11 +390,11 @@ class AgentSession:
         except (InterruptSignal, asyncio.CancelledError):
             raise
         except Exception as exc:
-            logger.exception("agent turn setup failed session=%s: %s", self.session_id, exc)
+            logger.exception("Agent turn setup failed session=%s: %s", self.session_id, exc)
             await self._publish(tag(ErrorEvent(
                 created_at=datetime.now(),
                 agent_name=turn_agent_code,
-                message=str(exc) or "agent turn setup failed",
+                message=str(exc) or "Agent turn setup failed",
             )))
             await self._publish(tag(DoneEvent(created_at=datetime.now(), agent_name=turn_agent_code)))
             return None
@@ -431,13 +431,13 @@ class AgentSession:
         except StreamIdleTimeout as exc:
             await discard_partial_stream(stream, buffers, log_label="agent")
             logger.warning(
-                "agent stream idle timeout session=%s agent=%s phase=%s timeout=%d",
+                "Agent stream idle timeout session=%s agent=%s phase=%s timeout=%d",
                 self.session_id, turn_agent_code, exc.phase, exc.timeout_seconds,
             )
             stream_error = ErrorEvent(created_at=datetime.now(), agent_name=agent.name, message=str(exc))
         except Exception as exc:
             await discard_partial_stream(stream, buffers, log_label="agent")
-            logger.exception("agent stream failed session=%s: %s", self.session_id, exc)
+            logger.exception("Agent stream failed session=%s: %s", self.session_id, exc)
             stream_error = ErrorEvent(created_at=datetime.now(), agent_name=agent.name, message=str(exc))
         if stream_error is not None:
             await self._publish(tag(stream_error))
@@ -470,7 +470,7 @@ class AgentSession:
             self._tool_snapshot = tool_snapshot
             self._agent_graph = self._registry.bind(tool_snapshot)
             logger.debug(
-                "agent graph bound session=%s agent=%s sandbox=%s generation=%d",
+                "Agent graph bound session=%s agent=%s sandbox=%s generation=%d",
                 self.session_id,
                 agent_code,
                 tool_snapshot.sandbox_container_id,
@@ -533,8 +533,8 @@ class AgentSession:
                 canceled = True
                 raise
             except Exception as exc:
-                logger.exception("agent driver failed session=%s", self.session_id)
-                await self._publish(ErrorEvent(created_at=datetime.now(), message=str(exc) or "agent turn failed"))
+                logger.exception("Agent driver failed session=%s", self.session_id)
+                await self._publish(ErrorEvent(created_at=datetime.now(), message=str(exc) or "Agent turn failed"))
                 await self._publish(DoneEvent(created_at=datetime.now()))
             finally:
                 relaunched = False
@@ -565,7 +565,7 @@ class AgentSession:
                 return False
             if attempt >= _MAX_DRIVER_RELAUNCH:
                 logger.error(
-                    "agent driver relaunch budget exhausted session=%s target=%s; canceling outstanding work",
+                    "Agent driver relaunch budget exhausted session=%s target=%s; canceling outstanding work",
                     self.session_id, context.agent_instance_id,
                 )
                 await agent_notifications.cancel_session_notifications(
@@ -729,7 +729,7 @@ class AgentSessionPool:
             return
         self._sweeper_task = asyncio.create_task(self._sweep_loop(), name="agent-pool-sweeper")
         logger.debug(
-            "agent pool started (ttl=%ds, interval=%ds, max_size=%d)",
+            "Agent pool started (ttl=%ds, interval=%ds, max_size=%d)",
             self._ttl, self._sweep_interval, self._max_size,
         )
 
@@ -748,7 +748,7 @@ class AgentSessionPool:
             self._pool.clear()
         await asyncio.gather(*(entry.session.shutdown() for entry in entries), return_exceptions=True)
         await _mark_sessions_stopped(session_ids)
-        logger.debug("agent pool stopped")
+        logger.debug("Agent pool stopped")
 
     async def get_or_create(self, session_id: str) -> AgentSession:
         async with self._lock:
@@ -768,7 +768,7 @@ class AgentSessionPool:
         if entry is None:
             entry = _PooledSession(session=AgentSession(session_id, self._registry))
             self._pool[session_id] = entry
-            logger.debug("agent pool created session=%s", session_id)
+            logger.debug("Agent pool created session=%s", session_id)
         else:
             entry.last_used_at = time.monotonic()
         return entry.session
@@ -780,7 +780,7 @@ class AgentSessionPool:
             await _force_mark_session_stopped(session_id)
             return
         await entry.session.shutdown()
-        logger.debug("agent pool discarded session=%s", session_id)
+        logger.debug("Agent pool discarded session=%s", session_id)
 
     async def invalidate_session_tool_binding(self, session_id: str) -> None:
         async with self._lock:
@@ -865,7 +865,7 @@ class AgentSessionPool:
         if not tasks:
             return
         await asyncio.gather(*tasks, return_exceptions=True)
-        logger.debug("agent pool invalidated tool bindings container=%s count=%d", container_id, len(entries))
+        logger.debug("Agent pool invalidated tool bindings container=%s count=%d", container_id, len(entries))
 
     async def _sweep_loop(self) -> None:
         while True:
@@ -878,7 +878,7 @@ class AgentSessionPool:
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception("agent pool sweep iteration failed")
+                logger.exception("Agent pool sweep iteration failed")
 
     def _sweep_expired_candidates_locked(self, now: float) -> list[_EvictionCandidate]:
         if self._ttl <= 0:
@@ -953,7 +953,7 @@ class AgentSessionPool:
             return
         await asyncio.gather(*(entry.session.close() for _, entry in evicted), return_exceptions=True)
         for sid, _ in evicted:
-            logger.debug("agent pool evicted %s session=%s", reason, sid)
+            logger.debug("Agent pool evicted %s session=%s", reason, sid)
 
 
 _pool: AgentSessionPool | None = None

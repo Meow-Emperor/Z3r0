@@ -112,7 +112,7 @@ def remove_container_sync(host: ManagedHost, container_hash: str) -> None:
         container = client.containers.get(container_hash)
         container.remove(force=True)
     except docker.errors.NotFound:
-        logger.debug("sandbox container instance already absent: %s", container_hash)
+        logger.debug("Sandbox container instance already absent: %s", container_hash)
     finally:
         client.close()
 

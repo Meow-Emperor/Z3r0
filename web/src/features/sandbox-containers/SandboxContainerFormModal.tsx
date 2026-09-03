@@ -137,7 +137,7 @@ export function SandboxContainerFormModal({
   return (
     <ResourceModal
       open={open}
-      title="Create Sandbox Container"
+      title="Create sandbox container"
       titleIcon={<Boxes size={17} />}
       saving={saving}
       submitLabel="Create"
@@ -184,7 +184,7 @@ export function SandboxContainerFormModal({
         />
       </FormField> : null}
 
-      <FormField label="Egress Mode">
+      <FormField label="Egress mode">
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
@@ -199,7 +199,7 @@ export function SandboxContainerFormModal({
       </FormField>
 
       {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
-        <FormField label="Managed Proxy">
+        <FormField label="Managed proxy">
           <OptionListSelect
             source={egressProxyOptions}
             prefix={<Network size={16} />}

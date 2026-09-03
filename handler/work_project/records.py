@@ -31,14 +31,14 @@ from service.work_project.records import (
 async def _page_response(query, response_model, project_id: int, page: int, size: int, user: AuthUser, **kwargs):
     result = await query(project_id, page=page, size=size, user_id=user.id, user_role=user.role, **kwargs)
     if result is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     return CommonResponse(data=response_model(**paginated_payload(result, result.items)))
 
 
 async def get_work_project_overview_handler(id: int, user: AuthUser) -> CommonResponse:
     result = await get_work_project_overview_for_user(id, user_id=user.id, user_role=user.role)
     if result is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     return CommonResponse(data=result)
 
 
@@ -149,5 +149,5 @@ async def query_work_project_activity_handler(id: int, page: int, size: int, use
 async def get_work_project_graph_handler(id: int, user: AuthUser) -> CommonResponse:
     result = await get_work_project_graph_for_user(id, user_id=user.id, user_role=user.role)
     if result is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     return CommonResponse(data=result)

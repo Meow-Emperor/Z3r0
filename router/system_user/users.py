@@ -27,7 +27,7 @@ from service.common.pagination import RESOURCE_PAGE_MAX_SIZE, RESOURCE_PAGE_SIZE
 NOT_FOUND_RESPONSE = not_found_response("System user")
 LOGIN_ERROR_RESPONSES = {
     401: {"description": "Invalid email or password", "model": CommonResponse},
-    422: {"description": "Validation Error", "model": CommonResponse},
+    422: {"description": "Validation error", "model": CommonResponse},
 }
 
 ADMIN_ONLY = [Depends(require_admin)]

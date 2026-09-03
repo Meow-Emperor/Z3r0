@@ -70,8 +70,23 @@ import type {
 
 type SemiTagColor = "amber" | "green" | "red" | "grey" | "blue" | "cyan";
 
+const ENUM_ACRONYMS: Record<string, string> = {
+  api: "API",
+  dns: "DNS",
+  http: "HTTP",
+  https: "HTTPS",
+  id: "ID",
+  ip: "IP",
+  llm: "LLM",
+  ssh: "SSH",
+  tcp: "TCP",
+  tls: "TLS",
+  udp: "UDP",
+  url: "URL",
+};
+
 export const SYSTEM_USER_ROLE_LABEL = labelsFromEnum<SystemUserRole>(SYSTEM_USER_ROLE_VALUES);
-export const WORK_PROJECT_TYPE_LABEL = labelsFromEnum<WorkProjectType>(WORK_PROJECT_TYPE_VALUES, { [WORK_PROJECT_TYPE.SOURCE_CODE_AUDIT]: "Source Code Audit" });
+export const WORK_PROJECT_TYPE_LABEL = labelsFromEnum<WorkProjectType>(WORK_PROJECT_TYPE_VALUES, { [WORK_PROJECT_TYPE.SOURCE_CODE_AUDIT]: "Source code audit" });
 export const WORK_PROJECT_STATUS_LABEL = labelsFromEnum<WorkProjectStatus>(WORK_PROJECT_STATUS_VALUES);
 export const WORK_PROJECT_ASSET_KIND_LABEL = labelsFromEnum<WorkProjectAssetKind>(WORK_PROJECT_ASSET_KIND_VALUES);
 export const WORK_PROJECT_ASSET_ORIGIN_LABEL = labelsFromEnum<WorkProjectAssetOrigin>(WORK_PROJECT_ASSET_ORIGIN_VALUES);
@@ -81,7 +96,9 @@ export const WORK_PROJECT_ASSET_STATE_LABEL = labelsFromEnum<WorkProjectAssetSta
 export const WORK_PROJECT_ASSERTION_STATUS_LABEL = labelsFromEnum<WorkProjectAssertionStatus>(WORK_PROJECT_ASSERTION_STATUS_VALUES);
 export const WORK_PROJECT_RELATION_TYPE_LABEL = labelsFromEnum<WorkProjectRelationType>(WORK_PROJECT_RELATION_TYPE_VALUES);
 export const WORK_PROJECT_RELATION_CATEGORY_LABEL = labelsFromEnum<WorkProjectRelationCategory>(WORK_PROJECT_RELATION_CATEGORY_VALUES);
-export const WORK_PROJECT_EVIDENCE_KIND_LABEL = labelsFromEnum<WorkProjectEvidenceKind>(WORK_PROJECT_EVIDENCE_KIND_VALUES);
+export const WORK_PROJECT_EVIDENCE_KIND_LABEL = labelsFromEnum<WorkProjectEvidenceKind>(WORK_PROJECT_EVIDENCE_KIND_VALUES, {
+  http_exchange: "HTTP exchange",
+});
 export const WORK_PROJECT_EVIDENCE_STATUS_LABEL = labelsFromEnum<WorkProjectEvidenceStatus>(WORK_PROJECT_EVIDENCE_STATUS_VALUES);
 export const WORK_PROJECT_FINDING_CATEGORY_LABEL = labelsFromEnum<WorkProjectFindingCategory>(WORK_PROJECT_FINDING_CATEGORY_VALUES);
 export const WORK_PROJECT_FINDING_SEVERITY_LABEL = labelsFromEnum<WorkProjectFindingSeverity>(WORK_PROJECT_FINDING_SEVERITY_VALUES);
@@ -119,5 +136,14 @@ function colorsFromEnum<T extends string>(values: readonly T[], colors: Partial<
 }
 
 export function formatEnumLabel(value: string): string {
-  return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part, index) => {
+      const normalized = part.toLowerCase();
+      const acronym = ENUM_ACRONYMS[normalized];
+      if (acronym) return acronym;
+      return index === 0 ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : normalized;
+    })
+    .join(" ");
 }

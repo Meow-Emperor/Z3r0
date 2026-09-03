@@ -65,18 +65,18 @@ class JwtAuthMiddleware:
         try:
             token_user = decode_access_token(token)
         except jwt.ExpiredSignatureError:
-            await _error_response(HTTPStatus.UNAUTHORIZED, "token expired")(scope, receive, send)
+            await _error_response(HTTPStatus.UNAUTHORIZED, "Token expired")(scope, receive, send)
             return
         except jwt.InvalidTokenError:
-            await _error_response(HTTPStatus.UNAUTHORIZED, "invalid token")(scope, receive, send)
+            await _error_response(HTTPStatus.UNAUTHORIZED, "Invalid token")(scope, receive, send)
             return
         if token_user is None:
-            await _error_response(HTTPStatus.UNAUTHORIZED, "invalid token payload")(scope, receive, send)
+            await _error_response(HTTPStatus.UNAUTHORIZED, "Invalid token payload")(scope, receive, send)
             return
 
         user = await resolve_current_user(token_user)
         if user is None:
-            await _error_response(HTTPStatus.UNAUTHORIZED, "access token user no longer exists")(scope, receive, send)
+            await _error_response(HTTPStatus.UNAUTHORIZED, "Access token user no longer exists")(scope, receive, send)
             return
 
         scope.setdefault("state", {})["system_user"] = user
@@ -129,13 +129,13 @@ async def resolve_current_user(token_user: AuthUser) -> AuthUser | None:
 async def require_user(request: Request) -> AuthUser:
     user = getattr(request.state, "system_user", None)
     if not isinstance(user, AuthUser):
-        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="missing access token")
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED.value, detail="Missing access token")
     return user
 
 
 async def require_admin(user: AuthUser = Depends(require_user)) -> AuthUser:
     if user.role != SystemUserRole.ADMIN:
-        raise HTTPException(status_code=HTTPStatus.FORBIDDEN.value, detail="admin role required")
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN.value, detail="Admin role required")
     return user
 
 

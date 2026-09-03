@@ -77,7 +77,7 @@ async def save_work_project_finding(
         asset_ids = {request.primary_asset_id, *(item.asset_id for item in request.affected_assets)}
         assets = list((await session.exec(select(WorkProjectAsset).where(WorkProjectAsset.id.in_(asset_ids)))).all())
         if len(assets) != len(asset_ids) or any(asset.project_id != project_id for asset in assets):
-            return None, "asset not found"
+            return None, "Asset not found"
         _, error = await validate_active_evidence_ids(session, project_id, request.evidence_ids)
         if error:
             return None, error
@@ -85,21 +85,21 @@ async def save_work_project_finding(
         if finding_id is not None:
             finding = (await session.exec(select(WorkProjectFinding).where(WorkProjectFinding.id == finding_id).with_for_update())).one_or_none()
             if finding is None or finding.project_id != project_id:
-                return None, "finding not found"
+                return None, "Finding not found"
             actor_code = created_by_agent_code.strip()
             if actor_code != DEFAULT_AGENT_CODE and finding.created_by_agent_code != actor_code:
-                return None, "specialist agents can only update findings they created"
+                return None, "Specialist agents can only update findings they created"
             linked_steps = list((await session.exec(select(WorkProjectAttackPathStep).where(
                 WorkProjectAttackPathStep.finding_id == finding_id
             ))).all())
             request_asset_ids = {request.primary_asset_id, *(item.asset_id for item in request.affected_assets)}
             for step in linked_steps:
                 if not (request_asset_ids & {step.source_asset_id, step.target_asset_id}):
-                    return None, "finding assets must remain linked to every attack path step that references it"
+                    return None, "Finding assets must remain linked to every attack path step that references it"
                 if request.verification == WorkProjectFindingVerification.REFUTED and step.status != WorkProjectAttackStepStatus.REFUTED:
-                    return None, "revise non-refuted attack path steps before refuting their linked finding"
+                    return None, "Revise non-refuted attack path steps before refuting their linked finding"
                 if step.status == WorkProjectAttackStepStatus.VALIDATED and request.verification != WorkProjectFindingVerification.VALIDATED:
-                    return None, "validated attack path steps require their linked finding to remain validated"
+                    return None, "Validated attack path steps require their linked finding to remain validated"
         now = datetime.now()
         previous_verification = finding.verification if finding is not None else None
         if finding is None:

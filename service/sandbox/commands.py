@@ -35,7 +35,7 @@ class _SandboxCommandCancelled(RuntimeError):
 class SandboxContainerCommandTimeoutError(TimeoutError):
     def __init__(self, timeout_seconds: float) -> None:
         self.timeout_seconds = timeout_seconds
-        super().__init__(f"sandbox container command timed out after {_format_timeout_seconds(timeout_seconds)} seconds")
+        super().__init__(f"Sandbox container command timed out after {_format_timeout_seconds(timeout_seconds)} seconds")
 
 
 class _RunningContainerCommand:
@@ -109,15 +109,15 @@ async def _terminate_container_command(host: ManagedHost, container_hash: str, m
     try:
         await asyncio.wait_for(asyncio.shield(terminate_task), timeout=_COMMAND_TERMINATE_TIMEOUT_SECONDS + 1)
     except asyncio.TimeoutError:
-        logger.warning("sandbox container command termination timed out: %s", container_hash)
+        logger.warning("Sandbox container command termination timed out: %s", container_hash)
         _consume_background_task(terminate_task)
     except docker.errors.NotFound:
-        logger.debug("sandbox container absent while cancelling command: %s", container_hash)
+        logger.debug("Sandbox container absent while cancelling command: %s", container_hash)
     except asyncio.CancelledError:
         _consume_background_task(terminate_task)
         raise
     except Exception:
-        logger.warning("sandbox container command termination failed: %s", container_hash, exc_info=True)
+        logger.warning("Sandbox container command termination failed: %s", container_hash, exc_info=True)
 
 
 async def _drain_cancelled_command_task(task: asyncio.Task, container_hash: str) -> None:
@@ -127,7 +127,7 @@ async def _drain_cancelled_command_task(task: asyncio.Task, container_hash: str)
     try:
         await asyncio.wait_for(asyncio.shield(task), timeout=_COMMAND_CANCEL_JOIN_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
-        logger.warning("sandbox container command did not exit after cancellation: %s", container_hash)
+        logger.warning("Sandbox container command did not exit after cancellation: %s", container_hash)
         _consume_background_task(task)
     except asyncio.CancelledError:
         _consume_background_task(task)
@@ -135,7 +135,7 @@ async def _drain_cancelled_command_task(task: asyncio.Task, container_hash: str)
     except _SandboxCommandCancelled:
         pass
     except Exception:
-        logger.debug("sandbox container command exited after cancellation with an error", exc_info=True)
+        logger.debug("Sandbox container command exited after cancellation with an error", exc_info=True)
 
 
 def _consume_background_task(task: asyncio.Task) -> None:
@@ -153,7 +153,7 @@ def _discard_background_task_result(task: asyncio.Task) -> None:
     except _SandboxCommandCancelled:
         pass
     except Exception:
-        logger.debug("background sandbox command task failed", exc_info=True)
+        logger.debug("Background sandbox command task failed", exc_info=True)
 
 
 def _execute_container_command_sync(
@@ -239,7 +239,7 @@ def _close_command_stream(stream: object) -> None:
         try:
             close()
         except Exception:
-            logger.debug("failed to close sandbox command stream", exc_info=True)
+            logger.debug("Failed to close sandbox command stream", exc_info=True)
     _close_response_sync(stream, response)
     try:
         stream._response = None
@@ -325,9 +325,9 @@ def _normalize_command_timeout(timeout_seconds: float) -> float:
     try:
         normalized_timeout_seconds = float(timeout_seconds)
     except (TypeError, ValueError) as exc:
-        raise ValueError("sandbox container command timeout must be a number") from exc
+        raise ValueError("Sandbox container command timeout must be a number") from exc
     if normalized_timeout_seconds <= 0:
-        raise ValueError("sandbox container command timeout must be greater than 0 seconds")
+        raise ValueError("Sandbox container command timeout must be greater than 0 seconds")
     return normalized_timeout_seconds
 
 
@@ -345,35 +345,35 @@ async def execute_sandbox_container_command(
 ) -> SandboxContainerCommandResult:
     command = command.strip()
     if not command:
-        raise ValueError("sandbox container command is required")
+        raise ValueError("Sandbox container command is required")
     normalized_timeout_seconds = _normalize_command_timeout(timeout_seconds)
 
     async with get_async_session() as session:
         sandbox_container = await session.get(SandboxContainer, id)
         if sandbox_container is None:
-            raise ValueError("sandbox container not found")
+            raise ValueError("Sandbox container not found")
         if sandbox_container.status != SandboxContainerStatus.RUNNING:
-            raise ValueError("only running sandbox containers can execute commands")
+            raise ValueError("Only running sandbox containers can execute commands")
 
         container_hash = sandbox_container.container_hash
         host_id = sandbox_container.host_id
 
         host = await session.get(ManagedHost, host_id)
         if host is None:
-            raise ValueError("managed host not found")
+            raise ValueError("Managed host not found")
 
     environment = await resolve_container_egress_environment(id)
 
     try:
         state = await asyncio.to_thread(inspect_container_state_sync, host, container_hash)
     except Exception as exc:
-        logger.exception("sandbox container inspect failed before command execution: %s", id)
-        raise RuntimeError("failed to inspect sandbox container") from exc
+        logger.exception("Sandbox container inspect failed before command execution: %s", id)
+        raise RuntimeError("Failed to inspect sandbox container") from exc
 
     status = SandboxContainerStatus.ERROR if not state.exists else docker_status_to_sandbox_status(state.status)
     if status != SandboxContainerStatus.RUNNING:
         await save_sandbox_container_status(id, status)
-        raise RuntimeError("sandbox container is not running")
+        raise RuntimeError("Sandbox container is not running")
 
     try:
         return await _execute_container_command(host, container_hash, command, environment, normalized_timeout_seconds)
@@ -382,9 +382,9 @@ async def execute_sandbox_container_command(
     except SandboxContainerCommandTimeoutError:
         raise
     except docker.errors.NotFound as exc:
-        logger.debug("sandbox container instance not found while executing command: %s", id)
+        logger.debug("Sandbox container instance not found while executing command: %s", id)
         await save_sandbox_container_status(id, SandboxContainerStatus.ERROR)
-        raise RuntimeError("sandbox container instance not found") from exc
+        raise RuntimeError("Sandbox container instance not found") from exc
     except Exception as exc:
-        logger.exception("sandbox container command execution failed: %s", id)
-        raise RuntimeError("failed to execute sandbox container command") from exc
+        logger.exception("Sandbox container command execution failed: %s", id)
+        raise RuntimeError("Failed to execute sandbox container command") from exc

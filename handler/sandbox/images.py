@@ -23,7 +23,7 @@ async def create_sandbox_image_handler(request: CreateSandboxImageRequest) -> Co
         supports_tor=request.supports_tor,
     )
     return CommonResponse(
-        message="sandbox image created",
+        message="Sandbox image created",
         data=SandboxImageSchema.model_validate(sandbox_image),
     )
 
@@ -31,7 +31,7 @@ async def create_sandbox_image_handler(request: CreateSandboxImageRequest) -> Co
 async def delete_sandbox_image_handler(id: int) -> CommonResponse:
     result = await delete_sandbox_image(id)
     if result.not_found:
-        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox image not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Sandbox image not found")
     if not result.deleted:
         raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=DeleteSandboxImageResponse(id=id))

@@ -7,7 +7,7 @@ description: Use ProjectDiscovery dnsx for authorized, small-batch DNS resolutio
 
 Use ProjectDiscovery `dnsx` to validate discovered hostnames and collect DNS records for in-scope assets.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help and use it as the source of truth:
 
@@ -15,7 +15,7 @@ Before constructing commands, run the installed help and use it as the source of
 dnsx -h
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on in-scope domains, hostnames, or resolver tests.
 - Prefer a small, reviewed file or stdin batch. Do not feed unbounded discovery output directly into `dnsx`.
@@ -25,7 +25,7 @@ dnsx -h
 - Keep concurrency and query rates low by default, and save non-trivial outputs to files.
 - Use `dnsx` for batch validation and DNS records from discovered host lists; use `dig`, `nslookup`, or `whois` for targeted manual triage.
 
-## Common Workflows
+## Common workflows
 
 Resolve a discovered host list:
 

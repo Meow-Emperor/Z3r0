@@ -7,7 +7,7 @@ description: Use ProjectDiscovery httpx for authorized, low-rate HTTP availabili
 
 Use ProjectDiscovery `httpx` for low-rate HTTP checks of in-scope hosts and URLs. Use it to validate HTTP/HTTPS availability and collect status, title, redirect, TLS, and lightweight technology signals. This is the ProjectDiscovery CLI, not the Python `httpx` library.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help and use it as the source of truth:
 
@@ -15,7 +15,7 @@ Before constructing commands, run the installed help and use it as the source of
 httpx -h
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on explicitly authorized targets.
 - Prefer a single URL or a small, reviewed file or stdin batch. Do not feed unbounded discovery output directly into `httpx`.
@@ -26,7 +26,7 @@ httpx -h
 - Treat detected technologies, titles, redirects, and TLS observations as triage signals; validate important claims with response evidence, browser inspection, or targeted follow-up.
 - Keep concurrency and request rates low by default. Do not use update, cloud/dashboard upload, screenshot, headless browser, or high-concurrency modes unless the user explicitly asks and the scope permits it.
 
-## Common Workflows
+## Common workflows
 
 Probe a small, reviewed host list and keep structured evidence:
 

@@ -150,7 +150,7 @@ router.add_api_route(
                 "text/markdown": {"schema": {"type": "string", "format": "binary"}},
             },
         },
-        400: {"description": "Bad Request"},
+        400: {"description": "Bad request"},
         404: {"description": "Report file not found"},
     },
 )

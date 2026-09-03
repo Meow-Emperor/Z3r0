@@ -7,7 +7,7 @@ description: Use dig, nslookup, whois, and related local CLIs for authorized DNS
 
 Use local DNS and WHOIS tools for authorized domain, host, nameserver, mail, address, ASN, registration, and ownership triage.
 
-## Help First
+## Help first
 
 Before constructing commands, use installed help or version output as the source of truth:
 
@@ -16,7 +16,7 @@ dig -h
 whois --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on in-scope domains, hosts, networks, or user-provided indicators.
 - Record the exact queried identifier and query time when results support a finding.
@@ -26,7 +26,7 @@ whois --help
 - Cross-check important ownership, delegation, and resolution claims with independent DNS records or supporting evidence.
 - Save large query batches and raw outputs to files rather than streaming them into the conversation.
 
-## Common Workflows
+## Common workflows
 
 Targeted DNS record triage:
 

@@ -7,7 +7,7 @@ description: Use gdb and pwndbg for authorized binary debugging, crash triage, e
 
 Use system `gdb` for stock debugging. Pwndbg is installed through `uv` against `/usr/bin/python3`, and `/root/.gdbinit` sources the installed Pwndbg `gdbinit.py` so the normal `gdb` entrypoint has Pwndbg available without bundling another debugger.
 
-## Help First
+## Help first
 
 Before constructing commands, confirm the debugger entrypoints and Pwndbg integration:
 
@@ -17,7 +17,7 @@ command -v pwndbg
 gdb -batch -ex 'python import pwndbg'
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on provided binaries, task-scoped builds, or explicitly authorized targets.
 - Do not execute unknown or untrusted samples unless runtime execution is explicitly in scope.
@@ -27,7 +27,7 @@ gdb -batch -ex 'python import pwndbg'
 - Record binary path, hash when relevant, architecture, protections, crash inputs, and debugger commands used.
 - Use `checksec` for the static mitigation baseline, `strace`/`ltrace` for runtime call traces, and `pwntools` for repeatable interaction or exploit scripts; do not treat them as debugger replacements.
 
-## Common Workflows
+## Common workflows
 
 Open an interactive Pwndbg-enhanced GDB session:
 

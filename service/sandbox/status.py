@@ -126,7 +126,7 @@ def _schedule_agent_tool_invalidation(container_id: int) -> None:
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
-        logger.debug("no running loop for agent tool invalidation: %s", container_id)
+        logger.debug("No running loop for agent tool invalidation: %s", container_id)
         return
 
     task = loop.create_task(
@@ -143,7 +143,7 @@ async def invalidate_agent_tool_bindings(container_id: int) -> None:
         if _agent_tool_binding_invalidator is not None:
             await _agent_tool_binding_invalidator(container_id)
     except Exception:
-        logger.exception("agent tool binding invalidation failed: %s", container_id)
+        logger.exception("Agent tool binding invalidation failed: %s", container_id)
 
 
 async def _invalidate_all_agent_tool_bindings() -> None:
@@ -154,7 +154,7 @@ async def _invalidate_all_agent_tool_bindings() -> None:
         if _agent_tool_binding_invalidator is not None:
             await _agent_tool_binding_invalidator(None)
     except Exception:
-        logger.exception("agent tool binding invalidation failed")
+        logger.exception("Agent tool binding invalidation failed")
 
 
 async def _load_container_status_snapshots() -> list[ContainerStatusSnapshot]:
@@ -194,7 +194,7 @@ async def sync_container_status_unlocked(snapshot: ContainerStatusSnapshot) -> N
 
     await save_sandbox_container_status(snapshot.id, next_status)
     logger.debug(
-        "sandbox container status synced: %s %s -> %s",
+        "Sandbox container status synced: %s %s -> %s",
         snapshot.id,
         snapshot.status,
         next_status,
@@ -214,7 +214,7 @@ async def _sync_container_status_safely(snapshot: ContainerStatusSnapshot) -> No
     try:
         await sync_container_status(snapshot)
     except Exception:
-        logger.exception("sandbox container status sync failed: %s", snapshot.id)
+        logger.exception("Sandbox container status sync failed: %s", snapshot.id)
 
 
 async def _status_monitor_loop() -> None:
@@ -225,7 +225,7 @@ async def _status_monitor_loop() -> None:
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("sandbox container status monitor iteration failed")
+            logger.exception("Sandbox container status monitor iteration failed")
             await asyncio.sleep(_STATUS_MONITOR_INTERVAL_SECONDS)
 
 
@@ -237,7 +237,7 @@ async def start_sandbox_container_status_monitor() -> None:
         _status_monitor_loop(),
         name="sandbox-container-status-monitor",
     )
-    logger.info("sandbox container status monitor started")
+    logger.info("Sandbox container status monitor started")
 
 
 async def stop_sandbox_container_status_monitor() -> None:
@@ -252,7 +252,7 @@ async def stop_sandbox_container_status_monitor() -> None:
     except asyncio.CancelledError:
         pass
     await _drain_tool_invalidation_tasks()
-    logger.info("sandbox container status monitor stopped")
+    logger.info("Sandbox container status monitor stopped")
 
 
 async def invalidate_all_agent_tool_bindings() -> None:
@@ -350,7 +350,7 @@ async def _resolve_sandbox_container_tool_binding(
             generation=generation,
         )
     except Exception:
-        logger.exception("sandbox container inspect failed before tool binding: %s", id)
+        logger.exception("Sandbox container inspect failed before tool binding: %s", id)
         return None
 
     status = SandboxContainerStatus.ERROR if not state.exists else docker_status_to_sandbox_status(state.status)

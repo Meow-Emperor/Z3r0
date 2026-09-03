@@ -108,7 +108,7 @@ async def create_work_project_work_item(
     actor_session_id: str,
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     if actor_agent_code != DEFAULT_AGENT_CODE:
-        return None, "only cso can create work items"
+        return None, "Only cso can create work items"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
@@ -145,7 +145,7 @@ async def create_work_project_work_item(
             session,
             item,
             WorkProjectWorkLogKind.STATE_CHANGE,
-            "created -> queued",
+            "Created -> queued",
             actor_agent_code,
             actor_session_id,
             now,
@@ -164,15 +164,15 @@ async def update_work_project_work_item_plan(
     actor_session_id: str,
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     if actor_agent_code != DEFAULT_AGENT_CODE:
-        return None, "only cso can update work item plans"
+        return None, "Only cso can update work item plans"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if item.status != WorkProjectWorkItemStatus.QUEUED:
-            return None, "work item plans are immutable after activation; cancel and replace the work item when the plan changes"
+            return None, "Work item plans are immutable after activation; cancel and replace the work item when the plan changes"
         if error := await _validate_plan(session, project_id, plan, work_item_id):
             return None, error
         changes = await _plan_changes(session, item, plan)
@@ -225,22 +225,22 @@ async def activate_work_project_work_item(
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     reason = reason.strip()
     if not reason:
-        return None, "activation reason is required"
+        return None, "Activation reason is required"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         previous_status = item.status
         if previous_status == WorkProjectWorkItemStatus.QUEUED:
             if actor_agent_code != DEFAULT_AGENT_CODE:
-                return None, "only cso can activate queued work items"
+                return None, "Only cso can activate queued work items"
         elif previous_status == WorkProjectWorkItemStatus.BLOCKED:
             if not _can_execute(item, actor_agent_code):
-                return None, "work item is assigned to another agent"
+                return None, "Work item is assigned to another agent"
         else:
-            return None, "only queued or blocked work items can be activated"
+            return None, "Only queued or blocked work items can be activated"
         if error := await _validate_activation(session, item):
             return None, error
         now = datetime.now()
@@ -276,20 +276,20 @@ async def update_work_project_work_item_target(
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if not _can_execute(item, actor_agent_code):
-            return None, "work item is assigned to another agent"
+            return None, "Work item is assigned to another agent"
         if item.status != WorkProjectWorkItemStatus.ACTIVE:
-            return None, "target coverage can only be updated on an active work item"
+            return None, "Target coverage can only be updated on an active work item"
         target = (await session.exec(select(WorkProjectWorkItemTarget).where(
             WorkProjectWorkItemTarget.work_item_id == work_item_id,
             WorkProjectWorkItemTarget.asset_id == update.asset_id,
             WorkProjectWorkItemTarget.surface == update.surface,
         ).with_for_update())).one_or_none()
         if target is None:
-            return None, "work item target not found"
+            return None, "Work item target not found"
         if update.status == WorkProjectTargetStatus.COVERED and not await _has_active_evidence(session, work_item_id):
-            return None, "covered target requires active evidence on the work item"
+            return None, "A covered target requires active evidence on the work item"
         target.status = update.status
         target.conclusion = update.conclusion
         target.deferral_reason = update.deferral_reason
@@ -313,28 +313,28 @@ async def block_work_project_work_item(
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     reason = reason.strip()
     if not reason:
-        return None, "blocker reason is required"
+        return None, "Blocker reason is required"
     if not targets:
-        return None, "at least one blocked target is required"
+        return None, "At least one blocked target is required"
     target_keys = {(target.asset_id, target.surface) for target in targets}
     if len(target_keys) != len(targets):
-        return None, "blocked targets contain duplicates"
+        return None, "Blocked targets contain duplicates"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if not _can_execute(item, actor_agent_code):
-            return None, "work item is assigned to another agent"
+            return None, "Work item is assigned to another agent"
         if item.status != WorkProjectWorkItemStatus.ACTIVE:
-            return None, "only an active work item can be blocked"
+            return None, "Only an active work item can be blocked"
         rows = list((await session.exec(select(WorkProjectWorkItemTarget).where(
             WorkProjectWorkItemTarget.work_item_id == work_item_id
         ).with_for_update())).all())
         by_key = {(target.asset_id, target.surface): target for target in rows}
         if not target_keys.issubset(by_key):
-            return None, "blocked target not found on work item"
+            return None, "Blocked target not found on work item"
         now = datetime.now()
         for key in target_keys:
             target = by_key[key]
@@ -365,24 +365,24 @@ async def submit_work_project_work_item_review(
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     result_summary = result_summary.strip()
     if not result_summary:
-        return None, "review submission requires a result summary"
+        return None, "Review submission requires a result summary"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if not _can_execute(item, actor_agent_code):
-            return None, "work item is assigned to another agent"
+            return None, "Work item is assigned to another agent"
         if item.status != WorkProjectWorkItemStatus.ACTIVE:
-            return None, "only an active work item can be submitted for review"
+            return None, "Only an active work item can be submitted for review"
         targets = list((await session.exec(select(WorkProjectWorkItemTarget).where(
             WorkProjectWorkItemTarget.work_item_id == work_item_id
         ))).all())
         if any(target.status not in {WorkProjectTargetStatus.COVERED, WorkProjectTargetStatus.DEFERRED} for target in targets):
-            return None, "review requires every target to be covered or deferred"
+            return None, "Review requires every target to be covered or deferred"
         if not await _has_active_evidence(session, work_item_id):
-            return None, "review requires at least one active evidence record"
+            return None, "Review requires at least one active evidence record"
         now = datetime.now()
         previous_status = item.status
         item.status = WorkProjectWorkItemStatus.REVIEW
@@ -390,7 +390,7 @@ async def submit_work_project_work_item_review(
         item.blocker_reason = ""
         item.updated_at = now
         session.add(item)
-        _add_state_log(session, item, previous_status, item.status, "submitted for lead review", actor_agent_code, actor_session_id, now)
+        _add_state_log(session, item, previous_status, item.status, "Submitted for lead review", actor_agent_code, actor_session_id, now)
         _add_log(session, item, WorkProjectWorkLogKind.RESULT, result_summary, actor_agent_code, actor_session_id, now)
         await session.commit()
         await session.refresh(item)
@@ -408,25 +408,25 @@ async def review_work_project_work_item(
     actor_session_id: str,
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     if actor_agent_code != DEFAULT_AGENT_CODE:
-        return None, "only cso can review work items"
+        return None, "Only cso can review work items"
     reason = reason.strip()
     if not reason:
-        return None, "review decision reason is required"
+        return None, "Review decision reason is required"
     keys = {(target.asset_id, target.surface) for target in reopened_targets}
     if len(keys) != len(reopened_targets):
-        return None, "reopened targets contain duplicates"
+        return None, "Reopened targets contain duplicates"
     if decision == WorkProjectReviewDecision.ACCEPT and keys:
-        return None, "accepted review cannot reopen targets"
+        return None, "Accepted review cannot reopen targets"
     if decision == WorkProjectReviewDecision.REQUEST_CHANGES and not keys:
-        return None, "change requests must identify at least one target to reopen"
+        return None, "Change requests must identify at least one target to reopen"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if item.status != WorkProjectWorkItemStatus.REVIEW:
-            return None, "work item is not awaiting review"
+            return None, "Work item is not awaiting review"
         now = datetime.now()
         previous_status = item.status
         if decision == WorkProjectReviewDecision.ACCEPT:
@@ -437,7 +437,7 @@ async def review_work_project_work_item(
             ).with_for_update())).all())
             by_key = {(target.asset_id, target.surface): target for target in targets}
             if not keys.issubset(by_key):
-                return None, "reopened target not found on work item"
+                return None, "Reopened target not found on work item"
             for key in keys:
                 target = by_key[key]
                 target.status = WorkProjectTargetStatus.ACTIVE
@@ -465,24 +465,24 @@ async def cancel_work_project_work_item(
     actor_session_id: str,
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     if actor_agent_code != DEFAULT_AGENT_CODE:
-        return None, "only cso can cancel work items"
+        return None, "Only cso can cancel work items"
     reason = reason.strip()
     if not reason:
-        return None, "cancellation reason is required"
+        return None, "Cancellation reason is required"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if item.status in {WorkProjectWorkItemStatus.COMPLETED, WorkProjectWorkItemStatus.CANCELED}:
-            return None, "work item is already terminal"
+            return None, "Work item is already terminal"
         running_subagent = (await session.exec(select(AgentSubordinateTask.run_id).where(
             AgentSubordinateTask.work_item_id == work_item_id,
             AgentSubordinateTask.status == AgentSubordinateStatus.RUNNING,
         ).limit(1))).first()
         if running_subagent is not None:
-            return None, "cancel the running delegated task before canceling its WorkItem"
+            return None, "Cancel the running delegated task before canceling its work item"
         now = datetime.now()
         previous_status = item.status
         item.status = WorkProjectWorkItemStatus.CANCELED
@@ -504,18 +504,18 @@ async def reopen_work_project_work_item(
     actor_session_id: str,
 ) -> tuple[WorkProjectWorkItemSchema | None, str]:
     if actor_agent_code != DEFAULT_AGENT_CODE:
-        return None, "only cso can reopen work items"
+        return None, "Only cso can reopen work items"
     reason = reason.strip()
     if not reason:
-        return None, "reopen reason is required"
+        return None, "Reopen reason is required"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await _lock_work_item(session, project_id, work_item_id)
         if item is None:
-            return None, "work item not found"
+            return None, "Work item not found"
         if item.status not in {WorkProjectWorkItemStatus.COMPLETED, WorkProjectWorkItemStatus.CANCELED}:
-            return None, "only terminal work items can be reopened"
+            return None, "Only terminal work items can be reopened"
         now = datetime.now()
         previous_status = item.status
         targets = list((await session.exec(select(WorkProjectWorkItemTarget).where(
@@ -547,22 +547,22 @@ async def create_work_project_work_log(
     actor_session_id: str,
 ) -> tuple[WorkProjectWorkLogSchema | None, str]:
     if request.kind in {WorkProjectWorkLogKind.STATE_CHANGE, WorkProjectWorkLogKind.PLAN_CHANGE}:
-        return None, "state and plan change logs are generated by the system"
+        return None, "State and plan change logs are generated by the system"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
         item = await session.get(WorkProjectWorkItem, work_item_id)
         if item is None or item.project_id != project_id:
-            return None, "work item not found"
+            return None, "Work item not found"
         if not _can_execute(item, actor_agent_code):
-            return None, "work item is assigned to another agent"
+            return None, "Work item is assigned to another agent"
         if actor_agent_code != DEFAULT_AGENT_CODE and item.status not in {
             WorkProjectWorkItemStatus.ACTIVE,
             WorkProjectWorkItemStatus.BLOCKED,
         }:
-            return None, "specialist work logs require an active or blocked work item"
+            return None, "Specialist work logs require an active or blocked work item"
         if item.status in {WorkProjectWorkItemStatus.COMPLETED, WorkProjectWorkItemStatus.CANCELED}:
-            return None, "terminal work items must be reopened before adding work logs"
+            return None, "Terminal work items must be reopened before adding work logs"
         log = WorkProjectWorkLog(
             project_id=project_id,
             work_item_id=work_item_id,
@@ -585,34 +585,34 @@ async def _validate_plan(
     work_item_id: int | None,
 ) -> str:
     if plan.assignee_agent_code not in WORK_PROJECT_AGENT_CODES:
-        return "work item assignee is not a registered project agent"
+        return "Work item assignee is not a registered project agent"
     target_ids = {target.asset_id for target in plan.targets}
     assets = list((await session.exec(select(WorkProjectAsset).where(
         WorkProjectAsset.id.in_(target_ids)
     ))).all())
     if len(assets) != len(target_ids) or any(asset.project_id != project_id for asset in assets):
-        return "target asset not found"
+        return "Target asset not found"
     dependency_ids = set(plan.dependency_ids)
     if work_item_id is not None and work_item_id in dependency_ids:
-        return "work item cannot depend on itself"
+        return "Work item cannot depend on itself"
     if dependency_ids:
         dependencies = list((await session.exec(select(WorkProjectWorkItem).where(
             WorkProjectWorkItem.id.in_(dependency_ids)
         ))).all())
         if len(dependencies) != len(dependency_ids) or any(item.project_id != project_id for item in dependencies):
-            return "dependency work item not found"
+            return "Dependency work item not found"
         if work_item_id is not None and await _creates_dependency_cycle(session, work_item_id, dependency_ids):
-            return "work item dependencies contain a cycle"
+            return "Work item dependencies contain a cycle"
     if plan.parent_id is not None:
         if plan.parent_id == work_item_id:
-            return "work item cannot be its own parent"
+            return "Work item cannot be its own parent"
         parent = await session.get(WorkProjectWorkItem, plan.parent_id)
         if parent is None or parent.project_id != project_id:
-            return "parent work item not found"
+            return "Parent work item not found"
         if work_item_id is not None and await _creates_parent_cycle(
             session, project_id, work_item_id, plan.parent_id
         ):
-            return "work item parent hierarchy contains a cycle"
+            return "Work item parent hierarchy contains a cycle"
     focus_models = (
         (plan.focus_relation_id, WorkProjectRelation, "relation"),
         (plan.focus_finding_id, WorkProjectFinding, "finding"),
@@ -624,19 +624,19 @@ async def _validate_plan(
             continue
         focus = await session.get(model, focus_id)
         if focus is None or focus.project_id != project_id:
-            return f"focus {label} not found"
+            return f"Focus {label} not found"
         if model is WorkProjectRelation and not {
             focus.source_asset_id,
             focus.target_asset_id,
         }.issubset(target_ids):
-            return "relation-focused work item must target both relation endpoint assets"
+            return "A relation-focused work item must target both relation endpoint assets"
         if model is WorkProjectFinding:
             finding_asset_ids = {focus.primary_asset_id}
             finding_asset_ids.update((await session.exec(select(WorkProjectFindingAsset.asset_id).where(
                 WorkProjectFindingAsset.finding_id == focus.id
             ))).all())
             if not (finding_asset_ids & target_ids):
-                return "finding-focused work item must target an asset linked to the finding"
+                return "A finding-focused work item must target an asset linked to the finding"
         if model is WorkProjectAttackPath:
             path_steps = list((await session.exec(select(WorkProjectAttackPathStep).where(
                 WorkProjectAttackPathStep.path_id == focus.id
@@ -647,12 +647,12 @@ async def _validate_plan(
                 for asset_id in (step.source_asset_id, step.target_asset_id)
             }
             if not path_asset_ids.issubset(target_ids):
-                return "attack-path-focused work item must target every asset in the path"
+                return "An attack-path-focused work item must target every asset in the path"
         if model is WorkProjectAttackPathStep and not {
             focus.source_asset_id,
             focus.target_asset_id,
         }.issubset(target_ids):
-            return "attack-path-step-focused work item must target both step endpoint assets"
+            return "An attack-path-step-focused work item must target both step endpoint assets"
     return ""
 
 
@@ -667,27 +667,27 @@ async def _validate_activation(session, item: WorkProjectWorkItem) -> str:
             WorkProjectWorkItem.id.in_(dependency_ids)
         ))).all())
         if any(dependency.status != WorkProjectWorkItemStatus.COMPLETED for dependency in dependencies):
-            return "work item dependencies are not completed"
+            return "Work item dependencies are not completed"
     return ""
 
 
 async def work_item_target_scope_error(session, item: WorkProjectWorkItem) -> str:
-    """Validate that a WorkItem still has executable targets in current scope."""
+    """Validate that a work item still has executable targets in the current scope."""
     targets = list((await session.exec(select(WorkProjectWorkItemTarget).where(
         WorkProjectWorkItemTarget.work_item_id == item.id
     ))).all())
     if not targets:
-        return "work item has no targets"
+        return "Work item has no targets"
     asset_ids = {target.asset_id for target in targets}
     assets = list((await session.exec(select(WorkProjectAsset).where(
         WorkProjectAsset.id.in_(asset_ids)
     ))).all())
     if len(assets) != len(asset_ids) or any(asset.project_id != item.project_id for asset in assets):
-        return "work item target asset not found"
+        return "Work item target asset not found"
     if item.phase != WorkProjectWorkItemPhase.SCOPE_REVIEW and any(
         asset.scope != WorkProjectAssetScope.IN_SCOPE for asset in assets
     ):
-        return "work item execution is limited to in-scope target assets"
+        return "Work item execution is limited to in-scope target assets"
     return ""
 
 

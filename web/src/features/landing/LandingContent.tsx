@@ -77,28 +77,28 @@ type AgentItem = {
 
 const planes: CardItem[] = [
   {
-    title: "Control Plane",
+    title: "Control plane",
     kicker: "FastAPI",
-    text: "Manages authenticated resources for users, sessions, WorkProjects, Knowledges, managed hosts, sandbox images, containers, egress proxies, and system configuration.",
+    text: "Manages authenticated resources for users, sessions, work projects, knowledge collections, managed hosts, sandbox images, containers, egress proxies, and system configuration.",
     icon: Braces,
     items: ["Identity and access", "Resource administration", "Session entry"],
   },
   {
-    title: "Runtime Plane",
+    title: "Runtime plane",
     kicker: "Agent sessions",
-    text: "Coordinates lead and specialist Agents around project scope, assignments, and evidence, enriches work with LightRAG context, and preserves continuity across long-running assessments.",
+    text: "Coordinates lead and specialist agents around project scope, assignments, and evidence, enriches work with LightRAG context, and preserves continuity across long-running assessments.",
     icon: Workflow,
     items: ["Session runtime", "Agent graph", "Replayable timeline"],
   },
   {
-    title: "Evidence Plane",
-    kicker: "WorkProject",
-    text: "Connects authorized scope, asset relationships, WorkItem-attributed evidence, findings, attack paths, and review gates in one durable operating record.",
+    title: "Evidence plane",
+    kicker: "Work project",
+    text: "Connects authorized scope, asset relationships, work item-attributed evidence, findings, attack paths, and review gates in one durable operating record.",
     icon: FileCheck2,
     items: ["Asset graph", "Evidence chain", "Workflow and paths"],
   },
   {
-    title: "Execution Plane",
+    title: "Execution plane",
     kicker: "Sandbox pool",
     text: "Provides isolated Docker-based execution with shell, files, noVNC/browser review, command execution, sandbox-local skills, a preloaded security toolchain, and container-level outbound network policy.",
     icon: SquareTerminal,
@@ -124,7 +124,7 @@ const runtimePath: CardItem[] = [
   },
   {
     title: "Retrieval context",
-    text: "For task-oriented inputs, LightRAG retrieves matching original document chunks and graph context before Agent execution.",
+    text: "For task-oriented inputs, LightRAG retrieves matching original document chunks and graph context before agent execution.",
     icon: Database,
   },
   {
@@ -138,19 +138,19 @@ const evidenceNodes: CardItem[] = [
   { title: "Authorized scope", text: "Declared assets and explicit testing boundaries", icon: ShieldCheck },
   { title: "Asset graph", text: "Environment structure, connectivity, trust, and dependency", icon: GitBranch },
   { title: "Graph-targeted work", text: "Coordinated assignments connect specialists, graph assets, test surfaces, and review outcomes", icon: ClipboardCheck },
-  { title: "Evidence", text: "Immutable observations remain attributed to the WorkItem and reproducible source", icon: FileCheck2 },
+  { title: "Evidence", text: "Immutable observations remain attributed to the work item and reproducible source", icon: FileCheck2 },
   { title: "Security conclusions", text: "Findings separate validation state, impact, and disposition", icon: FileSearch },
   { title: "Attack paths", text: "Evidence-backed steps reconstruct access and impact", icon: Route },
 ];
 
 const workbenchSurfaces: CardItem[] = [
-  { title: "Playground", text: "Live transcript, Agent selection, streaming state, subagent panel, and sandbox actions.", icon: Activity },
-  { title: "Work Projects", text: "Searchable scope coverage, graph-targeted workflow, evidence chains, findings, attack paths, retest candidates, and decision activity.", icon: FolderKanban },
-  { title: "Knowledges", text: "Parallel document ingestion, vector inspection, semantic retrieval, and progressive knowledge graph exploration.", icon: Database },
-  { title: "Host Management", text: "Docker host inventory for distributing sandbox workloads across managed infrastructure.", icon: Server },
-  { title: "Egress Proxies", text: "Managed HTTP, HTTPS, and SOCKS5 upstreams for container-level outbound routing.", icon: Network },
-  { title: "Sandbox Images", text: "Reusable sandbox baselines with skills, security tools, browser access, and control services.", icon: Boxes },
-  { title: "Sandbox Containers", text: "Managed runtime instances with ownership, lifecycle, port access, browser review, and outbound policy.", icon: SquareTerminal },
+  { title: "Playground", text: "Live transcript, agent selection, streaming state, subagent panel, and sandbox actions.", icon: Activity },
+  { title: "Work projects", text: "Searchable scope coverage, graph-targeted workflow, evidence chains, findings, attack paths, retest candidates, and decision activity.", icon: FolderKanban },
+  { title: "Knowledge", text: "Parallel document ingestion, vector inspection, semantic retrieval, and progressive knowledge graph exploration.", icon: Database },
+  { title: "Host management", text: "Docker host inventory for distributing sandbox workloads across managed infrastructure.", icon: Server },
+  { title: "Egress proxies", text: "Managed HTTP, HTTPS, and SOCKS5 upstreams for container-level outbound routing.", icon: Network },
+  { title: "Sandbox images", text: "Reusable sandbox baselines with skills, security tools, browser access, and control services.", icon: Boxes },
+  { title: "Sandbox containers", text: "Managed runtime instances with ownership, lifecycle, port access, browser review, and outbound policy.", icon: SquareTerminal },
 ];
 
 const sandboxToolchain: CardItem[] = [
@@ -193,12 +193,12 @@ const sandboxToolchain: CardItem[] = [
 ];
 
 const agents: AgentItem[] = [
-  { code: "cso", name: "Z3r0", role: "Chief Security Lead", detail: "Task decomposition, team coordination, result integration.", icon: Workflow },
-  { code: "cae", name: "V3ra", role: "Code Audit Engineer", detail: "Source code auditing, dependency review, remediation verification.", icon: ClipboardCheck },
-  { code: "cie", name: "L1ly", role: "Intelligence Gathering Engineer", detail: "Intelligence gathering, asset discovery, relationship mapping.", icon: FileSearch },
-  { code: "cpe", name: "Fr4nk", role: "Penetration Testing Engineer", detail: "Penetration testing, vulnerability validation, impact confirmation.", icon: ShieldCheck },
-  { code: "cre", name: "J4m3", role: "Reverse Analysis Engineer", detail: "Reverse analysis, firmware disassembly, binary unpacking.", icon: Code2 },
-  { code: "cce", name: "Nu1L", role: "Cryptography Engineer", detail: "Cryptographic analysis, key review, security assessment.", icon: LockKeyhole },
+  { code: "cso", name: "Z3r0", role: "Chief security lead", detail: "Task decomposition, team coordination, result integration.", icon: Workflow },
+  { code: "cae", name: "V3ra", role: "Code audit engineer", detail: "Source code auditing, dependency review, remediation verification.", icon: ClipboardCheck },
+  { code: "cie", name: "L1ly", role: "Intelligence gathering engineer", detail: "Intelligence gathering, asset discovery, relationship mapping.", icon: FileSearch },
+  { code: "cpe", name: "Fr4nk", role: "Penetration testing engineer", detail: "Penetration testing, vulnerability validation, impact confirmation.", icon: ShieldCheck },
+  { code: "cre", name: "J4m3", role: "Reverse analysis engineer", detail: "Reverse analysis, firmware disassembly, binary unpacking.", icon: Code2 },
+  { code: "cce", name: "Nu1L", role: "Cryptography engineer", detail: "Cryptographic analysis, key review, security assessment.", icon: LockKeyhole },
 ];
 
 export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) {
@@ -211,7 +211,7 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
         <div className="landing-hero-copy">
           <img className="landing-hero-logo" src={logoSrc} width="1000" height="1000" alt="Z3r0 logo" />
           <span className="page-eyebrow">Open-source red team collaboration workbench</span>
-          <p>A control-plane-oriented platform for authorized penetration testing, vulnerability discovery, code auditing, and security research.</p>
+          <p>A control-plane platform for authorized penetration testing, vulnerability discovery, code auditing, and security research.</p>
           <div className="landing-actions">
             <ActionLink action={primaryAction} primary />
             <ActionLink action={{ label: "GitHub", href: landingRepositoryUrl, external: true }} icon={GitBranch} ghost />
@@ -223,7 +223,7 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
       <Section
         eyebrow="Architecture planes"
         title="The system separates management, runtime, evidence, and execution concerns."
-        description="The architecture connects authenticated administration, Agent collaboration, durable WorkProject evidence, managed sandbox infrastructure, and PostgreSQL persistence."
+        description="The architecture connects authenticated administration, agent collaboration, durable work project evidence, managed sandbox infrastructure, and PostgreSQL persistence."
       >
         <div className="landing-card-grid landing-card-grid-4">
           {planes.map((item) => <Card key={item.title} item={item} accent />)}
@@ -238,7 +238,7 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
 
       <Section
         eyebrow="Evidence model"
-        title="WorkProject drives the assessment from authorized scope to evidence-backed attack paths."
+        title="Work projects drive the assessment from authorized scope to evidence-backed attack paths."
         description="Specialists work from graph-targeted assignments with the surrounding assets and evidence in view. Attributed observations support environment relations, security findings, and validated path steps, while the lead reviews conclusions and directs follow-up work."
       >
         <div className="landing-card-grid landing-card-grid-6">
@@ -251,7 +251,7 @@ export function LandingContent({ logoSrc, primaryAction }: LandingContentProps) 
           <SandboxNetworkMap />
           <div className="landing-panel landing-topology-copy">
             <h3>Sandbox resources provide a managed execution boundary.</h3>
-            <p>Operators and Agents work through selected running containers. The same boundary supports command execution, Shell, files, browser/noVNC review, sandbox-local skills, preloaded security tooling, and container-level network identity.</p>
+            <p>Operators and agents work through selected running containers. The same boundary supports command execution, shell, files, browser/noVNC review, sandbox-local skills, preloaded security tooling, and container-level network identity.</p>
             <p>Egress policy is applied inside the container through a local proxy and can be routed directly, through managed HTTP, HTTPS, and SOCKS5 upstreams, or through Tor.</p>
           </div>
         </div>
@@ -323,7 +323,7 @@ function OperationMeshPanel() {
       <div className="landing-ops-panel-heading">
         <div>
           <span className="page-eyebrow">Operation mesh</span>
-          <h2>One authorized scope. Six coordinated specialist roles.</h2>
+          <h2>One scope. Six specialist roles.</h2>
         </div>
         <span className="landing-live-status"><i /> Community built</span>
       </div>
@@ -331,7 +331,7 @@ function OperationMeshPanel() {
       <div className="landing-ops-console">
         <div className="landing-ops-commandbar">
           <span><SquareTerminal size={15} /> OP / AUTHORIZED-ASSESSMENT</span>
-          <span><Radio size={14} /> SIGNAL ACTIVE</span>
+          <span><Radio size={14} /> Signal active</span>
         </div>
 
         <div className="landing-ops-overview">
@@ -429,7 +429,7 @@ function SandboxNetworkMap() {
           <div className="landing-network-primary-node">
             <FolderKanban size={20} />
             <strong>Project session</strong>
-            <span>Operator + Agent team</span>
+            <span>Operator + agent team</span>
           </div>
           <div className="landing-network-tags">
             <span>Scoped</span>

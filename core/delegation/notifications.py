@@ -25,7 +25,7 @@ def notification_prompt(notification: AgentNotificationSnapshot) -> str:
     """
     if notification.is_user_message:
         raise ValueError(
-            f"notification_prompt must not be called for USER_MESSAGE "
+            f"Notification_prompt must not be called for USER_MESSAGE "
             f"notifications (id={notification.id})"
         )
     if notification.kind == AgentNotificationKind.SANDBOX_ASYNC_JOB_FINISHED:
@@ -57,12 +57,12 @@ def _subagent_finished_prompt(notification: AgentNotificationSnapshot) -> str:
         f"- Status: {status}",
     ]
     if isinstance(work_item_id, int) and work_item_id > 0:
-        event_lines.append(f"- Bound WorkItem: {work_item_id}")
+        event_lines.append(f"- Bound work item: {work_item_id}")
 
     sections = [
         _RESUMPTION_HEADER,
         "## Event\n\n" + "\n".join(event_lines),
-        "## Next Step\n\n"
+        "## Next step\n\n"
         "Read the complete delegated result before continuing. Report only a useful "
         "conclusion, coordination update, or next action.",
     ]
@@ -88,7 +88,7 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
         f"- Status: {status}",
     ]
     if isinstance(work_item_id, int) and work_item_id > 0:
-        event_lines.append(f"- Bound WorkItem: {work_item_id}")
+        event_lines.append(f"- Bound work item: {work_item_id}")
     if exit_code is not None:
         event_lines.append(f"- Exit code: {exit_code}")
     if output_file:
@@ -100,10 +100,10 @@ def _sandbox_async_job_prompt(notification: AgentNotificationSnapshot) -> str:
         "## Event\n\n" + "\n".join(event_lines),
     ]
     if error_preview:
-        sections.append(f"## Error Preview\n\n{error_preview}")
+        sections.append(f"## Error preview\n\n{error_preview}")
 
     sections.append(
-        "## Next Step\n\n"
+        "## Next step\n\n"
         "The command is terminal. Read any relevant captured output, then continue or report "
         "the result.",
     )

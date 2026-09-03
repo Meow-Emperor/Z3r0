@@ -11,7 +11,7 @@ _METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 
 async def _api_not_found(path: str = "") -> None:
-    raise_api_error(404, "not found")
+    raise_api_error(404, "Not found")
 
 
 api_not_found_router.add_api_route("", _api_not_found, methods=_METHODS)

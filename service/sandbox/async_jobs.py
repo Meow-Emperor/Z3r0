@@ -80,7 +80,7 @@ async def create_async_job(
         )
         await session.commit()
         await session.refresh(job)
-    logger.debug("sandbox async job created: %s", job.run_id)
+    logger.debug("Sandbox async job created: %s", job.run_id)
     return snapshot_from_job(job)
 
 
@@ -201,7 +201,7 @@ async def mark_stale_running_async_jobs_failed() -> list[SandboxAsyncJobSnapshot
             await session.commit()
             for job in rows:
                 await session.refresh(job)
-            logger.info("stale sandbox async jobs marked failed: %d", len(rows))
+            logger.info("Stale sandbox async jobs marked failed: %d", len(rows))
         snapshots = [snapshot_from_job(job) for job in rows]
     return snapshots
 

@@ -1,13 +1,13 @@
 ---
-title: First Use
+title: First use
 editLink: true
 ---
 
-# First Use
+# First use
 
 This guide introduces the primary Z3r0 modules and walks through initial resource configuration and an authorized CTF project workflow.
 
-## System Overview
+## System overview
 
 Access the configured listening address and port to enter the landing page:
 
@@ -21,37 +21,37 @@ Enter the configured administrator account and password. After successful authen
 
 The system contains the following core modules:
 
-1. Playground: provides session-based interaction and collaboration with the Agent team.
-2. Work Projects: manages authorized scope, graph-targeted workflow, evidence, findings, attack paths, decisions, and sessions.
-3. Knowledges: manages document ingestion, vector inspection, semantic retrieval, and knowledge graph exploration.
-4. Host Management: manages host nodes and orchestrates the runtime environment for sandbox containers.
-5. Egress Proxies: manages unified network egress through HTTP, HTTPS, and SOCKS5 proxies.
-6. Sandbox Images: manages customized sandbox images, including the default image with sandbox-local skills and preloaded security tooling.
-7. Sandbox Containers: orchestrates runnable sandbox containers with command execution, files, noVNC/browser review, and egress configuration.
-8. System Users: manages system users, roles, and related identity information.
-9. System Config: manages Agent runtime, Agent models, and independent LightRAG embedding and extraction configuration.
+1. Playground: Provides session-based interaction and collaboration with the agent team.
+2. Work projects: Manages authorized scope, graph-targeted workflow, evidence, findings, attack paths, decisions, and sessions.
+3. Knowledge: Manages document ingestion, vector inspection, semantic retrieval, and knowledge graph exploration.
+4. Host management: Manages host nodes and orchestrates the runtime environment for sandbox containers.
+5. Egress proxies: Manages unified network egress through HTTP, HTTPS, and SOCKS5 proxies.
+6. Sandbox images: Manages customized sandbox images, including the default image with sandbox-local skills and preloaded security tooling.
+7. Sandbox containers: Orchestrates runnable sandbox containers with command execution, files, noVNC/browser review, and egress configuration.
+8. System users: Manages system users, roles, and related identity information.
+9. System config: Manages agent runtime, agent models, and independent LightRAG embedding and extraction configuration.
 
-## Start Working
+## Start working
 
 The following sections configure execution resources, create a project, and run an authorized CTF workflow from a clean system state.
 
-### Manage Knowledge Documents
+### Manage knowledge documents
 
-Knowledges turns assessment playbooks, research notes, reports, and other reference material into a searchable knowledge collection. Upload one or more Markdown or PDF documents, then follow their processing status while the collection is parsed and indexed.
+Knowledge turns assessment playbooks, research notes, reports, and other reference material into a searchable knowledge collection. Upload one or more Markdown or PDF documents, then follow their processing status while the collection is parsed and indexed.
 
-The Documents view presents each source, its processing state, content summary, extracted text, and parsing details. The Vectors view exposes the original text segments and source metadata used by retrieval. The Knowledge Graph view supports semantic search across entities and relationships, with related areas available for progressive exploration. Together, these views provide a traceable review path from source material to retrieval content and graph relationships.
+The documents view presents each source, its processing state, content summary, extracted text, and parsing details. The vectors view exposes the original text segments and source metadata used by retrieval. The knowledge graph view supports semantic search across entities and relationships, with related areas available for progressive exploration. Together, these views provide a traceable review path from source material to retrieval content and graph relationships.
 
 After indexing, the managed document content, vectors, and graph relationships form the retained knowledge representation, so the uploaded source file does not need to remain available. Deleting a document removes its indexed text and graph contributions from the collection.
 
 Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs. Retrieval follows the active request and conversation focus, allowing follow-up work to remain grounded in relevant source material as the task develops.
 
-### Connect a Host
+### Connect a host
 
-Z3r0 adds the local machine to Host Management during startup, so a remote host is optional. A dedicated remote host is recommended when workload isolation, privilege separation, independent capacity, or centralized operational management is required.
+Z3r0 adds the local machine to host management during startup, so a remote host is optional. A dedicated remote host is recommended when workload isolation, privilege separation, independent capacity, or centralized operational management is required.
 
 Follow the steps below to configure and connect a remote host.
 
-**1. Install Docker and configure the Remote API with mutual TLS authentication**
+**1. Install Docker and configure the remote API with mutual TLS authentication**
 
 ```bash
 curl -fsSL https://get.docker.com | bash -s docker
@@ -86,60 +86,60 @@ systemctl restart docker
 
 **2. Create a host record and fill in the connection information**
 
-In the `Host Management` module, click `Create Host` to open the edit form. Fill in the remote host IP address, port, account, password, and Docker certificate information, then save the record.
+In the `Host management` module, click `Create host` to open the edit form. Fill in the remote host IP address, port, account, password, and Docker certificate information, then save the record.
 
-> Use mutual TLS whenever Docker Remote API traffic leaves the local host. Plain mode should be limited to explicitly trusted, isolated networks with independent access controls.
+> Use mutual TLS whenever Docker remote API traffic leaves the local host. Plain mode should be limited to explicitly trusted, isolated networks with independent access controls.
 
 ![create-host-1](/images/create-host-1.png)
 
 **3. Connect to the host and build the sandbox image**
 
-Z3r0 provides a web terminal that can connect directly to the remote host over SSH. Follow the instructions in [Quick Start](./quick-start#build-the-sandbox) to build the sandbox image.
+Z3r0 provides a web terminal that can connect directly to the remote host over SSH. Follow the instructions in [Quick start](./quick-start#build-the-sandbox) to build the sandbox image.
 
 ![create-host-2](/images/create-host-2.png)
 
-### Create an Image
+### Create an image
 
-In the `Sandbox Images` module, create an image record. The image name must match the name of the image that was actually built:
+In the `Sandbox images` module, create an image record. The image name must match the name of the image that was actually built:
 
 ![create-image-1](/images/create-image-1.png)
 
-### Create a Container
+### Create a container
 
-In the `Sandbox Containers` module, create a container and select the corresponding remote host and sandbox image. During container creation, you can specify the container egress mode. Z3r0 supports direct connection, HTTP, HTTPS, SOCKS5, and Tor. HTTP, HTTPS, and SOCKS5 require proxy entries to be configured in advance in the `Egress Proxies` module.
+In the `Sandbox containers` module, create a container and select the corresponding remote host and sandbox image. During container creation, you can specify the container egress mode. Z3r0 supports direct connection, HTTP, HTTPS, SOCKS5, and Tor. HTTP, HTTPS, and SOCKS5 require proxy entries to be configured in advance in the `Egress proxies` module.
 
 ![create-container-1](/images/create-container-1.png)
 
-### Test the Container
+### Test the container
 
 After the sandbox container is created, use the action buttons on the right side of the list item to operate it. Start the container, then access the sandbox through the web terminal, file manager, and noVNC display.
 
 ![create-container-2](/images/create-container-2.png)
 
-### Create a Project
+### Create a project
 
-Using an authorized CTF challenge as the target, create a project in `Work Projects`. Fill in the project name, type, description, owners, and sandbox binding. Declare each known scope asset with a kind, canonical locator, name, and criticality. Declared assets are immediately `in_scope`; assets discovered later remain contextual until the lead Agent confirms scope.
+Using an authorized CTF challenge as the target, create a project in `Work projects`. Fill in the project name, type, description, owners, and sandbox binding. Declare each known scope asset with a kind, canonical locator, name, and criticality. Declared assets are immediately `in_scope`; assets discovered later remain contextual until the lead agent confirms scope.
 
 ![create-project-1](/images/create-project-1.png)
 
-### Execute the Workflow
+### Execute the workflow
 
-After the WorkProject is created, it appears in `Playground`. Open it, create a session, and assign the authorized objective to the Agent team. The lead Agent reads the scope and graph, prepares WorkItems with target assets and completion criteria, then coordinates the appropriate specialist for each assignment.
+After the work project is created, it appears in `Playground`. Open it, create a session, and assign the authorized objective to the agent team. The lead agent reads the scope and graph, prepares work items with target assets and completion criteria, then coordinates the appropriate specialist for each assignment.
 
 ![project-example-1](/images/project-example-1.png)
 
 During execution, open the project workspace to review the eight operational views:
 
-- `Overview` summarizes scope coverage, current assignments, findings, paths, evidence, and active Agents.
-- `Workflow` connects each assignment to assets, test surfaces, dependencies, coverage conclusions, WorkItem-attributed evidence, decisions, and subordinate runs; status and assignee filters support focused review.
+- `Overview` summarizes scope coverage, current assignments, findings, paths, evidence, and active agents.
+- `Workflow` connects each assignment to assets, test surfaces, dependencies, coverage conclusions, work item-attributed evidence, decisions, and subordinate runs; status and assignee filters support focused review.
 - `Graph` presents environment structure, connectivity, dependencies, identity, trust, data flow, and provenance without mixing in offensive actions.
 - `Assets` distinguishes declared scope, discovered context, out-of-scope entities, criticality, and stable locators.
 - `Findings` presents validation, severity, impact, remediation, disposition, CWE/CVSS, affected assets, and supporting evidence.
-- `Attack Paths` reconstructs continuous offensive steps with blockers, evidence, and optional ATT&CK mappings.
-- `Evidence` preserves WorkItem-attributed immutable observations with source references, integrity hashes, supersession, and lifecycle state.
+- `Attack paths` reconstructs continuous offensive steps with blockers, evidence, and optional ATT&CK mappings.
+- `Evidence` preserves work item-attributed immutable observations with source references, integrity hashes, supersession, and lifecycle state.
 - `Activity` records business-significant state and plan changes, decisions, blockers, handoffs, and results.
 
-Each specialist receives the assignment, target coverage, supporting Evidence, surrounding graph, and relevant retest opportunities needed for the current task. Evidence remains attributed to the WorkItem as relationships, findings, and path steps are validated. Once every target has a conclusion and the result is ready, the lead Agent can accept the work or return specific target surfaces for further analysis. Useful negative results remain available as evidence and can close a test surface without inventing a vulnerability. New credentials, trust relationships, routes, versions, code paths, and keys bring related follow-up and retest work into view.
+Each specialist receives the assignment, target coverage, supporting evidence, surrounding graph, and relevant retest opportunities needed for the current task. Evidence remains attributed to the work item as relationships, findings, and path steps are validated. Once every target has a conclusion and the result is ready, the lead agent can accept the work or return specific target surfaces for further analysis. Useful negative results remain available as evidence and can close a test surface without inventing a vulnerability. New credentials, trust relationships, routes, versions, code paths, and keys bring related follow-up and retest work into view.
 
 ![project-example-2](/images/project-example-2.png)
 

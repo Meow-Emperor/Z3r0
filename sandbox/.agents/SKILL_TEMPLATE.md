@@ -3,11 +3,11 @@ name: example-skill
 description: Use this skill for one clear sandbox task family. Keep this sentence short, specific, and action-oriented.
 ---
 
-# Example Skill
+# Example skill
 
 Describe the task scope, when to use the skill, and any authorization boundary that matters.
 
-## Help First
+## Help first
 
 Use this section for direct CLI skills whose installed help output should be the source of truth.
 For resource-only skills, use `## Resource Paths` instead. For controller skills with special startup behavior, use `## Core Rules` instead.
@@ -16,14 +16,14 @@ For resource-only skills, use `## Resource Paths` instead. For controller skills
 tool --help
 ```
 
-## Resource Paths
+## Resource paths
 
 Use this section when the skill ships files under its skill root. `load_skill` lists shipped resource files automatically; reference files with `.agents/skills/<skill-name>/...` paths when commands need them.
 
 - Wrapper script: `.agents/skills/example-skill/scripts/example-skill.sh`
 - Supporting files: `.agents/skills/example-skill/scripts/support`
 
-## Usage Rules
+## Usage rules
 
 Use this section for scope boundaries, preinstalled-tool expectations, safety limits, and how the tool should relate to nearby skills.
 
@@ -31,7 +31,7 @@ Use this section for scope boundaries, preinstalled-tool expectations, safety li
 .agents/skills/example-skill/scripts/example-skill.sh [options] <input>
 ```
 
-## Common Workflows
+## Common workflows
 
 Provide bounded examples that match the sandbox command model.
 
@@ -44,7 +44,7 @@ tool --help
 
 Describe what to report: command used, scope, relevant findings, output paths, and failures that affect completion.
 
-## Validation Notes
+## Validation notes
 
 Every skill must use:
 

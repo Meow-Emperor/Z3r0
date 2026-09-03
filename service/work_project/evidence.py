@@ -72,31 +72,31 @@ async def create_work_project_evidence(
         if request.primary_asset_id is not None:
             asset = await session.get(WorkProjectAsset, request.primary_asset_id)
             if asset is None or asset.project_id != project_id:
-                return None, "primary asset not found"
+                return None, "Primary asset not found"
         work_item = await session.get(WorkProjectWorkItem, request.work_item_id)
         if work_item is None or work_item.project_id != project_id:
-            return None, "work item not found"
+            return None, "Work item not found"
         actor_code = created_by_agent_code.strip()
         if actor_code != DEFAULT_AGENT_CODE and work_item.assignee_agent_code != actor_code:
-            return None, "evidence work item is assigned to another agent"
+            return None, "Evidence work item is assigned to another agent"
         if actor_code != DEFAULT_AGENT_CODE and work_item.status not in {
             WorkProjectWorkItemStatus.ACTIVE,
             WorkProjectWorkItemStatus.BLOCKED,
         }:
-            return None, "specialist evidence requires an active or blocked work item"
+            return None, "Specialist evidence requires an active or blocked work item"
         if work_item.status in {WorkProjectWorkItemStatus.COMPLETED, WorkProjectWorkItemStatus.CANCELED}:
-            return None, "evidence cannot be added to a terminal work item; reopen it first"
+            return None, "Evidence cannot be added to a terminal work item; reopen it first"
         superseded = None
         if request.supersedes_evidence_id is not None:
             superseded = await session.get(WorkProjectEvidence, request.supersedes_evidence_id)
             if superseded is None or superseded.project_id != project_id:
-                return None, "superseded evidence not found"
+                return None, "Superseded evidence not found"
             if superseded.status != WorkProjectEvidenceStatus.ACTIVE:
-                return None, "only active evidence can be superseded"
+                return None, "Only active evidence can be superseded"
             if actor_code != DEFAULT_AGENT_CODE and superseded.created_by_agent_code != actor_code:
-                return None, "specialist agents can only supersede evidence they created"
+                return None, "Specialist agents can only supersede evidence they created"
             if superseded.work_item_id != request.work_item_id:
-                return None, "replacement evidence must remain attached to the superseded evidence work item"
+                return None, "Replacement evidence must remain attached to the superseded evidence work item"
         evidence = WorkProjectEvidence(
             project_id=project_id,
             kind=request.kind,
@@ -144,20 +144,20 @@ async def invalidate_work_project_evidence(
 ) -> str:
     reason = reason.strip()
     if not reason:
-        return "evidence invalidation reason is required"
+        return "Evidence invalidation reason is required"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return error
         evidence = (await session.exec(select(WorkProjectEvidence).where(WorkProjectEvidence.id == evidence_id).with_for_update())).one_or_none()
         if evidence is None or evidence.project_id != project_id:
-            return "evidence not found"
+            return "Evidence not found"
         if evidence.status != WorkProjectEvidenceStatus.ACTIVE:
-            return "only active evidence can be invalidated"
+            return "Only active evidence can be invalidated"
         actor_code = actor_agent_code.strip()
         if actor_code != DEFAULT_AGENT_CODE and evidence.created_by_agent_code != actor_code:
-            return "specialist agents can only invalidate evidence they created"
+            return "Specialist agents can only invalidate evidence they created"
         if actor_code != DEFAULT_AGENT_CODE and evidence.work_item_id != actor_work_item_id:
-            return "specialist agents can only invalidate evidence from their runtime-bound work item"
+            return "Specialist agents can only invalidate evidence from their runtime-bound work item"
         if error := await _validate_invalidation_support(session, evidence):
             return error
         evidence.status = WorkProjectEvidenceStatus.INVALIDATED
@@ -179,7 +179,7 @@ async def _validate_invalidation_support(session, evidence: WorkProjectEvidence)
             WorkProjectEvidence.status == WorkProjectEvidenceStatus.ACTIVE,
         ).limit(1))).first()
         if other_evidence is None:
-            return f"work item {work_item.id} requires another active evidence record before invalidation"
+            return f"Work item {work_item.id} requires another active evidence record before invalidation"
 
     relation_ids = list((await session.exec(
         select(WorkProjectRelationEvidence.relation_id).where(
@@ -203,7 +203,7 @@ async def _validate_invalidation_support(session, evidence: WorkProjectEvidence)
                 relation.id or 0,
                 evidence.id or 0,
             ):
-                return f"relation {relation.id} requires another active evidence record before invalidation"
+                return f"Relation {relation.id} requires another active evidence record before invalidation"
 
     finding_ids = list((await session.exec(
         select(WorkProjectFindingEvidence.finding_id).where(
@@ -227,7 +227,7 @@ async def _validate_invalidation_support(session, evidence: WorkProjectEvidence)
                 finding.id or 0,
                 evidence.id or 0,
             ):
-                return f"finding {finding.id} requires another active evidence record before invalidation"
+                return f"Finding {finding.id} requires another active evidence record before invalidation"
 
     step_ids = list((await session.exec(
         select(WorkProjectAttackPathStepEvidence.step_id).where(
@@ -250,7 +250,7 @@ async def _validate_invalidation_support(session, evidence: WorkProjectEvidence)
                 step.id or 0,
                 evidence.id or 0,
             ):
-                return f"attack path step {step.id} requires another active evidence record before invalidation"
+                return f"Attack path step {step.id} requires another active evidence record before invalidation"
     return ""
 
 
@@ -281,5 +281,5 @@ async def validate_active_evidence_ids(session, project_id: int, evidence_ids: l
     if len(items) != len(set(evidence_ids)) or any(
         item.project_id != project_id or item.status != WorkProjectEvidenceStatus.ACTIVE for item in items
     ):
-        return [], "active evidence not found"
+        return [], "Active evidence not found"
     return items, ""

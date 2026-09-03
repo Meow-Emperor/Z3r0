@@ -76,6 +76,5 @@ class WorkProjectEvidenceRequest(BaseModel):
     def validate_hash(self) -> "WorkProjectEvidenceRequest":
         self.sha256 = self.sha256.lower()
         if self.sha256 and not re.fullmatch(r"[0-9a-f]{64}", self.sha256):
-            raise ValueError("sha256 must be a 64-character hexadecimal digest")
+            raise ValueError("SHA-256 must be a 64-character hexadecimal digest")
         return self
-

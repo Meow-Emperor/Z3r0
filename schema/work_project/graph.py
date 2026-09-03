@@ -121,10 +121,10 @@ class WorkProjectRelationRequest(BaseModel):
     @model_validator(mode="after")
     def validate_relation(self) -> "WorkProjectRelationRequest":
         if self.source_asset_id == self.target_asset_id:
-            raise ValueError("relation cannot connect an asset to itself")
+            raise ValueError("A relation cannot connect an asset to itself")
         self.evidence_ids = list(dict.fromkeys(self.evidence_ids))
         if self.status in {WorkProjectAssertionStatus.OBSERVED, WorkProjectAssertionStatus.VALIDATED, WorkProjectAssertionStatus.REFUTED} and not self.evidence_ids:
-            raise ValueError(f"{self.status.value} relation requires evidence")
+            raise ValueError(f"{self.status.value.capitalize()} relation requires evidence")
         return self
 
 
@@ -195,18 +195,18 @@ class WorkProjectAttackPathStepRequest(BaseModel):
     @model_validator(mode="after")
     def validate_step(self) -> "WorkProjectAttackPathStepRequest":
         if self.source_asset_id == self.target_asset_id:
-            raise ValueError("attack path step must move between distinct assets")
+            raise ValueError("An attack path step must move between distinct assets")
         self.evidence_ids = list(dict.fromkeys(self.evidence_ids))
         if self.attack_technique_id and not re.fullmatch(r"T\d{4}(?:\.\d{3})?", self.attack_technique_id):
-            raise ValueError("attack_technique_id must be a MITRE ATT&CK technique id")
+            raise ValueError("The `attack_technique_id` field must be a MITRE ATT&CK technique ID")
         if self.status in {WorkProjectAttackStepStatus.VALIDATED, WorkProjectAttackStepStatus.REFUTED} and not self.evidence_ids:
-            raise ValueError(f"{self.status.value} attack path step requires evidence")
+            raise ValueError(f"{self.status.value.capitalize()} attack path step requires evidence")
         if self.status in {WorkProjectAttackStepStatus.VALIDATED, WorkProjectAttackStepStatus.REFUTED} and not self.result:
-            raise ValueError(f"{self.status.value} attack path step requires a result")
+            raise ValueError(f"{self.status.value.capitalize()} attack path step requires a result")
         if self.status == WorkProjectAttackStepStatus.BLOCKED and not self.blocker_reason:
-            raise ValueError("blocked attack path step requires a blocker reason")
+            raise ValueError("A blocked attack path step requires a blocker reason")
         if self.status != WorkProjectAttackStepStatus.BLOCKED and self.blocker_reason:
-            raise ValueError("blocker_reason is only valid for a blocked attack path step")
+            raise ValueError("The `blocker_reason` field is only valid for a blocked attack path step")
         return self
 
 
@@ -230,24 +230,24 @@ class WorkProjectAttackPathRequest(BaseModel):
     @model_validator(mode="after")
     def validate_path(self) -> "WorkProjectAttackPathRequest":
         if self.archived and not self.archive_reason:
-            raise ValueError("archived attack path requires an archive reason")
+            raise ValueError("An archived attack path requires an archive reason")
         if not self.archived and self.archive_reason:
-            raise ValueError("archive_reason is only valid for an archived attack path")
+            raise ValueError("The `archive_reason` field is only valid for an archived attack path")
         if self.entry_asset_id == self.target_asset_id:
-            raise ValueError("attack path entry and target assets must be distinct")
+            raise ValueError("Attack path entry and target assets must be distinct")
         sequences = [step.sequence for step in self.steps]
         if sequences != list(range(1, len(self.steps) + 1)):
-            raise ValueError("attack path step sequences must be contiguous and start at 1")
+            raise ValueError("Attack path step sequences must be contiguous and start at 1")
         if self.steps[0].source_asset_id != self.entry_asset_id:
-            raise ValueError("first attack path step must start at entry_asset_id")
+            raise ValueError("The first attack path step must start at `entry_asset_id`")
         if self.steps[-1].target_asset_id != self.target_asset_id:
-            raise ValueError("last attack path step must end at target_asset_id")
+            raise ValueError("The last attack path step must end at `target_asset_id`")
         for previous, current in zip(self.steps, self.steps[1:]):
             if previous.target_asset_id != current.source_asset_id:
-                raise ValueError("attack path steps must form a continuous chain")
+                raise ValueError("Attack path steps must form a continuous chain")
         path_assets = [self.entry_asset_id, *(step.target_asset_id for step in self.steps)]
         if len(path_assets) != len(set(path_assets)):
-            raise ValueError("attack path cannot visit the same asset more than once")
+            raise ValueError("An attack path cannot visit the same asset more than once")
         return self
 
 

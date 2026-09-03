@@ -9,7 +9,7 @@ Use `agent-browser-cli` when a task requires browser perception, browser control
 
 `agent-browser-cli` controls the sandbox's supervised Chrome through a Rust daemon and the bundled Chrome extension bridge. The browser is launched by `supervisord` with profile data under `/data` and the extension loaded from `/opt/agent-browser/chrome-extension`. It is not Selenium or Playwright.
 
-## Core Rules
+## Core rules
 
 Follow these rules strictly:
 
@@ -26,7 +26,7 @@ Follow these rules strictly:
 11. Do not change ports or perform configuration changes without explicit user confirmation.
 12. Do not guess when a tab, profile, browser, label, or `@e` reference is ambiguous.
 
-## Normal Startup Behavior
+## Normal startup behavior
 
 For ordinary browser tasks, run the target command directly. These commands auto-start the daemon when needed:
 
@@ -59,7 +59,7 @@ agent-browser-cli logs --tail 100
 
 `doctor` only checks state. It does not auto-start the daemon or change configuration.
 
-## Command Selection
+## Command selection
 
 Choose the smallest sufficient command:
 
@@ -112,7 +112,7 @@ agent-browser-cli exec --tab <tabId> 'return document.title'
 
 After `open`, continue against `result.opened_tab_id` or `result.opened_session_key` when the command output provides them.
 
-## Browser, Profile, Tab, and Element Identity
+## Browser, profile, tab, and element identity
 
 High-level actions support `--tab <tabId>`.
 
@@ -169,7 +169,7 @@ Profile label constraints:
 
 If `--tab` alone is ambiguous, add `--profile` or `--browser`. Do not guess.
 
-## Waiting and Monitoring
+## Waiting and monitoring
 
 Keep waiting and monitoring separate.
 
@@ -189,13 +189,13 @@ agent-browser-cli click '@e1' --wait-js 'return document.body.innerText.includes
 
 Do not use fixed `setTimeout` sleeps inside scripts when `--wait-js` can express the condition.
 
-## Alerts, Confirms, and Prompts
+## Alerts, confirms, and prompts
 
 The extension does not permanently rewrite business-page `alert`, `confirm`, or `prompt`.
 
 During a CLI page command, native dialogs may be temporarily suppressed and then restored. If native dialog behavior appears wrong, ask the user to reload the Chrome extension and the page before deeper troubleshooting.
 
-## Ports and Configuration
+## Ports and configuration
 
 Fixed API port:
 
@@ -223,7 +223,7 @@ agent-browser-cli set-extension-port <port>
 
 This writes to `~/.agent-browser-cli/config.json`. If the daemon is running, it restarts.
 
-## Network and Console Debugging
+## Network and console debugging
 
 Use network and console commands only when the task requires request or log inspection.
 
@@ -260,7 +260,7 @@ Network and console constraints:
 - `console stop` stops listening and clears log cache.
 - `agent-browser-cli stop` and daemon idle exit also clear daemon-side `snapshot` and `@e` caches and notify the extension to clear network and console debug caches.
 
-## Tab Groups and Windows
+## Tab groups and windows
 
 When opening new tabs for separate work streams, use Chrome native tab groups through `--session` or `--group-title`.
 
@@ -319,7 +319,7 @@ PDF rules:
 
 If high-level capture commands fail, use `exec` and CDP only if the script writes the artifact to disk. Still do not paste base64.
 
-## JavaScript Execution
+## JavaScript execution
 
 Use inline `exec` only for small scripts:
 
@@ -346,7 +346,7 @@ Example:
 agent-browser-cli exec --tab <tabId> 'document.querySelector("button").click()' --wait-js 'return document.body.innerText.includes("Done")' --wait-timeout 3
 ```
 
-## JSON and CDP Escape Hatch
+## JSON and CDP escape hatch
 
 Use JSON commands for cookies, cross-tab work, CDP, extension management, or browser content permissions when high-level commands are insufficient.
 
@@ -365,7 +365,7 @@ CDP interaction rules:
 - Warm up first attach with a harmless `mouseMoved(0,0)` when needed.
 - Use CDP only when high-level commands, selectors, `@e`, or DOM JavaScript are inadequate.
 
-## File Uploads
+## File uploads
 
 Prefer the browser `DataTransfer` API for file upload simulation. Do not prefer CDP `DOM.setFileInputFiles` unless the page blocks normal DOM assignment.
 
@@ -380,7 +380,7 @@ input.dispatchEvent(new Event('change', { bubbles: true }));
 return input.files.length;
 ```
 
-## Troubleshooting Gate
+## Troubleshooting gate
 
 Enter troubleshooting only after a failed target command, an explicit browser/extension/connectivity error, or a direct user request.
 
@@ -390,7 +390,7 @@ Interpret `status` carefully:
 - Actual browser usability is determined by `healthy` and `summary`.
 - `daemon_not_running` before a target command is usually normal.
 
-### Daemon Not Running
+### Daemon not running
 
 Typical status:
 
@@ -407,7 +407,7 @@ agent-browser-cli restart
 agent-browser-cli status
 ```
 
-### Extension Not Connected
+### Extension not connected
 
 Typical status:
 
@@ -427,7 +427,7 @@ Handle in this order:
 agent-browser-cli status
 ```
 
-### No Usable Tabs
+### No usable tabs
 
 Typical status:
 
@@ -437,7 +437,7 @@ Typical status:
 
 Open or ask the user to open a normal `http` or `https` page. Do not rely on `about:blank`, `chrome://` pages, or extension pages.
 
-### Port Mismatch
+### Port mismatch
 
 Typical status:
 
@@ -475,7 +475,7 @@ agent-browser-cli logs --tail 200
 
 `logs` outputs plain text. It does not output JSON and does not support `--follow`.
 
-### Restart and Stop
+### Restart and stop
 
 ```bash
 agent-browser-cli restart

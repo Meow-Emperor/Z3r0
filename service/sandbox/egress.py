@@ -43,7 +43,7 @@ def sandbox_egress_upstream_environment(selection: SandboxEgressSelection) -> di
             EGRESS_UPSTREAM_ADDR_ENV: "",
         }
     if selection.proxy is None:
-        raise ValueError("managed proxy is required for proxy egress mode")
+        raise ValueError("A managed proxy is required for proxy egress mode")
     return {
         EGRESS_UPSTREAM_TYPE_ENV: selection.proxy.proxy_type.value,
         EGRESS_UPSTREAM_ADDR_ENV: egress_proxy_upstream(selection.proxy),

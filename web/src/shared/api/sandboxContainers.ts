@@ -98,11 +98,11 @@ export function canManageSandboxContainer(container: SandboxContainer | null | u
 
 export function buildContainerNoVNCUrl(container: SandboxContainer) {
   if (!canOpenContainerNoVNC(container)) {
-    throw new Error("container control port is not ready");
+    throw new Error("Container control port is not ready");
   }
 
   const token = getStoredAccessToken();
-  if (!token) throw new Error("missing access token");
+  if (!token) throw new Error("Missing access token");
 
   const wsPath = `../novnc-ws?token=${encodeURIComponent(token)}`;
   const base = `${window.location.origin}/api/sandbox-containers/${container.id}/novnc/vnc.html`;

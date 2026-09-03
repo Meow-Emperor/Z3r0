@@ -44,11 +44,11 @@ export function KnowledgeDetailModal({
       try {
         if (target.kind === "document") {
           const response = await getKnowledgeDocument(target.id);
-          if (!response.data) throw new Error("document details are unavailable");
+          if (!response.data) throw new Error("Document details are unavailable");
           if (!cancelled) setDetail({ kind: "document", data: response.data });
         } else {
           const response = await getKnowledgeVector(target.id);
-          if (!response.data) throw new Error("vector details are unavailable");
+          if (!response.data) throw new Error("Vector details are unavailable");
           if (!cancelled) setDetail({ kind: "vector", data: response.data });
         }
       } catch (error) {
@@ -64,7 +64,7 @@ export function KnowledgeDetailModal({
   return (
     <AppModal
       open={target !== null}
-      title={target?.kind === "vector" ? "Vector Details" : "Document Details"}
+      title={target?.kind === "vector" ? "Vector details" : "Document details"}
       titleIcon={target?.kind === "vector" ? <Braces size={17} /> : <FileText size={17} />}
       titleDescription={target?.label}
       width="min(1120px, calc(100vw - 24px))"
@@ -101,14 +101,14 @@ function DocumentDetail({ detail }: { detail: KnowledgeDocumentDetail }) {
       <section className="knowledge-detail-identifiers" aria-label="Document identifiers">
         <DetailIdentifier label="Document ID" value={detail.id} />
         <DetailIdentifier label="Track ID" value={detail.track_id || "-"} />
-        <DetailIdentifier label="Content Hash" value={detail.content_hash || "-"} />
+        <DetailIdentifier label="Content hash" value={detail.content_hash || "-"} />
       </section>
 
-      <DetailSection title="Content Summary">
+      <DetailSection title="Content summary">
         <pre className="knowledge-detail-text">{detail.content_summary || "No summary is available."}</pre>
       </DetailSection>
 
-      <DetailSection title="Extracted Document Content">
+      <DetailSection title="Extracted document content">
         {detail.content ? (
           <Editor value={detail.content} filename={detail.file_name} />
         ) : (
@@ -117,14 +117,14 @@ function DocumentDetail({ detail }: { detail: KnowledgeDocumentDetail }) {
       </DetailSection>
 
       {detail.error ? (
-        <DetailSection title="Processing Error">
+        <DetailSection title="Processing error">
           <pre className="knowledge-detail-text is-error">{detail.error}</pre>
         </DetailSection>
       ) : null}
 
       <DetailJsonSection title="Chunk IDs" value={detail.chunk_ids} />
-      <DetailJsonSection title="Document Metadata" value={detail.metadata} />
-      <DetailJsonSection title="Chunking Options" value={detail.chunk_options} />
+      <DetailJsonSection title="Document metadata" value={detail.metadata} />
+      <DetailJsonSection title="Chunking options" value={detail.chunk_options} />
     </div>
   );
 }
@@ -133,7 +133,7 @@ function VectorDetail({ detail }: { detail: KnowledgeVectorDetail }) {
   return (
     <div className="knowledge-detail-content">
       <section className="knowledge-detail-facts" aria-label="Vector metadata">
-        <DetailFact label="Chunk Index">{detail.chunk_index.toLocaleString()}</DetailFact>
+        <DetailFact label="Chunk index">{detail.chunk_index.toLocaleString()}</DetailFact>
         <DetailFact label="Tokens">{detail.tokens.toLocaleString()}</DetailFact>
         <DetailFact label="Dimensions">{detail.dimension.toLocaleString()}</DetailFact>
         <DetailFact label="Created">{formatDateTime(detail.created_at)}</DetailFact>
@@ -143,10 +143,10 @@ function VectorDetail({ detail }: { detail: KnowledgeVectorDetail }) {
       <section className="knowledge-detail-identifiers" aria-label="Vector identifiers">
         <DetailIdentifier label="Chunk ID" value={detail.id} />
         <DetailIdentifier label="Document ID" value={detail.document_id} />
-        <DetailIdentifier label="Source Document" value={detail.file_name} />
+        <DetailIdentifier label="Source document" value={detail.file_name} />
       </section>
 
-      <DetailSection title="Chunk Content">
+      <DetailSection title="Chunk content">
         {detail.content ? (
           <Editor value={detail.content} filename={detail.file_name} compact />
         ) : (
@@ -155,7 +155,7 @@ function VectorDetail({ detail }: { detail: KnowledgeVectorDetail }) {
       </DetailSection>
 
       <DetailJsonSection title="Heading" value={detail.heading} />
-      <DetailJsonSection title="Source Metadata" value={detail.source_metadata} />
+      <DetailJsonSection title="Source metadata" value={detail.source_metadata} />
     </div>
   );
 }

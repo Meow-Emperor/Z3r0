@@ -32,7 +32,7 @@ async def request_validation_exception_handler(
         status_code=422,
         content=CommonResponse(
             code=422,
-            message="request validation failed",
+            message="Request validation failed",
             data=_serialize_validation_errors(exc.errors()),
         ).model_dump(),
     )
@@ -53,7 +53,7 @@ async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSO
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Log unexpected API failures and return the public CommonResponse shape."""
     logger.error(
-        "unhandled request failed: %s %s",
+        "Unhandled request failed: %s %s",
         request.method,
         request.url.path,
         exc_info=(type(exc), exc, exc.__traceback__),
@@ -62,6 +62,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         status_code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
         content=CommonResponse(
             code=HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            message="internal server error",
+            message="Internal server error",
         ).model_dump(),
     )

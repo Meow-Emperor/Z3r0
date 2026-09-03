@@ -7,7 +7,7 @@ description: Use binwalk for authorized firmware, binary blob, archive, filesyst
 
 Use `binwalk` for authorized triage of firmware images, binary blobs, packed artifacts, and files that may contain embedded filesystems or compressed content.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help and use it as the source of truth:
 
@@ -15,7 +15,7 @@ Before constructing commands, run the installed help and use it as the source of
 binwalk --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on explicitly provided artifacts in scope.
 - Start with identification/listing before extraction.
@@ -25,7 +25,7 @@ binwalk --help
 - Do not execute extracted files.
 - Save large listings, extraction logs, and recursive output to files rather than streaming them into the conversation.
 
-## Common Workflows
+## Common workflows
 
 Signature scan without extraction:
 

@@ -145,7 +145,7 @@ function handleAuthExpired(status: number, payloadCode: number) {
 }
 
 export function buildAuthenticatedWebSocketUrl(path: string, token = getStoredAccessToken()) {
-  if (!token) throw new Error("missing access token");
+  if (!token) throw new Error("Missing access token");
   const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
   return `${wsScheme}://${window.location.host}${path}?token=${encodeURIComponent(token)}`;
 }

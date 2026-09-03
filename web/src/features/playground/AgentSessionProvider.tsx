@@ -118,7 +118,7 @@ const AgentSessionContext = createContext<AgentSessionContextValue | null>(null)
 
 export function useAgentSessionContext(): AgentSessionContextValue {
   const value = useContext(AgentSessionContext);
-  if (!value) throw new Error("useAgentSessionContext must be used inside AgentSessionProvider");
+  if (!value) throw new Error("The useAgentSessionContext hook must be used inside AgentSessionProvider");
   return value;
 }
 
@@ -388,7 +388,7 @@ export function AgentSessionProvider({ children }: { children: ReactNode }) {
     }
 
     const token = getStoredAccessToken();
-    if (!token) throw new Error("missing access token");
+    if (!token) throw new Error("Missing access token");
 
     const socket = new WebSocket(buildAgentStreamUrl(sessionId, token));
     socketsRef.current.set(sessionId, socket);
@@ -798,7 +798,7 @@ function websocketCloseMessage(event: CloseEvent | Event): string {
 }
 
 function requireTurnData(data: AgentTurnData | null | undefined): AgentTurnData {
-  if (!data) throw new Error("agent session turn response missing data");
+  if (!data) throw new Error("Agent session turn response is missing data");
   return data;
 }
 

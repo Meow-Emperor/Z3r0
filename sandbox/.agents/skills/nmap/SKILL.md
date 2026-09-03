@@ -7,7 +7,7 @@ description: Use nmap for authorized, targeted port checks, lightweight service 
 
 Use `nmap` for bounded, authorized network reconnaissance. Keep scan scope explicit, targeted, and matched to the task.
 
-## Help First
+## Help first
 
 Before constructing or explaining any `nmap` command, execute the installed CLI help command and use that raw output as the source of truth:
 
@@ -15,7 +15,7 @@ Before constructing or explaining any `nmap` command, execute the installed CLI 
 nmap --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on explicitly authorized hosts, networks, or local diagnostics.
 - Keep scan scope, timing, ports, scripts, and output files explicit.
@@ -24,7 +24,7 @@ nmap --help
 - Save larger scan outputs to files rather than streaming them into the conversation.
 - Treat NSE results and service versions as evidence to validate before reporting impact.
 
-## Common Workflows
+## Common workflows
 
 Targeted service/version scan for known ports:
 

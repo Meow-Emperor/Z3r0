@@ -63,7 +63,7 @@ async def discard_partial_stream(
     try:
         result.cancel(mode="immediate")
     except Exception:
-        logger.warning("failed to cancel %s SDK stream", log_label, exc_info=True)
+        logger.warning("Failed to cancel %s SDK stream", log_label, exc_info=True)
     buffers.clear()
 
 

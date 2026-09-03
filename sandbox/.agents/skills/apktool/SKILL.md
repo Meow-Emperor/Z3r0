@@ -7,7 +7,7 @@ description: Use apktool for authorized Android APK resource decoding, manifest 
 
 Use `apktool` for authorized Android APK resource decoding and smali-level inspection when Java decompilation alone is insufficient.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help and use it as the source of truth:
 
@@ -15,7 +15,7 @@ Before constructing commands, run the installed help and use it as the source of
 apktool --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on explicitly provided APKs or artifacts in scope.
 - Prefer decoding into a task-scoped output directory.
@@ -25,7 +25,7 @@ apktool --help
 - Do not rebuild, sign, patch, or modify an APK unless the user explicitly asks and the scope permits it.
 - Use `jadx` when readable Java/Kotlin-like source is needed; use `apktool` when manifest, resources, smali, or packaging fidelity matters.
 
-## Common Workflows
+## Common workflows
 
 Decode an APK into a task directory:
 

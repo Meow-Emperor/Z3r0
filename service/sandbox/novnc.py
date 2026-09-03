@@ -47,7 +47,7 @@ async def proxy_novnc_http(target: NoVNCTarget, path: str) -> httpx.Response | N
     try:
         return await _get_http_client().get(url, headers=sandbox_control_proxy_token_headers(target.control_proxy))
     except (httpx.HTTPError, OSError):
-        logger.debug("novnc http proxy failed: %s -> %s", target.control_proxy.container_id, url, exc_info=True)
+        logger.debug("noVNC HTTP proxy failed: %s -> %s", target.control_proxy.container_id, url, exc_info=True)
         return None
 
 
@@ -71,7 +71,7 @@ async def proxy_novnc_websocket(
         ) as upstream:
             await _bidirectional_ws_forward(upstream, receive_from_client, send_to_client, client_connected)
     except (websockets.exceptions.WebSocketException, OSError, asyncio.CancelledError):
-        logger.debug("novnc ws proxy ended: %s", target.control_proxy.container_id, exc_info=True)
+        logger.debug("noVNC WebSocket proxy ended: %s", target.control_proxy.container_id, exc_info=True)
 
 
 async def _bidirectional_ws_forward(upstream, receive_from_client, send_to_client, client_connected):

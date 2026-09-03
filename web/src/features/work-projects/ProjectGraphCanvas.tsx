@@ -468,9 +468,9 @@ function nodeRows(asset: WorkProjectAsset, recordCounts: AssetRecordCounts): Too
     ["Origin", WORK_PROJECT_ASSET_ORIGIN_LABEL[asset.origin]],
     ["Scope", WORK_PROJECT_ASSET_SCOPE_LABEL[asset.scope]],
     ["Locator", asset.locator],
-    ["Active WorkItems", formatRecordCount(recordCounts.activeWorkItems[asset.id])],
+    ["Active work items", formatRecordCount(recordCounts.activeWorkItems[asset.id])],
     ["Findings", formatRecordCount(recordCounts.findings[asset.id])],
-    ["Attack Paths", formatRecordCount(recordCounts.attackPaths[asset.id])],
+    ["Attack paths", formatRecordCount(recordCounts.attackPaths[asset.id])],
     ["Summary", asset.summary, true],
   ];
   return { title: formatWorkProjectAsset(asset), items: filledDetailItems(items) };

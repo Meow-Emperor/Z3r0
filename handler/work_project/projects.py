@@ -38,7 +38,7 @@ async def create_work_project_handler(request: CreateWorkProjectRequest, user: A
 async def get_work_project_handler(id: int, user: AuthUser) -> CommonResponse:
     project = await get_work_project_for_user(id, user_id=user.id, user_role=user.role)
     if project is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     return CommonResponse(data=project)
 
 
@@ -52,32 +52,32 @@ async def update_work_project_metadata_handler(
     except WorkProjectMetadataValidationError as exc:
         raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     if project is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
-    return CommonResponse(message="work project updated", data=project)
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
+    return CommonResponse(message="Work project updated", data=project)
 
 
 async def delete_work_project_handler(id: int) -> CommonResponse:
     if not await delete_work_project(id):
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     return CommonResponse(data=DeleteWorkProjectResponse(id=id))
 
 
 async def cancel_work_project_handler(id: int, user: AuthUser) -> CommonResponse:
     project, canceled = await cancel_work_project(id, user_id=user.id, user_role=user.role)
     if project is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     if not canceled:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "canceled projects cannot be canceled again")
-    return CommonResponse(message="work project canceled", data=project)
+        raise_api_error(HTTPStatus.BAD_REQUEST, "Canceled projects cannot be canceled again")
+    return CommonResponse(message="Work project canceled", data=project)
 
 
 async def retry_work_project_handler(id: int, user: AuthUser) -> CommonResponse:
     project, retried = await retry_work_project(id, user_id=user.id, user_role=user.role)
     if project is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     if not retried:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "only canceled projects can be retried")
-    return CommonResponse(message="work project restarted", data=project)
+        raise_api_error(HTTPStatus.BAD_REQUEST, "Only canceled projects can be retried")
+    return CommonResponse(message="Work project restarted", data=project)
 
 
 async def query_work_projects_handler(page: int, size: int, keyword: str, user: AuthUser) -> CommonResponse:
@@ -101,9 +101,9 @@ async def create_work_project_session_handler(
         user_role=user.role,
     )
     if result.not_found:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     if result.inactive:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "only active projects can create sessions")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "Only active projects can create sessions")
     return CommonResponse(data=CreateWorkProjectSessionResponse(session_id=result.session_id))
 
 
@@ -121,7 +121,7 @@ async def list_work_project_sessions_handler(
         size=size,
     )
     if sessions is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     return CommonResponse(data=ListWorkProjectSessionsResponse(
         **paginated_payload(sessions, sessions.items)
     ))
@@ -135,7 +135,7 @@ async def delete_work_project_session_handler(id: int, session_id: str, user: Au
         user_role=user.role,
     )
     if deleted is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project not found")
     if not deleted:
-        raise_api_error(HTTPStatus.NOT_FOUND, "work project session not found")
-    return CommonResponse(message="work project session deleted")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Work project session not found")
+    return CommonResponse(message="Work project session deleted")

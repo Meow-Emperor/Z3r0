@@ -12,7 +12,7 @@ class SandboxImageSchema(BaseModel):
 
     id: int
     image_name: str
-    control_proxy_port: int = Field(title="Control Port")
+    control_proxy_port: int = Field(title="Control port")
     supports_tor: bool
     created_at: datetime
     updated_at: datetime
@@ -21,7 +21,7 @@ class SandboxImageSchema(BaseModel):
 # create sandbox image request schema
 class CreateSandboxImageRequest(BaseModel):
     image_name: str = Field(min_length=1, max_length=255)
-    control_proxy_port: int = Field(default=8000, ge=1, le=65535, title="Control Port")
+    control_proxy_port: int = Field(default=8000, ge=1, le=65535, title="Control port")
     supports_tor: bool = False
 
     @field_validator("image_name", mode="before")

@@ -65,43 +65,43 @@ const RUNTIME_FIELD_GROUPS: ConfigFieldGroup<AgentRuntimeConfig>[] = [
   {
     title: "Execution",
     fields: [
-      { key: "main_max_turns", label: "Main Max Turns", min: RUNTIME_CONSTRAINTS.main_max_turns.minimum },
-      { key: "subordinate_max_turns", label: "Subordinate Max Turns", min: RUNTIME_CONSTRAINTS.subordinate_max_turns.minimum },
-      { key: "model_stream_idle_timeout_seconds", label: "Stream Idle Timeout", min: RUNTIME_CONSTRAINTS.model_stream_idle_timeout_seconds.minimum },
-      { key: "report_retention_seconds", label: "Report Retention Seconds", min: RUNTIME_CONSTRAINTS.report_retention_seconds.minimum },
+      { key: "main_max_turns", label: "Main max turns", min: RUNTIME_CONSTRAINTS.main_max_turns.minimum },
+      { key: "subordinate_max_turns", label: "Subordinate max turns", min: RUNTIME_CONSTRAINTS.subordinate_max_turns.minimum },
+      { key: "model_stream_idle_timeout_seconds", label: "Stream idle timeout", min: RUNTIME_CONSTRAINTS.model_stream_idle_timeout_seconds.minimum },
+      { key: "report_retention_seconds", label: "Report retention seconds", min: RUNTIME_CONSTRAINTS.report_retention_seconds.minimum },
     ],
   },
   {
-    title: "Context Thresholds",
+    title: "Context thresholds",
     fields: [
-      ratioField("context_budget_model_call_ratio", "Model Call Budget"),
-      ratioField("context_compression_trigger_ratio", "Trigger Ratio"),
-      ratioField("context_compression_hard_stop_ratio", "Hard Stop Ratio"),
-      ratioField("context_compression_target_ratio", "Target Ratio"),
+      ratioField("context_budget_model_call_ratio", "Model call budget"),
+      ratioField("context_compression_trigger_ratio", "Trigger ratio"),
+      ratioField("context_compression_hard_stop_ratio", "Hard stop ratio"),
+      ratioField("context_compression_target_ratio", "Target ratio"),
     ],
   },
   {
-    title: "Compression Policy",
+    title: "Compression policy",
     fields: [
-      ratioField("context_compression_preserve_recent_ratio", "Preserve Recent Ratio"),
-      { key: "context_compression_preserve_recent_items", label: "Preserve Recent Items", min: RUNTIME_CONSTRAINTS.context_compression_preserve_recent_items.minimum, width: "compact" },
-      { key: "context_compression_min_items", label: "Minimum Items", min: RUNTIME_CONSTRAINTS.context_compression_min_items.minimum, width: "compact" },
-      { key: "context_compression_summary_max_tokens", label: "Summary Max Tokens", min: RUNTIME_CONSTRAINTS.context_compression_summary_max_tokens.minimum },
+      ratioField("context_compression_preserve_recent_ratio", "Preserve recent ratio"),
+      { key: "context_compression_preserve_recent_items", label: "Preserve recent items", min: RUNTIME_CONSTRAINTS.context_compression_preserve_recent_items.minimum, width: "compact" },
+      { key: "context_compression_min_items", label: "Minimum items", min: RUNTIME_CONSTRAINTS.context_compression_min_items.minimum, width: "compact" },
+      { key: "context_compression_summary_max_tokens", label: "Summary max tokens", min: RUNTIME_CONSTRAINTS.context_compression_summary_max_tokens.minimum },
     ],
   },
 ];
 
 const POOL_FIELDS: ConfigField<AgentPoolConfig>[] = [
-  { key: "max_size", label: "Max Size", min: POOL_CONSTRAINTS.max_size.minimum, width: "compact" },
-  { key: "ttl_seconds", label: "TTL Seconds", min: POOL_CONSTRAINTS.ttl_seconds.minimum },
-  { key: "sweep_interval_seconds", label: "Sweep Interval Seconds", min: POOL_CONSTRAINTS.sweep_interval_seconds.minimum, width: "compact" },
+  { key: "max_size", label: "Max size", min: POOL_CONSTRAINTS.max_size.minimum, width: "compact" },
+  { key: "ttl_seconds", label: "TTL seconds", min: POOL_CONSTRAINTS.ttl_seconds.minimum },
+  { key: "sweep_interval_seconds", label: "Sweep interval seconds", min: POOL_CONSTRAINTS.sweep_interval_seconds.minimum, width: "compact" },
 ];
 
 const AGENT_TEXT_FIELDS: AgentTextField[] = [
   { key: "name", label: "Name", maxLength: AGENT_CONSTRAINTS.name.maxLength },
   { key: "model", label: "Model" },
   { key: "base_url", label: "Base URL" },
-  { key: "api_key", label: "API Key", password: true },
+  { key: "api_key", label: "API key", password: true },
 ];
 
 function ratioField(
@@ -124,7 +124,7 @@ function ratioField(
 
 function toFormValue(config: InstanceConfig): ConfigFormValue {
   if (!config.agent_pool || !config.agent_runtime || !config.lightrag) {
-    throw new Error("instance config is incomplete");
+    throw new Error("Instance config is incomplete");
   }
   const agents = Object.values(config.agents ?? {}).map((agent) => ({ ...agent }));
   return {
@@ -219,10 +219,10 @@ export function SystemConfigPage() {
     const agentCount = values?.agents.length ?? 0;
     return [
       { label: "Agents", value: agentCount },
-      { label: "Pool Size", value: values?.agent_pool.max_size ?? "-" },
-      { label: "Main Turns", value: values?.agent_runtime.main_max_turns ?? "-" },
+      { label: "Pool size", value: values?.agent_pool.max_size ?? "-" },
+      { label: "Main turns", value: values?.agent_runtime.main_max_turns ?? "-" },
       {
-        label: "Graph / Chunks",
+        label: "Graph / chunks",
         value: values ? `${values.lightrag.graph_matches} / ${values.lightrag.chunk_matches}` : "-",
       },
     ];
@@ -313,7 +313,7 @@ export function SystemConfigPage() {
                 <RuntimeConfigEditor value={values.agent_runtime} onChange={updateRuntime} />
               </ConfigPanel>
 
-              <ConfigPanel icon={<RotateCcw size={18} />} title="Agent Pool">
+              <ConfigPanel icon={<RotateCcw size={18} />} title="Agent pool">
                 <ConfigFieldGrid fill fields={POOL_FIELDS} values={values.agent_pool} onChange={updatePool} />
               </ConfigPanel>
 
@@ -364,25 +364,25 @@ function LightRAGConfigEditor({ value, onChange }: {
     <div className="config-grid lightrag-config-grid">
       <Field kind="text" label="Embedding API" value={value.embedding_api}
         onChange={(embedding_api) => onChange({ embedding_api })} />
-      <Field kind="text" label="Embedding Key" value={value.embedding_key} password
+      <Field kind="text" label="Embedding key" value={value.embedding_key} password
         onChange={(embedding_key) => onChange({ embedding_key })} />
-      <Field kind="text" label="Embedding Model" value={value.embedding_model}
+      <Field kind="text" label="Embedding model" value={value.embedding_model}
         onChange={(embedding_model) => onChange({ embedding_model })} />
-      <Field kind="number" label="Embedding Dimension" value={value.embedding_dim}
+      <Field kind="number" label="Embedding dimension" value={value.embedding_dim}
         width="fill"
         min={LIGHTRAG_CONSTRAINTS.embedding_dim.minimum} max={LIGHTRAG_CONSTRAINTS.embedding_dim.maximum}
         onChange={(embedding_dim) => onChange({ embedding_dim })} />
       <Field kind="text" label="Extraction LLM API" value={value.llm_api}
         onChange={(llm_api) => onChange({ llm_api })} />
-      <Field kind="text" label="Extraction LLM Key" value={value.llm_key} password
+      <Field kind="text" label="Extraction LLM key" value={value.llm_key} password
         onChange={(llm_key) => onChange({ llm_key })} />
-      <Field kind="text" label="Extraction LLM Model" value={value.llm_model}
+      <Field kind="text" label="Extraction LLM model" value={value.llm_model}
         onChange={(llm_model) => onChange({ llm_model })} />
       <div className="lightrag-retrieval-fields">
-        <Field kind="number" label="Graph Matches" value={value.graph_matches} width="fill"
+        <Field kind="number" label="Graph matches" value={value.graph_matches} width="fill"
           min={LIGHTRAG_CONSTRAINTS.graph_matches.minimum} max={LIGHTRAG_CONSTRAINTS.graph_matches.maximum}
           onChange={(graph_matches) => onChange({ graph_matches })} />
-        <Field kind="number" label="Chunk Matches" value={value.chunk_matches} width="fill"
+        <Field kind="number" label="Chunk matches" value={value.chunk_matches} width="fill"
           min={LIGHTRAG_CONSTRAINTS.chunk_matches.minimum} max={LIGHTRAG_CONSTRAINTS.chunk_matches.maximum}
           onChange={(chunk_matches) => onChange({ chunk_matches })} />
       </div>
@@ -436,7 +436,7 @@ function AgentConfigEditor({ agent, onChange }: {
   return (
     <div className="agent-config-card">
       <div className="agent-config-card-header">
-        <strong>{agent.name || agent.code || "New Agent"}</strong>
+        <strong>{agent.name || agent.code || "New agent"}</strong>
         <span>{agent.code}</span>
       </div>
       <div className="agent-form-grid">
@@ -451,7 +451,7 @@ function AgentConfigEditor({ agent, onChange }: {
             onChange={(value) => onChange({ [field.key]: value })}
           />
         ))}
-        <Field kind="number" label="Context Window" value={agent.context_window} min={AGENT_CONSTRAINTS.context_window.minimum} width="wide"
+        <Field kind="number" label="Context window" value={agent.context_window} min={AGENT_CONSTRAINTS.context_window.minimum} width="wide"
           onChange={(context_window) => onChange({ context_window })}
         />
         <Field kind="toggle" label="Use Responses API" value={agent.use_responses}

@@ -28,7 +28,7 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
   return (
     <ResourceModal
       open={open}
-      title="Create Sandbox Image"
+      title="Create sandbox image"
       titleIcon={<Package size={17} />}
       saving={saving}
       submitLabel="Create"
@@ -40,13 +40,13 @@ export function SandboxImageFormModal({ open, saving, onCancel, onSubmit }: Sand
         supports_tor: values.supports_tor,
       })}
     >
-      <FormField label="Image Name">
+      <FormField label="Image name">
         <Input prefix={<Package size={16} />} value={values.image_name}
           placeholder="ghcr.io/org/image:latest" maxLength={255} required
           onChange={(image_name) => setValues((current) => ({ ...current, image_name }))}
         />
       </FormField>
-      <FormField label="Control Port">
+      <FormField label="Control port">
         <InputNumber
           prefix={<Network size={16} />}
           value={values.control_proxy_port}

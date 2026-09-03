@@ -383,7 +383,7 @@ export function SessionList({
       />
       <ResourceModal
         open={Boolean(renameTarget)}
-        title="Edit Session Title"
+        title="Edit session title"
         titleIcon={<Edit3 size={17} />}
         saving={renaming}
         submitLabel={UI_TEXT.save}
@@ -391,7 +391,7 @@ export function SessionList({
         onSubmit={saveRename}
         onCancel={() => setRenameTarget(null)}
       >
-        <FormField label="Session Title">
+        <FormField label="Session title">
           <Input
             autoFocus
             maxLength={80}

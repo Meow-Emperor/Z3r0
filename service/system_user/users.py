@@ -102,10 +102,10 @@ async def create_system_user(
             await session.commit()
         except IntegrityError as exc:
             await session.rollback()
-            raise SystemUserConflictError("username or email already exists") from exc
+            raise SystemUserConflictError("Username or email already exists") from exc
         await session.refresh(system_user)
 
-    logger.info("system user created: %s", system_user.id)
+    logger.info("System user created: %s", system_user.id)
     return system_user
 
 
@@ -118,7 +118,7 @@ async def delete_system_user(id: int) -> DeleteSystemUserResult:
                 select(SystemUser).where(SystemUser.id == id).with_for_update()
             )).first()
             if system_user is None:
-                return DeleteSystemUserResult(deleted=False, not_found=True, message="system user not found")
+                return DeleteSystemUserResult(deleted=False, not_found=True, message="System user not found")
             message = await _user_deletion_blocker(session, system_user)
             if message:
                 return DeleteSystemUserResult(deleted=False, message=message)
@@ -126,7 +126,7 @@ async def delete_system_user(id: int) -> DeleteSystemUserResult:
             if reassignment is None:
                 return DeleteSystemUserResult(
                     deleted=False,
-                    message="shared agent sessions require another project owner or administrator",
+                    message="Shared agent sessions require another project owner or administrator",
                 )
 
         await cancel_sessions(
@@ -142,7 +142,7 @@ async def delete_system_user(id: int) -> DeleteSystemUserResult:
                 select(SystemUser).where(SystemUser.id == id).with_for_update()
             )).first()
             if system_user is None:
-                return DeleteSystemUserResult(deleted=False, not_found=True, message="system user not found")
+                return DeleteSystemUserResult(deleted=False, not_found=True, message="System user not found")
             message = await _user_deletion_blocker(session, system_user)
             if message:
                 return DeleteSystemUserResult(deleted=False, message=message)
@@ -167,14 +167,14 @@ async def delete_system_user(id: int) -> DeleteSystemUserResult:
             if reassignment is None:
                 return DeleteSystemUserResult(
                     deleted=False,
-                    message="shared agent sessions require another project owner or administrator",
+                    message="Shared agent sessions require another project owner or administrator",
                 )
             await _apply_project_session_reassignment(session, reassignment)
             await session.delete(system_user)
             await session.commit()
             break
 
-    logger.info("system user deleted: %s", id)
+    logger.info("System user deleted: %s", id)
     return DeleteSystemUserResult(deleted=True)
 
 
@@ -201,7 +201,7 @@ async def update_system_user(
         ):
             return UpdateSystemUserResult(
                 user=system_user,
-                message="the last administrator cannot be demoted",
+                message="The last administrator cannot be demoted",
             )
 
         if role is not None:
@@ -219,10 +219,10 @@ async def update_system_user(
             await session.commit()
         except IntegrityError as exc:
             await session.rollback()
-            raise SystemUserConflictError("username or email already exists") from exc
+            raise SystemUserConflictError("Username or email already exists") from exc
         await session.refresh(system_user)
 
-    logger.info("system user updated: %s", system_user.id)
+    logger.info("System user updated: %s", system_user.id)
     return UpdateSystemUserResult(user=system_user)
 
 
@@ -285,7 +285,7 @@ async def system_user_login(email: str, password: str) -> str | None:
 
 async def _user_deletion_blocker(session, user: SystemUser) -> str:
     if user.role == SystemUserRole.ADMIN and await _admin_count(session) <= 1:
-        return "the last administrator cannot be deleted"
+        return "The last administrator cannot be deleted"
 
     owned_container = await session.exec(
         select(SandboxContainer.id)
@@ -293,7 +293,7 @@ async def _user_deletion_blocker(session, user: SystemUser) -> str:
         .limit(1)
     )
     if owned_container.first() is not None:
-        return "system user owns sandbox containers"
+        return "System user owns sandbox containers"
 
     owned_projects = select(WorkProjectOwner.project_id).where(WorkProjectOwner.user_id == user.id)
     sole_owner_project = await session.exec(
@@ -304,7 +304,7 @@ async def _user_deletion_blocker(session, user: SystemUser) -> str:
         .limit(1)
     )
     if sole_owner_project.first() is not None:
-        return "system user is the sole owner of a work project"
+        return "System user is the sole owner of a work project"
     return ""
 
 

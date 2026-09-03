@@ -99,12 +99,12 @@ async def run_until_idle(
             # strand sibling PENDING notifications and leave the session stuck
             # "running" with no task to interrupt.
             logger.exception(
-                "notification turn failed session=%s notification=%s",
+                "Notification turn failed session=%s notification=%s",
                 session_id,
                 notification.id,
             )
             await agent_notifications.fail_notification(
                 notification.id,
-                str(exc) or "notification handling failed",
+                str(exc) or "Notification handling failed",
             )
             continue

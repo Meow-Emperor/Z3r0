@@ -67,7 +67,7 @@ class UpdateEgressProxyRequest(BaseModel):
                 self.proxy_password,
             )
         ):
-            raise ValueError("at least one field must be provided")
+            raise ValueError("At least one field must be provided")
         return self
 
 

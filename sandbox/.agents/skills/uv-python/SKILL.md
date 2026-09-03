@@ -7,11 +7,11 @@ description: Use uv for missing Python dependencies, task-scoped virtual environ
 
 Use `uv` for missing Python dependencies, task-scoped virtual environments, temporary execution, and Python tools that are not already preinstalled. The image is configured to prefer the existing `/usr/bin/python3` and to avoid uv-managed Python downloads.
 
-## Skill Loading Required
+## Skill loading required
 
 Before using `uv` to run or install a tool, load the dedicated skill for that tool when one exists. Do not use `uvx`, `uv run --with`, or `uv tool install` to recreate `pwntools`, `checksec`, or any other tool already listed by `sandbox-shell`.
 
-## Help First
+## Help first
 
 Before constructing commands, use installed help as the source of truth:
 
@@ -21,7 +21,7 @@ uv tool --help
 uv pip --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Prefer preinstalled tools and their dedicated skills. Check `command -v <tool>` and installed help before any install step.
 - Do not use temporary or persistent Python tools to expand the preinstalled network CLI inventory. Use the existing network tools and their dedicated skills.
@@ -33,7 +33,7 @@ uv pip --help
 - Prefer the existing `/usr/bin/python3`; do not let uv download another Python unless the user explicitly asks.
 - Do not use global `pip install` unless the user explicitly asks and the reason is recorded.
 
-## Common Workflows
+## Common workflows
 
 Create an isolated task environment:
 

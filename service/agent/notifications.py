@@ -154,7 +154,7 @@ async def enqueue_user_message_notification(
         await session.commit()
         await session.refresh(notification)
     logger.debug(
-        "user message notification queued: %s session=%s target=%s",
+        "User message notification queued: %s session=%s target=%s",
         notification.id,
         notification.session_id,
         notification.target_agent_code,
@@ -415,7 +415,7 @@ async def reset_processing_notifications_all() -> int:
             session.add(notification)
         if rows:
             await session.commit()
-            logger.info("processing agent notifications reset: %d", len(rows))
+            logger.info("Processing agent notifications reset: %d", len(rows))
         return len(rows)
 
 

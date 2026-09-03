@@ -88,7 +88,7 @@ async def resolve_container_egress_environment(container_id: int) -> dict[str, s
             .where(SandboxContainer.id == container_id)
         )).first()
     if row is None:
-        raise ValueError("sandbox container not found")
+        raise ValueError("Sandbox container not found")
     container, proxy = row
     return sandbox_egress_container_environment(SandboxEgressSelection(
         mode=container.egress_mode,
@@ -99,7 +99,7 @@ async def resolve_container_egress_environment(container_id: int) -> dict[str, s
 async def apply_container_egress(container_id: int) -> None:
     target = await resolve_sandbox_control_proxy_target(container_id, require_running=True)
     if target is None:
-        raise ValueError("sandbox container is not running")
+        raise ValueError("Sandbox container is not running")
     environment = await resolve_container_egress_environment(container_id)
     await apply_egress_environment(target, environment)
 

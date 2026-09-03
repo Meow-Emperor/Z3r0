@@ -15,7 +15,7 @@ class InstanceConfigSchema(BaseModel):
     def validate_agent_codes(self):
         for code, agent in self.agents.items():
             if agent.code != code:
-                raise ValueError(f"agent code mismatch: {code}")
+                raise ValueError(f"Agent code mismatch: {code}")
         return self
 
 

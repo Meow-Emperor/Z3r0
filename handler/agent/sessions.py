@@ -95,8 +95,8 @@ async def delete_agent_session_handler(session_id: str, user: AuthUser) -> Commo
         user_role=user.role,
     )
     if not deleted:
-        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
-    return CommonResponse(message="agent session deleted")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Agent session not found")
+    return CommonResponse(message="Agent session deleted")
 
 
 async def update_agent_session_title_handler(
@@ -111,8 +111,8 @@ async def update_agent_session_title_handler(
         user_role=user.role,
     )
     if session is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
-    return CommonResponse(message="agent session title updated", data=session)
+        raise_api_error(HTTPStatus.NOT_FOUND, "Agent session not found")
+    return CommonResponse(message="Agent session title updated", data=session)
 
 
 async def update_agent_session_sandbox_container_handler(
@@ -129,7 +129,7 @@ async def update_agent_session_sandbox_container_handler(
     except Exception as exc:
         _raise_runtime_error(exc)
         raise
-    return CommonResponse(message="sandbox container updated", data=session)
+    return CommonResponse(message="Sandbox container updated", data=session)
 
 
 async def list_agent_sessions_handler(
@@ -162,7 +162,7 @@ async def list_agent_events_handler(
         limit=limit,
     )
     if result is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Agent session not found")
     events, has_more, next_before_seq = result
     return CommonResponse(data=ListAgentEventsResponse(
         session_id=session_id,
@@ -182,7 +182,7 @@ async def download_agent_report_handler(report_id: str, user: AuthUser) -> FileR
 
     session_id = agent_reports.report_session_id(report_path)
     if not session_id or not await agent_sessions.can_access_session(session_id, user.id, user.role):
-        raise_api_error(HTTPStatus.NOT_FOUND, "report file not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Report file not found")
 
     return FileResponse(
         report_path,
@@ -221,7 +221,7 @@ async def handle_agent_stream(websocket: WebSocket, session_id: str, token: str)
     except WebSocketDisconnect:
         pass
     except Exception:
-        logger.exception("agent stream failed for session=%s", session_id)
+        logger.exception("Agent stream failed for session=%s", session_id)
         await _close_silently(websocket)
     finally:
         if session is not None and event_queue is not None:
@@ -255,7 +255,7 @@ async def _send_event(
         await websocket.send_text(event.model_dump_json())
         return True
     except Exception:
-        logger.debug("failed to send agent event to websocket", exc_info=True)
+        logger.debug("Failed to send agent event to WebSocket", exc_info=True)
         return False
 
 
@@ -300,7 +300,7 @@ async def _forward_events(
     except asyncio.CancelledError:
         raise
     except Exception:
-        logger.debug("agent event forwarding stopped", exc_info=True)
+        logger.debug("Agent event forwarding stopped", exc_info=True)
 
 
 async def _turn_response(
@@ -314,13 +314,13 @@ async def _turn_response(
         user_role=user.role,
     )
     if summary is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Agent session not found")
     return CommonResponse(data=AgentTurnResponse(session_id=session_id, session=summary, events=events))
 
 
 def _raise_runtime_error(exc: Exception) -> None:
     if isinstance(exc, agent_runtime.SessionNotRunnableError):
-        raise_api_error(HTTPStatus.BAD_REQUEST, "work project is canceled")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "Work project is canceled")
     if isinstance(exc, agent_runtime.SandboxContainerUnavailableError):
         raise_api_error(HTTPStatus.BAD_REQUEST, str(exc))
     if isinstance(exc, agent_runtime.AgentUnavailableError):
@@ -328,4 +328,4 @@ def _raise_runtime_error(exc: Exception) -> None:
     if isinstance(exc, agent_runtime.SessionBusyError):
         raise_api_error(HTTPStatus.CONFLICT, str(exc))
     if isinstance(exc, PermissionError):
-        raise_api_error(HTTPStatus.NOT_FOUND, "agent session not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Agent session not found")

@@ -125,7 +125,7 @@ export function PlaygroundPage() {
     ?? getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresControlProxy: true });
   const screenUnavailableReason = sandboxAccessUnavailableReason
     ?? getSandboxActionUnavailableReason(selectedSandboxContainer, { requiresNoVNC: true });
-  const selectedSandboxName = selectedSandboxContainer?.container_name ?? "selected sandbox";
+  const selectedSandboxName = selectedSandboxContainer?.container_name ?? "Selected sandbox";
   const selectedSandboxActionId = selectedSandboxContainer?.id ?? 0;
   const canStartSelectedSandbox = Boolean(!sandboxManageUnavailableReason && selectedSandboxContainer && (
     selectedSandboxContainer.status === SANDBOX_CONTAINER_STATUS.CREATED

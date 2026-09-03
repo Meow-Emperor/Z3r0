@@ -74,15 +74,15 @@ def work_project_error(message: str) -> str:
 
 @function_tool
 async def load_work_project_context(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
-    """Load the current graph-driven WorkProject context.
+    """Load the current graph-driven work project context.
 
     A fresh snapshot is injected automatically at turn start. Call this explicit
     refresh after material writes when another same-turn decision depends on them.
-    The result contains the runtime-bound or cso-focused WorkItem, bounded queue
-    metadata, relevant graph and Evidence, and retest candidates.
+    The result contains the runtime-bound or cso-focused work item, bounded queue
+    metadata, relevant graph and evidence, and retest candidates.
 
     Returns:
-        A JSON tool result containing the refreshed WorkProject context.
+        A JSON tool result containing the refreshed work project context.
     """
     return work_project_success(await build_work_project_context(ctx.context))
 
@@ -95,28 +95,28 @@ async def list_work_project_work_items(
     assignee_agent_code: str = "",
     page: int = 1,
 ) -> str:
-    """List complete WorkItem records with targets, dependencies, Evidence, logs, and delegated runs.
+    """List complete work item records with targets, dependencies, evidence, logs, and delegated runs.
 
-    Specialists can list only WorkItems assigned to their Agent code. cso can filter
-    the complete project queue, including queued and terminal WorkItems.
-    The result contains pagination metadata and complete WorkItem records.
+    Specialists can list only work items assigned to their agent code. cso can filter
+    the complete project queue, including queued and terminal work items.
+    The result contains pagination metadata and complete work item records.
 
     Args:
         keyword: Optional title, objective, assignee, or status search text.
-        status: Optional exact WorkItem status filter.
+        status: Optional exact work item status filter.
         assignee_agent_code: Optional assignee filter; cso only.
         page: One-based result page; each page contains at most 10 complete records.
 
     Returns:
-        A JSON tool result containing the requested WorkItem page.
+        A JSON tool result containing the requested work item page.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     assignee = assignee_agent_code.strip()
     if ctx.context.agent_code != DEFAULT_AGENT_CODE:
         if assignee and assignee != ctx.context.agent_code:
-            return work_project_error("Specialists can list only their assigned WorkItems.")
+            return work_project_error("Specialists can list only their assigned work items.")
         assignee = ctx.context.agent_code
     result = await query_work_project_work_item_records(
         project_id,
@@ -139,75 +139,75 @@ async def get_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
     work_item_id: int,
 ) -> str:
-    """Load one complete WorkItem record by its durable id.
+    """Load one complete work item record by its durable id.
 
-    Specialists may load only their runtime-bound WorkItem. cso may load any
-    WorkItem for planning, review, cancellation, reopening, or closure decisions.
-    The result contains the WorkItem, targets, assets, dependencies, Evidence,
-    WorkLogs, and delegated run identities.
+    Specialists may load only their runtime-bound work item. cso may load any
+    work item for planning, review, cancellation, reopening, or closure decisions.
+    The result contains the work item, targets, assets, dependencies, evidence,
+    work logs, and delegated run identities.
 
     Args:
-        work_item_id: Durable WorkItem id to retrieve.
+        work_item_id: Durable work item id to retrieve.
 
     Returns:
-        A JSON tool result containing the complete WorkItem record.
+        A JSON tool result containing the complete work item record.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if ctx.context.agent_code != DEFAULT_AGENT_CODE and work_item_id != ctx.context.work_item_id:
-        return work_project_error("Specialists can load only their runtime-bound WorkItem.")
+        return work_project_error("Specialists can load only their runtime-bound work item.")
     record = await get_work_project_work_item_record(project_id, work_item_id)
     if record is None:
-        return work_project_error("WorkItem not found.")
+        return work_project_error("Work item not found.")
     if (
         ctx.context.agent_code != DEFAULT_AGENT_CODE
         and record.work_item.assignee_agent_code != ctx.context.agent_code
     ):
-        return work_project_error("WorkItem is assigned to another Agent.")
+        return work_project_error("Work item is assigned to another agent.")
     return work_project_success({"work_item": record.model_dump(mode="json")})
 
 
 @function_tool
 async def list_work_project_assets(ctx: RunContextWrapper[AgentRuntimeContext], keyword: str = "", page: int = 1) -> str:
-    """List canonical Asset nodes in the current WorkProject.
+    """List canonical asset nodes in the current work project.
 
     Scope is authoritative; never execute against context or out-of-scope assets.
-    The result contains pagination metadata and compact Asset records.
+    The result contains pagination metadata and compact asset records.
 
     Args:
         keyword: Optional locator, name, summary, or kind search text.
         page: One-based result page of at most 20 records; values below one become one.
 
     Returns:
-        A JSON tool result containing the requested Asset page.
+        A JSON tool result containing the requested asset page.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     result = await query_work_project_assets(project_id, page=max(page, 1), size=_PAGE_SIZE, keyword=keyword)
     return work_project_success({"page": result.page, "size": result.size, "total": result.total, "assets": [_compact_asset(item) for item in result.items]})
 
 
 @function_tool
 async def save_work_project_asset(ctx: RunContextWrapper[AgentRuntimeContext], asset_id: int | None, asset: WorkProjectAssetRequest) -> str:
-    """Create or update a canonical Asset graph node.
+    """Create or update a canonical asset graph node.
 
     Specialists create discoveries as context assets and may enrich descriptive
     state. Only cso may change canonical identity, scope, or criticality.
-    The result contains the saved Asset or a validation or permission error.
+    The result contains the saved asset or a validation or permission error.
 
     Args:
-        asset_id: Existing Asset id to update, or null to upsert by kind and locator.
+        asset_id: Existing asset id to update, or null to upsert by kind and locator.
         asset: Canonical locator, graph classification, scope, criticality, state,
             name, and concise summary.
 
     Returns:
-        A JSON tool result containing the saved Asset or an error.
+        A JSON tool result containing the saved asset or an error.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := await _specialist_mutation_error(ctx):
         return work_project_error(error)
     if ctx.context.agent_code != DEFAULT_AGENT_CODE:
@@ -261,15 +261,15 @@ async def merge_work_project_asset_records(
     source_asset_id: int,
     target_asset_id: int,
 ) -> str:
-    """Merge a duplicate Asset into a canonical Asset and rewire references.
+    """Merge a duplicate asset into a canonical asset and rewire references.
 
     This operation is restricted to cso and refuses merges that would collapse
-    distinct nodes in an AttackPath.
-    The result contains the canonical Asset and the merged source identity.
+    distinct nodes in an attack path.
+    The result contains the canonical asset and the merged source identity.
 
     Args:
-        source_asset_id: Duplicate Asset id that will be removed.
-        target_asset_id: Canonical Asset id that will remain.
+        source_asset_id: Duplicate asset id that will be removed.
+        target_asset_id: Canonical asset id that will remain.
 
     Returns:
         A JSON tool result containing the merge outcome.
@@ -278,30 +278,30 @@ async def merge_work_project_asset_records(
         return work_project_error("Only cso can merge assets.")
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await merge_work_project_assets(project_id, source_asset_id, target_asset_id)
     return work_project_error(error) if error else work_project_success({"asset": _dump(saved), "merged_asset_id": source_asset_id})
 
 
 @function_tool
 async def record_work_project_evidence(ctx: RunContextWrapper[AgentRuntimeContext], evidence: WorkProjectEvidenceRequest) -> str:
-    """Record immutable Evidence produced by an assigned WorkItem.
+    """Record immutable evidence produced by an assigned work item.
 
-    Record Evidence before asserting an observed or validated Relation, Finding,
-    AttackPathStep, or target conclusion. Corrections supersede existing Evidence.
-    The result contains the immutable Evidence record or a validation error.
+    Record evidence before asserting an observed or validated relation, finding,
+    attack path step, or target conclusion. Corrections supersede existing evidence.
+    The result contains the immutable evidence record or a validation error.
 
     Args:
-        evidence: Evidence kind, WorkItem id, stable source reference, concise
-            summary, optional primary Asset and hash, capture time, and optional
-            active Evidence id to supersede.
+        evidence: Evidence kind, work item id, stable source reference, concise
+            summary, optional primary asset and hash, capture time, and optional
+            active evidence id to supersede.
 
     Returns:
-        A JSON tool result containing the Evidence creation outcome.
+        A JSON tool result containing the evidence creation outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := await _specialist_mutation_error(ctx, evidence.work_item_id):
         return work_project_error(error)
     saved, error = await create_work_project_evidence(
@@ -314,23 +314,23 @@ async def record_work_project_evidence(ctx: RunContextWrapper[AgentRuntimeContex
 
 @function_tool
 async def invalidate_work_project_evidence_record(ctx: RunContextWrapper[AgentRuntimeContext], evidence_id: int, reason: str) -> str:
-    """Invalidate erroneous active Evidence while retaining audit history.
+    """Invalidate erroneous active evidence while retaining audit history.
 
-    A specialist may invalidate only Evidence it created. Invalidation is refused
-    when a reviewed WorkItem or evidence-mature conclusion would lose its last
-    active supporting Evidence.
-    The result identifies the invalidated Evidence or reports the failed gate.
+    A specialist may invalidate only evidence it created. Invalidation is refused
+    when a reviewed work item or evidence-mature conclusion would lose its last
+    active supporting evidence.
+    The result identifies the invalidated evidence or reports the failed gate.
 
     Args:
-        evidence_id: Active Evidence id to invalidate.
-        reason: Specific reason the Evidence is no longer trustworthy.
+        evidence_id: Active evidence id to invalidate.
+        reason: Specific reason the evidence is no longer trustworthy.
 
     Returns:
         A JSON tool result containing the invalidation outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := await _specialist_mutation_error(ctx):
         return work_project_error(error)
     error = await invalidate_work_project_evidence(
@@ -345,43 +345,43 @@ async def invalidate_work_project_evidence_record(ctx: RunContextWrapper[AgentRu
 
 @function_tool
 async def list_work_project_evidence(ctx: RunContextWrapper[AgentRuntimeContext], keyword: str = "", page: int = 1) -> str:
-    """List WorkProject Evidence with stable source references.
+    """List work project evidence with stable source references.
 
-    The result contains pagination metadata and Evidence records.
+    The result contains pagination metadata and evidence records.
 
     Args:
         keyword: Optional title, summary, reference, or kind search text.
         page: One-based result page of at most 20 records; values below one become one.
 
     Returns:
-        A JSON tool result containing the requested Evidence page.
+        A JSON tool result containing the requested evidence page.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     result = await query_work_project_evidence(project_id, page=max(page, 1), size=_PAGE_SIZE, keyword=keyword)
     return work_project_success({"page": result.page, "size": result.size, "total": result.total, "evidence": [_dump(item) for item in result.items]})
 
 
 @function_tool
 async def save_work_project_relation(ctx: RunContextWrapper[AgentRuntimeContext], relation_id: int | None, relation: WorkProjectRelationRequest) -> str:
-    """Create or update an evidence-backed environment Relation.
+    """Create or update an evidence-backed environment relation.
 
     Relations model structure, connectivity, dependency, identity, data flow, or
-    provenance only. Attack progression belongs in AttackPaths.
-    The result contains the saved Relation or a validation error.
+    provenance only. Attack progression belongs in attack paths.
+    The result contains the saved relation or a validation error.
 
     Args:
-        relation_id: Existing Relation id to update, or null to upsert by endpoints and type.
-        relation: Source and target Asset ids, Relation type, assertion status,
-            concise summary, and active supporting Evidence ids.
+        relation_id: Existing relation id to update, or null to upsert by endpoints and type.
+        relation: Source and target asset ids, relation type, assertion status,
+            concise summary, and active supporting evidence ids.
 
     Returns:
-        A JSON tool result containing the Relation save outcome.
+        A JSON tool result containing the relation save outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := await _specialist_mutation_error(ctx):
         return work_project_error(error)
     saved, error = await upsert_work_project_relation(
@@ -399,21 +399,21 @@ async def list_work_project_relations(
     status: WorkProjectAssertionStatus | None = None,
     page: int = 1,
 ) -> str:
-    """Page through environment Relations in the current WorkProject.
+    """Page through environment relations in the current work project.
 
-    The result contains pagination metadata and Relation records.
+    The result contains pagination metadata and relation records.
 
     Args:
-        keyword: Optional summary, Relation type, or assertion-status search text.
+        keyword: Optional summary, relation type, or assertion-status search text.
         status: Optional exact assertion status filter.
         page: One-based result page of at most 20 records; values below one become one.
 
     Returns:
-        A JSON tool result containing the requested Relation page.
+        A JSON tool result containing the requested relation page.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     result = await query_work_project_relations(
         project_id,
         page=max(page, 1),
@@ -431,42 +431,42 @@ async def list_work_project_relations(
 
 @function_tool
 async def list_work_project_findings(ctx: RunContextWrapper[AgentRuntimeContext], keyword: str = "", page: int = 1) -> str:
-    """List suspected, validated, refuted, and deferred security Findings.
+    """List suspected, validated, refuted, and deferred security findings.
 
-    The result contains pagination metadata and Finding records.
+    The result contains pagination metadata and finding records.
 
     Args:
         keyword: Optional title, description, impact, CWE, verification, or severity search text.
         page: One-based result page of at most 20 records; values below one become one.
 
     Returns:
-        A JSON tool result containing the requested Finding page.
+        A JSON tool result containing the requested finding page.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     result = await query_work_project_findings(project_id, page=max(page, 1), size=_PAGE_SIZE, keyword=keyword)
     return work_project_success({"page": result.page, "size": result.size, "total": result.total, "findings": [_dump(item) for item in result.items]})
 
 
 @function_tool
 async def save_work_project_finding(ctx: RunContextWrapper[AgentRuntimeContext], finding_id: int | None, finding: WorkProjectFindingRequest) -> str:
-    """Create or update an evidence-backed security Finding.
+    """Create or update an evidence-backed security finding.
 
-    The result contains the saved Finding or a validation error.
+    The result contains the saved finding or a validation error.
 
     Args:
-        finding_id: Existing Finding id to update, or null to create one.
-        finding: Primary and affected Assets, category, verification, severity,
-            technical conclusion, impact, remediation, Evidence ids, and optional
+        finding_id: Existing finding id to update, or null to create one.
+        finding: Primary and affected assets, category, verification, severity,
+            technical conclusion, impact, remediation, evidence ids, and optional
             evidence-supported CWE/CVSS classification.
 
     Returns:
-        A JSON tool result containing the Finding save outcome.
+        A JSON tool result containing the finding save outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := await _specialist_mutation_error(ctx):
         return work_project_error(error)
     saved, error = await save_work_project_finding_service(
@@ -479,22 +479,22 @@ async def save_work_project_finding(ctx: RunContextWrapper[AgentRuntimeContext],
 
 @function_tool
 async def save_work_project_attack_path(ctx: RunContextWrapper[AgentRuntimeContext], path_id: int | None, path: WorkProjectAttackPathRequest) -> str:
-    """Atomically create or update a continuous evidence-backed AttackPath.
+    """Atomically create or update a continuous evidence-backed attack path.
 
-    The result contains the saved AttackPath and its ordered steps, or a validation error.
+    The result contains the saved attack path and its ordered steps, or a validation error.
 
     Args:
-        path_id: Existing AttackPath id to update, or null to create one.
-        path: Entry and target Assets, objective, archive state, and the complete
+        path_id: Existing attack path id to update, or null to create one.
+        path: Entry and target assets, objective, archive state, and the complete
             ordered sequence of actions, results, blockers, graph links, ATT&CK
-            mappings, and active Evidence ids.
+            mappings, and active evidence ids.
 
     Returns:
-        A JSON tool result containing the AttackPath save outcome.
+        A JSON tool result containing the attack path save outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := await _specialist_mutation_error(ctx):
         return work_project_error(error)
     saved, steps, error = await save_work_project_attack_path_service(
@@ -511,7 +511,7 @@ async def list_work_project_attack_paths(
     keyword: str = "",
     page: int = 1,
 ) -> str:
-    """Page through AttackPaths and their ordered validation steps.
+    """Page through attack paths and their ordered validation steps.
 
     The result contains pagination metadata, each derived path status, and ordered steps.
 
@@ -520,11 +520,11 @@ async def list_work_project_attack_paths(
         page: One-based result page of at most 20 records; values below one become one.
 
     Returns:
-        A JSON tool result containing the requested AttackPath page.
+        A JSON tool result containing the requested attack path page.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     result = await query_work_project_attack_paths(
         project_id,
         page=max(page, 1),
@@ -559,20 +559,20 @@ async def create_work_project_work_item(
     ctx: RunContextWrapper[AgentRuntimeContext],
     plan: WorkProjectWorkItemPlanRequest,
 ) -> str:
-    """Create a queued graph-targeted WorkItem; cso only.
+    """Create a queued graph-targeted work item; cso only.
 
-    The result contains the new queued WorkItem or a validation error.
+    The result contains the new queued work item or a validation error.
 
     Args:
         plan: Immutable execution plan containing assignee, objective, scope,
             completion criteria, dependencies, graph focus, and target surfaces.
 
     Returns:
-        A JSON tool result containing the WorkItem creation outcome.
+        A JSON tool result containing the work item creation outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await create_work_project_work_item_service(
         project_id,
         plan,
@@ -588,12 +588,12 @@ async def update_work_project_work_item_plan(
     work_item_id: int,
     plan: WorkProjectWorkItemPlanRequest,
 ) -> str:
-    """Replace the plan of a queued WorkItem before activation; cso only.
+    """Replace the plan of a queued work item before activation; cso only.
 
-    The result contains the updated queued WorkItem or a validation error.
+    The result contains the updated queued work item or a validation error.
 
     Args:
-        work_item_id: Queued WorkItem id whose plan will be replaced.
+        work_item_id: Queued work item id whose plan will be replaced.
         plan: Complete immutable execution plan and target surface set.
 
     Returns:
@@ -601,7 +601,7 @@ async def update_work_project_work_item_plan(
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await update_work_project_work_item_plan_service(
         project_id,
         work_item_id,
@@ -618,13 +618,13 @@ async def activate_work_project_work_item(
     work_item_id: int,
     reason: str,
 ) -> str:
-    """Activate queued work as cso or resume the bound blocked WorkItem as its assignee.
+    """Activate queued work as cso or resume the bound blocked work item as its assignee.
 
-    The result contains the active WorkItem or a scope, state, or dependency error.
+    The result contains the active work item or a scope, state, or dependency error.
 
     Args:
-        work_item_id: Queued or blocked WorkItem id.
-        reason: Specific activation or blocker-resolution reason for the WorkLog.
+        work_item_id: Queued or blocked work item id.
+        reason: Specific activation or blocker-resolution reason for the work log.
 
     Returns:
         A JSON tool result containing the activation outcome.
@@ -633,7 +633,7 @@ async def activate_work_project_work_item(
         return work_project_error(error)
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await activate_work_project_work_item_service(
         project_id,
         work_item_id,
@@ -650,12 +650,12 @@ async def update_work_project_work_item_target(
     work_item_id: int,
     target: WorkProjectWorkItemTargetUpdateRequest,
 ) -> str:
-    """Update one target surface on the active runtime-bound WorkItem.
+    """Update one target surface on the active runtime-bound work item.
 
     The result contains the updated target surface or a validation error.
 
     Args:
-        work_item_id: Active WorkItem id.
+        work_item_id: Active work item id.
         target: Exact asset and surface plus active, covered, or deferred state;
             covered requires a conclusion and deferred requires a reason.
 
@@ -666,7 +666,7 @@ async def update_work_project_work_item_target(
         return work_project_error(error)
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await update_work_project_work_item_target_service(
         project_id,
         work_item_id,
@@ -683,12 +683,12 @@ async def block_work_project_work_item(
     targets: list[WorkProjectWorkItemTargetKey],
     reason: str,
 ) -> str:
-    """Block an active WorkItem and atomically mark the affected target surfaces blocked.
+    """Block an active work item and atomically mark the affected target surfaces blocked.
 
-    The result contains the blocked WorkItem or a validation error.
+    The result contains the blocked work item or a validation error.
 
     Args:
-        work_item_id: Active WorkItem id.
+        work_item_id: Active work item id.
         targets: One or more exact asset and surface targets affected by the blocker.
         reason: Concrete blocker and the condition required to resume.
 
@@ -699,7 +699,7 @@ async def block_work_project_work_item(
         return work_project_error(error)
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await block_work_project_work_item_service(
         project_id,
         work_item_id,
@@ -717,12 +717,12 @@ async def submit_work_project_work_item_review(
     work_item_id: int,
     result_summary: str,
 ) -> str:
-    """Submit an active WorkItem to cso review after all target and Evidence gates pass.
+    """Submit an active work item to cso review after all target and evidence gates pass.
 
-    The result contains the WorkItem in review state or the first unmet gate.
+    The result contains the work item in review state or the first unmet gate.
 
     Args:
-        work_item_id: Active runtime-bound WorkItem id.
+        work_item_id: Active runtime-bound work item id.
         result_summary: Complete evidence-based result, valuable negatives, residual
             limitations, and handoff implications.
 
@@ -733,7 +733,7 @@ async def submit_work_project_work_item_review(
         return work_project_error(error)
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await submit_work_project_work_item_review_service(
         project_id,
         work_item_id,
@@ -752,14 +752,14 @@ async def review_work_project_work_item(
     reason: str,
     reopened_targets: list[WorkProjectWorkItemTargetKey],
 ) -> str:
-    """Accept a reviewed WorkItem or return named target surfaces to active work; cso only.
+    """Accept a reviewed work item or return named target surfaces to active work; cso only.
 
-    The result contains the completed or reactivated WorkItem or a validation error.
+    The result contains the completed or reactivated work item or a validation error.
 
     Args:
-        work_item_id: WorkItem currently awaiting review.
+        work_item_id: Work item currently awaiting review.
         decision: accept to complete, or request_changes to return work to active.
-        reason: Evidence-based review conclusion recorded in WorkLog.
+        reason: Evidence-based review conclusion recorded in the work log.
         reopened_targets: Empty when accepting; exact targets requiring more work
             when requesting changes.
 
@@ -768,7 +768,7 @@ async def review_work_project_work_item(
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await review_work_project_work_item_service(
         project_id,
         work_item_id,
@@ -787,12 +787,12 @@ async def cancel_work_project_work_item(
     work_item_id: int,
     reason: str,
 ) -> str:
-    """Cancel a non-terminal WorkItem with an explicit governance reason; cso only.
+    """Cancel a non-terminal work item with an explicit governance reason; cso only.
 
-    The result contains the canceled WorkItem or a validation error.
+    The result contains the canceled work item or a validation error.
 
     Args:
-        work_item_id: Non-terminal WorkItem id.
+        work_item_id: Non-terminal work item id.
         reason: Scope, duplication, risk, priority, or planning reason for cancellation.
 
     Returns:
@@ -800,7 +800,7 @@ async def cancel_work_project_work_item(
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await cancel_work_project_work_item_service(
         project_id,
         work_item_id,
@@ -817,12 +817,12 @@ async def reopen_work_project_work_item(
     work_item_id: int,
     reason: str,
 ) -> str:
-    """Reopen a completed or canceled WorkItem as queued and reset its targets; cso only.
+    """Reopen a completed or canceled work item as queued and reset its targets; cso only.
 
-    The result contains the reopened queued WorkItem or a validation error.
+    The result contains the reopened queued work item or a validation error.
 
     Args:
-        work_item_id: Terminal WorkItem id.
+        work_item_id: Terminal work item id.
         reason: New evidence, scope, or retest trigger requiring renewed execution.
 
     Returns:
@@ -830,7 +830,7 @@ async def reopen_work_project_work_item(
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     saved, error = await reopen_work_project_work_item_service(
         project_id,
         work_item_id,
@@ -843,20 +843,20 @@ async def reopen_work_project_work_item(
 
 @function_tool
 async def record_work_project_work_log(ctx: RunContextWrapper[AgentRuntimeContext], work_item_id: int, entry: WorkProjectWorkLogRequest) -> str:
-    """Record a durable WorkLog entry for an assigned WorkItem.
+    """Record a durable work log entry for an assigned work item.
 
-    The result contains the persisted WorkLog entry or a validation error.
+    The result contains the persisted work log entry or a validation error.
 
     Args:
-        work_item_id: WorkItem receiving the timeline entry.
+        work_item_id: Work item receiving the timeline entry.
         entry: Decision, blocker, handoff, or result kind and concise content.
 
     Returns:
-        A JSON tool result containing the WorkLog creation outcome.
+        A JSON tool result containing the work log creation outcome.
     """
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     if error := _specialist_work_item_error(ctx, work_item_id):
         return work_project_error(error)
     saved, error = await create_work_project_work_log(
@@ -869,10 +869,10 @@ async def record_work_project_work_log(ctx: RunContextWrapper[AgentRuntimeContex
 
 @function_tool
 async def complete_current_work_project(ctx: RunContextWrapper[AgentRuntimeContext]) -> str:
-    """Close the current WorkProject after all review gates pass.
+    """Close the current work project after all review gates pass.
 
-    This operation is restricted to cso. Closure requires terminal WorkItems,
-    concluded in-scope coverage, resolved Findings, and resolved AttackPaths.
+    This operation is restricted to cso. Closure requires terminal work items,
+    concluded in-scope coverage, resolved findings, and resolved attack paths.
     The result contains the completed project identity and status or the first
     unmet review gate.
 
@@ -880,10 +880,10 @@ async def complete_current_work_project(ctx: RunContextWrapper[AgentRuntimeConte
         A JSON tool result containing the project closure outcome.
     """
     if ctx.context.agent_code != DEFAULT_AGENT_CODE:
-        return work_project_error("Only the cso agent can complete a WorkProject.")
+        return work_project_error("Only the cso agent can complete a work project.")
     project_id = _project_id(ctx)
     if project_id is None:
-        return work_project_error("No WorkProject is bound to this session.")
+        return work_project_error("No work project is bound to this session.")
     from service.work_project.projects import complete_work_project
     error = await complete_work_project(project_id)
     return work_project_error(error) if error else work_project_success({"project_id": project_id, "status": "completed"})
@@ -900,9 +900,9 @@ def _specialist_work_item_error(
     if ctx.context.agent_code == DEFAULT_AGENT_CODE:
         return ""
     if ctx.context.work_item_id is None:
-        return "No WorkItem is bound to this specialist runtime."
+        return "No work item is bound to this specialist runtime."
     if ctx.context.work_item_id != work_item_id:
-        return "Specialists can mutate only their runtime-bound WorkItem."
+        return "Specialists can mutate only their runtime-bound work item."
     return ""
 
 
@@ -914,21 +914,21 @@ async def _specialist_mutation_error(
         return ""
     bound_id = ctx.context.work_item_id
     if bound_id is None:
-        return "No WorkItem is bound to this specialist runtime."
+        return "No work item is bound to this specialist runtime."
     if work_item_id is not None and work_item_id != bound_id:
-        return "Specialists can mutate only their runtime-bound WorkItem."
+        return "Specialists can mutate only their runtime-bound work item."
     project_id = _project_id(ctx)
     async with get_async_session() as session:
         item = await session.get(WorkProjectWorkItem, bound_id)
     if item is None or item.project_id != project_id:
-        return "The runtime-bound WorkItem was not found in this WorkProject."
+        return "The runtime-bound work item was not found in this work project."
     if item.assignee_agent_code != ctx.context.agent_code:
-        return "The runtime-bound WorkItem is assigned to another Agent."
+        return "The runtime-bound work item is assigned to another agent."
     if item.status not in {
         WorkProjectWorkItemStatus.ACTIVE,
         WorkProjectWorkItemStatus.BLOCKED,
     }:
-        return "Specialist project mutations require an active or blocked runtime-bound WorkItem."
+        return "Specialist project mutations require an active or blocked runtime-bound work item."
     return ""
 
 

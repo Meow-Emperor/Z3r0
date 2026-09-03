@@ -339,7 +339,7 @@ function fileToImagePart(file: File): Promise<AgentImageInputPart> {
       const match = /^data:([^;]+);base64$/.exec(prefix);
       const mediaType = match?.[1] ?? "";
       if (!isAcceptedImageType(mediaType) || !data) {
-        reject(new Error("invalid image data"));
+        reject(new Error("Invalid image data"));
         return;
       }
       resolve({
@@ -349,7 +349,7 @@ function fileToImagePart(file: File): Promise<AgentImageInputPart> {
         detail: AGENT_IMAGE_DETAIL.AUTO,
       });
     };
-    reader.onerror = () => reject(reader.error ?? new Error("failed to read image"));
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read image"));
     reader.readAsDataURL(file);
   });
 }

@@ -39,7 +39,7 @@ async def create_session(user_id: int) -> str:
     async with get_async_session() as session:
         await lock_system_user_lifecycle(session, user_id)
         if await session.get(SystemUser, user_id) is None:
-            raise PermissionError("system user no longer exists")
+            raise PermissionError("System user no longer exists")
         await ensure_sdk_session_row(session, session_id)
         session.add(AgentSessionMeta(
             session_id=session_id,
@@ -81,7 +81,7 @@ async def ensure_chat_session_meta(
     async with get_async_session() as session:
         meta = await session.get(AgentSessionMeta, session_id)
         if meta is None or not await _can_access_meta(session, meta, user_id, user_role):
-            raise PermissionError("agent session not found")
+            raise PermissionError("Agent session not found")
         existing = meta.agent_code if meta and meta.agent_code in valid else None
         resolved = override or existing or DEFAULT_AGENT_CODE
 
@@ -294,7 +294,7 @@ async def replay_session_events_page(
         try:
             events.append(_content_event_adapter.validate_python(payload))
         except Exception:
-            logger.debug("skipping malformed timeline payload session=%s seq=%s", session_id, seq)
+            logger.debug("Skipping malformed timeline payload session=%s seq=%s", session_id, seq)
     return events, has_more, next_before_seq
 
 
@@ -353,7 +353,7 @@ async def delete_session(
         await session.commit()
 
     if records_deleted:
-        logger.info("agent session deleted: %s", session_id)
+        logger.info("Agent session deleted: %s", session_id)
     return records_deleted
 
 
@@ -380,7 +380,7 @@ async def delete_private_sessions_for_owner(owner_id: int) -> int:
         )
         await session.commit()
     deleted = result.rowcount or 0
-    logger.info("private agent sessions deleted for user: user=%s sessions=%s", owner_id, deleted)
+    logger.info("Private agent sessions deleted for user: user=%s sessions=%s", owner_id, deleted)
     return deleted
 
 

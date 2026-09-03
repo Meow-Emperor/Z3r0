@@ -83,7 +83,7 @@ async def update_managed_host(
             select(ManagedHost).where(ManagedHost.id == id).with_for_update()
         )).one_or_none()
         if host is None:
-            return UpdateManagedHostResult(host=None, not_found=True, message="managed host not found")
+            return UpdateManagedHostResult(host=None, not_found=True, message="Managed host not found")
 
         next_docker_tls_enabled = (
             docker_tls_enabled if docker_tls_enabled is not None else host.docker_tls_enabled
@@ -110,7 +110,7 @@ async def update_managed_host(
         elif not all((next_docker_client_ca_cert, next_docker_client_cert, next_docker_client_key)):
             return UpdateManagedHostResult(
                 host=host,
-                message="docker TLS CA certificate, client certificate, and client key are required",
+                message="Docker TLS CA certificate, client certificate, and client key are required",
             )
 
         docker_connection_changed = _docker_connection_changed(
@@ -125,7 +125,7 @@ async def update_managed_host(
         if docker_connection_changed and await _host_has_sandbox_containers(session, id):
             return UpdateManagedHostResult(
                 host=host,
-                message="host docker connection is used by sandbox containers",
+                message="Host Docker connection is used by sandbox containers",
             )
 
         if ip_address is not None:
@@ -153,17 +153,17 @@ async def update_managed_host(
 
 async def delete_managed_host(id: int) -> DeleteManagedHostResult:
     if id == DEFAULT_LOCAL_HOST_ID:
-        return DeleteManagedHostResult(deleted=False, message="default local host cannot be deleted")
+        return DeleteManagedHostResult(deleted=False, message="Default local host cannot be deleted")
     async with get_async_session() as session:
         host = (await session.exec(
             select(ManagedHost).where(ManagedHost.id == id).with_for_update()
         )).one_or_none()
         if host is None:
-            return DeleteManagedHostResult(deleted=False, not_found=True, message="managed host not found")
+            return DeleteManagedHostResult(deleted=False, not_found=True, message="Managed host not found")
         if await _host_has_sandbox_containers(session, id):
             return DeleteManagedHostResult(
                 deleted=False,
-                message="managed host is used by sandbox containers",
+                message="Managed host is used by sandbox containers",
             )
 
         await session.delete(host)
@@ -276,11 +276,11 @@ async def pull_managed_host_images(id: int, image_names: list[str]) -> list[Pull
 async def delete_managed_host_image(id: int, image_id: str, force: bool = False) -> str | None:
     host = await query_managed_host_by_id(id)
     if host is None:
-        return "managed host not found"
+        return "Managed host not found"
     try:
         await asyncio.to_thread(remove_host_image_sync, host, image_id, force)
     except Exception as exc:
-        return str(exc).strip() or "failed to remove image"
+        return str(exc).strip() or "Failed to remove image"
     return None
 
 

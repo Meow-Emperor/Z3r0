@@ -116,7 +116,7 @@ class TimelineLogWriter:
         persisted = await self._flush(rows)
         self._resolve_barriers(barriers, persisted=persisted)
         if not persisted:
-            raise TimelinePersistenceError(f"timeline persistence failed for session {self._session_id}")
+            raise TimelinePersistenceError(f"Timeline persistence failed for session {self._session_id}")
 
     async def _run(self) -> None:
         while True:
@@ -151,7 +151,7 @@ class TimelineLogWriter:
                     item.set_result(None)
                 else:
                     item.set_exception(TimelinePersistenceError(
-                        f"timeline persistence failed for session {self._session_id}"
+                        f"Timeline persistence failed for session {self._session_id}"
                     ))
             return False
         await self._flush(rows)
@@ -182,7 +182,7 @@ class TimelineLogWriter:
             if persisted:
                 barrier.set_result(None)
             else:
-                barrier.set_exception(TimelinePersistenceError("timeline persistence failed"))
+                barrier.set_exception(TimelinePersistenceError("Timeline persistence failed"))
 
     async def _flush(self, batch: list[_TimelineRow]) -> bool:
         # Keep failed rows in memory and merge newer payloads by stable key. A
@@ -205,14 +205,14 @@ class TimelineLogWriter:
             except Exception:
                 if attempt >= attempts:
                     logger.exception(
-                        "timeline writer upsert failed after %d attempts session=%s pending=%d",
+                        "Timeline writer upsert failed after %d attempts session=%s pending=%d",
                         attempts,
                         self._session_id,
                         len(pending),
                     )
                     return False
                 logger.warning(
-                    "timeline writer upsert retry session=%s attempt=%d/%d",
+                    "Timeline writer upsert retry session=%s attempt=%d/%d",
                     self._session_id,
                     attempt,
                     attempts,

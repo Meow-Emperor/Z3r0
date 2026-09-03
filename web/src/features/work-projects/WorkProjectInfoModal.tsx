@@ -19,7 +19,7 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "overview",
   return (
     <AppModal
       open={open}
-      title={project?.name ?? "Work Project"}
+      title={project?.name ?? "Work project"}
       titleIcon={<FolderKanban size={17} />}
       className="work-project-info-modal"
       width="min(1440px, calc(100vw - 24px))"
@@ -54,7 +54,7 @@ export function WorkProjectInfoModal({ open, projectId, initialTab = "overview",
                   <strong>{project.sandbox_container?.container_name ?? "-"}</strong>
                 </div>
                 <div className="project-info-state">
-                  <span>Operational State</span>
+                  <span>Operational state</span>
                   <strong>{project.untouched_asset_count} untouched assets</strong>
                   <small>{project.active_work_item_count} active · {project.blocked_work_item_count} blocked</small>
                 </div>

@@ -7,7 +7,7 @@ description: Use jadx for authorized Android APK, DEX, AAR, and JAR decompilatio
 
 Use `jadx` to decompile Android APK, DEX, AAR, and JAR inputs into readable Java source and decoded resources. Prefer CLI output that can be searched, scripted, and archived.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help and use it as the source of truth:
 
@@ -15,7 +15,7 @@ Before constructing commands, run the installed help and use it as the source of
 jadx --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on provided Android artifacts or explicitly authorized mobile applications.
 - Prefer task-scoped output directories and preserve the original input file.
@@ -25,7 +25,7 @@ jadx --help
 - Use `apktool` when manifest, resources, smali, or packaging fidelity matters more than readable Java-like source.
 - Save large grep results and decompiled snippets to files rather than streaming them into the conversation.
 
-## Common Workflows
+## Common workflows
 
 ```bash
 # Standard decompilation
@@ -47,7 +47,7 @@ jadx --show-bad-code app.apk -d app-jadx
 jadx --fallback --show-bad-code app.apk -d app-jadx
 ```
 
-## Output Layout
+## Output layout
 
 ```text
 app-jadx/
@@ -61,7 +61,7 @@ app-jadx/
 
 Start analysis from `resources/AndroidManifest.xml`, then inspect entry points and security-sensitive packages under `sources/`.
 
-## Recommended Workflow
+## Recommended workflow
 
 ```bash
 apk=app.apk
@@ -86,9 +86,9 @@ grep -r "setJavaScriptEnabled.*true\|addJavascriptInterface\|WebView.*loadUrl" "
 grep -r "TrustManager\|HostnameVerifier\|CertificatePinner\|checkServerTrusted" "$out/sources/"
 ```
 
-## Common Analysis Tasks
+## Common analysis tasks
 
-### API Endpoint Discovery
+### API endpoint discovery
 
 ```bash
 jadx --deobf app.apk -d app-jadx
@@ -102,7 +102,7 @@ grep -r "@GET\|@POST\|@PUT\|@DELETE\|@PATCH" app-jadx/sources/ | sort -u
 grep -r "baseUrl\|BASE_URL\|API_BASE\|API_URL" app-jadx/sources/ app-jadx/resources/ | sort -u
 ```
 
-### Embedded Secret Review
+### Embedded secret review
 
 ```bash
 jadx --no-res --deobf app.apk -d app-code
@@ -112,7 +112,7 @@ grep -ri "username.*password\|user.*pass\|password\|passwd\|pwd" app-code/source
 grep -ri "token\|jwt\|bearer\|authorization" app-code/sources/
 ```
 
-### IoT Companion App Review
+### IoT companion app review
 
 ```bash
 jadx --deobf iot.apk -d iot-jadx
@@ -123,7 +123,7 @@ grep -ri "Authorization\|apiKey\|token\|login\|authenticate" iot-jadx/sources/
 grep -r "CertificatePinner\|TrustManager\|HostnameVerifier" iot-jadx/sources/
 ```
 
-### Batch Processing
+### Batch processing
 
 ```bash
 for apk in *.apk; do
@@ -134,7 +134,7 @@ for apk in *.apk; do
 done
 ```
 
-## Useful Options
+## Useful options
 
 - `--deobf`: rename obfuscated classes and members where possible.
 - `--use-source-name-as-class-name-alias`: use source file names as deobfuscation hints; valid values include `always`, `if-better`, and `never`.

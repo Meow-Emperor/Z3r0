@@ -33,7 +33,7 @@ async def query_knowledge_documents_handler(
 async def get_knowledge_document_handler(document_id: str) -> CommonResponse:
     document = await get_knowledge_document(document_id)
     if document is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "knowledge document not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Knowledge document not found")
     return CommonResponse(data=document)
 
 
@@ -47,11 +47,11 @@ async def upload_knowledge_documents_handler(
     if result.track_ids:
         request_knowledge_document_processing(result.track_ids)
     if result.queued_files and result.rejected_files:
-        message = "knowledge documents partially queued"
+        message = "Knowledge documents partially queued"
     elif result.queued_files:
-        message = "knowledge documents queued"
+        message = "Knowledge documents queued"
     else:
-        message = "no knowledge documents queued"
+        message = "No knowledge documents queued"
     return CommonResponse(message=message, data=result)
 
 
@@ -60,7 +60,7 @@ async def delete_knowledge_document_handler(document_id: str) -> CommonResponse:
     if result.status != "success":
         raise_api_error(result.status_code, result.message)
     return CommonResponse(
-        message="knowledge document deleted",
+        message="Knowledge document deleted",
         data=DeleteKnowledgeDocumentResponse(id=document_id),
     )
 
@@ -73,7 +73,7 @@ async def query_knowledge_vectors_handler(page: int, size: int) -> CommonRespons
 async def get_knowledge_vector_handler(vector_id: str) -> CommonResponse:
     vector = await get_knowledge_vector(vector_id)
     if vector is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "knowledge vector not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Knowledge vector not found")
     return CommonResponse(data=vector)
 
 

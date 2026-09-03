@@ -76,11 +76,11 @@ class AgentImageInputPart(BaseModel):
     def validate_base64_data(cls, value: str) -> str:
         compact = "".join(value.split())
         if compact.startswith("data:"):
-            raise ValueError("image data must be raw base64 without a data URL prefix")
+            raise ValueError("Image data must be raw base64 without a data URL prefix")
         try:
             base64.b64decode(compact, validate=True)
         except Exception as exc:
-            raise ValueError("image data must be valid base64") from exc
+            raise ValueError("Image data must be valid base64") from exc
         return compact
 
 
@@ -225,14 +225,14 @@ AgentEventSchema = Annotated[
 def validate_agent_input_content(content: list[AgentInputPart]) -> None:
     image_count = sum(1 for part in content if isinstance(part, AgentImageInputPart))
     if image_count > MAX_AGENT_IMAGES:
-        raise ValueError(f"at most {MAX_AGENT_IMAGES} images are allowed in one message")
+        raise ValueError(f"At most {MAX_AGENT_IMAGES} images are allowed in one message")
     image_bytes = sum(
         _decoded_base64_length(part.data)
         for part in content
         if isinstance(part, AgentImageInputPart)
     )
     if image_bytes > MAX_AGENT_TOTAL_IMAGE_BYTES:
-        raise ValueError("image payload is too large")
+        raise ValueError("Image payload is too large")
 
 
 def _decoded_base64_length(value: str) -> int:

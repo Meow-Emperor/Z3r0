@@ -71,7 +71,7 @@ def _docker_base_url(host: ManagedHost) -> str:
 
 def _docker_tls_config_for_host(host: ManagedHost) -> tuple[TLSConfig, str]:
     if not all((host.docker_client_ca_cert, host.docker_client_cert, host.docker_client_key)):
-        raise ValueError("docker TLS CA certificate, client certificate, and client key are required")
+        raise ValueError("Docker TLS CA certificate, client certificate, and client key are required")
 
     safe_ip = re.sub(r"[^A-Za-z0-9]+", "_", host.ip_address).strip("_") or "host"
     host_id = host.id if host.id is not None else "new"
@@ -124,13 +124,13 @@ def pull_host_images_sync(host: ManagedHost, image_names: list[str]) -> list[Pul
                 results.append(PullManagedHostImageResultSchema(
                     image_name=image_name,
                     success=True,
-                    message="pulled",
+                    message="Pulled",
                 ))
             except Exception as exc:
                 results.append(PullManagedHostImageResultSchema(
                     image_name=image_name,
                     success=False,
-                    message=str(exc) or "pull failed",
+                    message=str(exc) or "Pull failed",
                 ))
         return results
     finally:

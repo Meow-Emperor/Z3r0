@@ -116,25 +116,25 @@ class WorkProjectFindingRequest(BaseModel):
     def validate_finding(self) -> "WorkProjectFindingRequest":
         self.cwe_id = self.cwe_id.upper()
         if self.cwe_id and (not self.cwe_id.startswith("CWE-") or not self.cwe_id[4:].isdigit()):
-            raise ValueError("cwe_id must use the CWE-<number> format")
+            raise ValueError("The `cwe_id` field must use the `CWE-<number>` format")
         self.evidence_ids = list(dict.fromkeys(self.evidence_ids))
         asset_links = [(item.asset_id, item.role) for item in self.affected_assets]
         if len(asset_links) != len(set(asset_links)):
-            raise ValueError("finding contains a duplicate asset role")
+            raise ValueError("Finding contains a duplicate asset role")
         if self.verification in {
             WorkProjectFindingVerification.SUSPECTED,
             WorkProjectFindingVerification.VALIDATED,
             WorkProjectFindingVerification.REFUTED,
         } and not self.evidence_ids:
-            raise ValueError(f"{self.verification.value} finding requires evidence")
+            raise ValueError(f"{self.verification.value.capitalize()} finding requires evidence")
         if self.verification == WorkProjectFindingVerification.DEFERRED and not self.deferral_reason:
-            raise ValueError("deferred finding requires a deferral reason")
+            raise ValueError("A deferred finding requires a deferral reason")
         if self.verification != WorkProjectFindingVerification.DEFERRED and self.deferral_reason:
-            raise ValueError("deferral_reason is only valid for a deferred finding")
+            raise ValueError("The `deferral_reason` field is only valid for a deferred finding")
         if self.verification == WorkProjectFindingVerification.VALIDATED and not self.impact:
-            raise ValueError("validated finding requires an impact statement")
+            raise ValueError("A validated finding requires an impact statement")
         if self.verification != WorkProjectFindingVerification.VALIDATED and self.resolution is not None:
-            raise ValueError("resolution is only valid for a validated finding")
+            raise ValueError("The `resolution` field is only valid for a validated finding")
         if self.verification == WorkProjectFindingVerification.VALIDATED and self.resolution is None:
             self.resolution = WorkProjectFindingResolution.OPEN
         if self.cvss_vector:
@@ -142,7 +142,7 @@ class WorkProjectFindingRequest(BaseModel):
             expected_severity = _severity_for_cvss(score)
             if self.severity != expected_severity:
                 raise ValueError(
-                    f"severity must be {expected_severity.value} for CVSS score {score:g}"
+                    f"Severity must be {expected_severity.value} for CVSS score {score:g}"
                 )
         return self
 
@@ -158,8 +158,8 @@ def _cvss_score(vector: str) -> float:
         if vector.startswith("CVSS:3.0/") or vector.startswith("CVSS:3.1/"):
             return float(CVSS3(vector).scores()[0])
     except (CVSSError, ValueError, IndexError, KeyError) as error:
-        raise ValueError("cvss_vector is invalid") from error
-    raise ValueError("cvss_vector must be CVSS 3.0, 3.1, or 4.0")
+        raise ValueError("The `cvss_vector` field is invalid") from error
+    raise ValueError("The `cvss_vector` field must be a valid CVSS 3.0, 3.1, or 4.0 vector")
 
 
 def _severity_for_cvss(score: float) -> WorkProjectFindingSeverity:

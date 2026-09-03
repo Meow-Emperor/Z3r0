@@ -113,7 +113,7 @@ async def upload_knowledge_documents(
     uploads: list[UploadFile],
 ) -> UploadKnowledgeDocumentsResponse:
     if not uploads:
-        raise KnowledgeDocumentError("at least one document is required")
+        raise KnowledgeDocumentError("At least one document is required")
 
     workspace_dir = LIGHTRAG_INPUT_DIR / LIGHTRAG_WORKSPACE
     workspace_dir.mkdir(parents=True, exist_ok=True)
@@ -130,14 +130,14 @@ async def upload_knowledge_documents(
                 try:
                     file_name = _validate_upload_file_name(upload)
                     if await rag.doc_status.get_doc_by_file_basename(file_name) is not None:
-                        raise KnowledgeDocumentError("a document with this file name already exists")
+                        raise KnowledgeDocumentError("A document with this file name already exists")
 
                     content = await _read_upload_content(upload)
                     source_path = workspace_dir / file_name
                     try:
                         await asyncio.to_thread(_write_new_document, source_path, content)
                     except FileExistsError:
-                        raise KnowledgeDocumentError("a document with this file name already exists") from None
+                        raise KnowledgeDocumentError("A document with this file name already exists") from None
                 except KnowledgeDocumentError as exc:
                     rejected_files.append(
                         RejectedKnowledgeDocumentUpload(
@@ -175,7 +175,7 @@ async def upload_knowledge_documents(
                 except Exception:
                     remaining = accepted_files[offset:]
                     logger.exception(
-                        "failed to enqueue LightRAG document batch: offset=%s, size=%s",
+                        "Failed to enqueue LightRAG document batch: offset=%s, size=%s",
                         offset,
                         len(batch),
                     )
@@ -189,7 +189,7 @@ async def upload_knowledge_documents(
                     rejected_files.extend(
                         RejectedKnowledgeDocumentUpload(
                             file_name=file_name,
-                            message="the document could not be queued",
+                            message="The document could not be queued",
                         )
                         for file_name, _ in remaining
                     )
@@ -206,7 +206,7 @@ async def upload_knowledge_documents(
                     rejected_files.extend(
                         RejectedKnowledgeDocumentUpload(
                             file_name=file_name,
-                            message="the document is already indexed or queued",
+                            message="The document is already indexed or queued",
                         )
                         for file_name, _ in batch
                     )
@@ -231,7 +231,7 @@ async def upload_knowledge_documents(
 
 
 def _display_upload_file_name(upload: UploadFile) -> str:
-    return Path((upload.filename or "").replace("\\", "/")).name.strip() or "unnamed document"
+    return Path((upload.filename or "").replace("\\", "/")).name.strip() or "Unnamed document"
 
 
 def _validate_upload_file_name(upload: UploadFile) -> str:
@@ -242,18 +242,18 @@ def _validate_upload_file_name(upload: UploadFile) -> str:
         or any(category(character) in {"Cc", "Cf", "Cs"} for character in file_name)
         or len(file_name.encode("utf-8")) > MAX_KNOWLEDGE_FILENAME_BYTES
     ):
-        raise KnowledgeDocumentError("document file name is invalid")
+        raise KnowledgeDocumentError("Document file name is invalid")
     if suffix not in SUPPORTED_KNOWLEDGE_DOCUMENT_SUFFIXES:
-        raise KnowledgeDocumentError("only Markdown and PDF documents are supported")
+        raise KnowledgeDocumentError("Only Markdown and PDF documents are supported")
     return file_name
 
 
 async def _read_upload_content(upload: UploadFile) -> bytes:
     content = await upload.read(MAX_KNOWLEDGE_DOCUMENT_BYTES + 1)
     if not content:
-        raise KnowledgeDocumentError("document is empty")
+        raise KnowledgeDocumentError("Document is empty")
     if len(content) > MAX_KNOWLEDGE_DOCUMENT_BYTES:
-        raise KnowledgeDocumentError("document exceeds the 25 MB size limit")
+        raise KnowledgeDocumentError("Document exceeds the 25 MB size limit")
     return content
 
 
@@ -429,10 +429,10 @@ async def _remove_source_document(
     try:
         await asyncio.to_thread(path.unlink, missing_ok=True)
     except Exception as cleanup_error:
-        logger.exception("failed to remove LightRAG source document: %s", path)
+        logger.exception("Failed to remove LightRAG source document: %s", path)
         if original_error is not None:
             original_error.add_note(
-                f"source document cleanup also failed: {cleanup_error}"
+                f"Source document cleanup also failed: {cleanup_error}"
             )
 
 
@@ -509,7 +509,7 @@ async def _remove_source_document_copies(file_name: str) -> None:
         except Exception:
             if attempt >= _SOURCE_CLEANUP_ATTEMPTS:
                 logger.exception(
-                    "failed to remove indexed LightRAG source document: %s",
+                    "Failed to remove indexed LightRAG source document: %s",
                     canonical_name,
                 )
                 return
@@ -538,7 +538,7 @@ async def get_knowledge_graph(
 async def search_knowledge_graph(*, query: str, max_nodes: int) -> KnowledgeGraphSchema:
     normalized_query = query.strip()
     if not normalized_query:
-        raise KnowledgeDocumentError("a graph search query is required")
+        raise KnowledgeDocumentError("A graph search query is required")
 
     try:
         async with lightrag_client() as rag:

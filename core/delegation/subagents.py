@@ -110,7 +110,7 @@ _drivers_lock = asyncio.Lock()
 _CANCEL_MESSAGE = "Subagent task canceled."
 # Hot-loop guard for self-relaunch after a claim race; on exhaustion the run fails.
 _MAX_SUBAGENT_RELAUNCH = 5
-_RELAUNCH_FAILURE_MESSAGE = "subagent driver could not make progress"
+_RELAUNCH_FAILURE_MESSAGE = "Subagent driver could not make progress"
 
 
 def build_subagent_tools(
@@ -131,8 +131,8 @@ def build_subagent_tools(
         """Start a configured subagent task in the background.
 
         A successful start is turn-terminal: do not call another tool or respond.
-        The runtime resumes the owner after completion. WorkProject sessions require
-        an active WorkItem assigned to the selected subagent, and the run is durably
+        The runtime resumes the owner after completion. Work project sessions require
+        an active work item assigned to the selected subagent, and the run is durably
         bound to it. The result includes status, persistent run identity, selected
         agent, timestamps, and completion-resume guidance.
 
@@ -140,28 +140,28 @@ def build_subagent_tools(
             agent_code: Code of the configured subagent to run.
             brief: Self-contained task brief with objective, scope, constraints,
                 relevant context, and expected output.
-            work_item_id: Active WorkItem to bind; required in WorkProject sessions.
+            work_item_id: Active work item to bind; required in work project sessions.
 
         Returns:
             JSON metadata describing the started subagent task.
         """
         code = agent_code.strip()
         if code not in allowed:
-            return _tool_response(message=f"unknown subagent '{code}'. allowed: {allowed_codes}")
+            return _tool_response(message=f"Unknown subagent '{code}'. Allowed: {allowed_codes}")
         body = brief.strip()
         if not body:
-            return _tool_response(message="brief is required")
+            return _tool_response(message="Brief is required")
         if ctx.context.work_project_id is not None:
             if work_item_id is None:
-                return _tool_response(message="work_item_id is required in WorkProject sessions")
+                return _tool_response(message="The `work_item_id` field is required in work project sessions")
             async with get_async_session() as session:
                 work_item = await session.get(WorkProjectWorkItem, work_item_id)
             if work_item is None or work_item.project_id != ctx.context.work_project_id:
-                return _tool_response(message="work item not found")
+                return _tool_response(message="Work item not found")
             if work_item.assignee_agent_code != code:
-                return _tool_response(message="work item assignee does not match the selected subagent")
+                return _tool_response(message="Work item assignee does not match the selected subagent")
             if work_item.status != WorkProjectWorkItemStatus.ACTIVE:
-                return _tool_response(message="work item must be active before delegation")
+                return _tool_response(message="Work item must be active before delegation")
 
         starter = asyncio.create_task(
             start_subagent_task_run(
@@ -184,7 +184,7 @@ def build_subagent_tools(
         return _tool_response(
             task=snapshot,
             message=(
-                "subagent task started; end this turn now. The task will resume automatically when "
+                "Subagent task started; end this turn now. The task will resume automatically when "
                 "the subagent finishes. Use read/list/cancel only if the user later asks for progress, "
                 "task history, or cancellation."
             ),
@@ -211,7 +211,7 @@ def build_subagent_tools(
         """
         snapshot = await _resolve_task(ctx, run_id)
         if snapshot is None:
-            return _tool_response(message="subagent task not found")
+            return _tool_response(message="Subagent task not found")
         return _tool_response(task=snapshot, offset=offset)
 
     async def list_subagent_tasks(ctx: RunContextWrapper[AgentRuntimeContext], limit: int = 20) -> str:
@@ -247,9 +247,9 @@ def build_subagent_tools(
         """
         snapshot = await _resolve_task(ctx, run_id)
         if snapshot is None:
-            return _tool_response(message="subagent task not found")
+            return _tool_response(message="Subagent task not found")
         latest = await cancel_subagent_task_run(snapshot)
-        return _tool_response(task=latest, message="subagent task cancel requested")
+        return _tool_response(task=latest, message="Subagent task cancellation requested")
 
     tools = [
         function_tool(
@@ -259,7 +259,7 @@ def build_subagent_tools(
                 "Start a configured subagent task in the background. "
                 f"Allowed agent codes: {allowed_codes}. "
                 "A successful start is turn-terminal, and the runtime resumes the owner after completion. "
-                "WorkProject sessions require an active WorkItem assigned to the selected subagent, "
+                "Work project sessions require an active work item assigned to the selected subagent, "
                 "and the run is durably bound to it. The result includes status, persistent run "
                 "identity, selected agent, timestamps, and completion-resume guidance."
             ),
@@ -360,9 +360,9 @@ def _log_subagent_start_result(task: asyncio.Task[AgentSubordinateTaskSnapshot])
     try:
         task.result()
     except asyncio.CancelledError:
-        logger.warning("subagent task starter was canceled before scheduling completed")
+        logger.warning("Subagent task starter was canceled before scheduling completed")
     except Exception:
-        logger.exception("subagent task starter failed after parent turn cancellation")
+        logger.exception("Subagent task starter failed after parent turn cancellation")
 
 
 async def start_subagent_task_run(
@@ -413,7 +413,7 @@ async def start_subagent_task_run(
         raise
 
     await _publish_task_snapshot(snapshot)
-    logger.info("subagent task scheduled: %s agent=%s", snapshot.run_id, agent_code)
+    logger.info("Subagent task scheduled: %s agent=%s", snapshot.run_id, agent_code)
     return snapshot
 
 
@@ -421,7 +421,7 @@ async def _safe_close_graph(graph: SessionAgentGraphProtocol) -> None:
     try:
         await graph.close()
     except Exception:
-        logger.exception("failed to dispose subagent graph")
+        logger.exception("Failed to dispose subagent graph")
 
 
 def _spawn_subagent_drive(
@@ -614,8 +614,8 @@ async def _drive_subagent(
         await _cancel_subagent(driver)
         raise
     except Exception as exc:
-        logger.exception("subagent drive failed: %s", driver.run_id)
-        await _fail_subagent(driver, str(exc) or "subagent failed")
+        logger.exception("Subagent drive failed: %s", driver.run_id)
+        await _fail_subagent(driver, str(exc) or "Subagent failed")
 
 
 async def _settle_subagent(driver: _SubagentDriver) -> None:
@@ -627,7 +627,7 @@ async def _settle_subagent(driver: _SubagentDriver) -> None:
         ):
             driver.relaunch_attempts += 1
             if driver.relaunch_attempts > _MAX_SUBAGENT_RELAUNCH:
-                logger.error("subagent driver relaunch budget exhausted run=%s", driver.run_id)
+                logger.error("Subagent driver relaunch budget exhausted run=%s", driver.run_id)
                 driver.task = asyncio.create_task(
                     _fail_subagent(driver, _RELAUNCH_FAILURE_MESSAGE),
                     name=f"subagent-fail-{driver.run_id}",
@@ -805,13 +805,13 @@ async def _update_progress_from_event(snapshot: AgentSubordinateTaskSnapshot, ev
 
 def _progress_from_event(event: AgentEventSchema) -> str:
     if isinstance(event, ToolCallEvent):
-        return f"calling tool: {event.name or event.call_id}"
+        return f"Calling tool: {event.name or event.call_id}"
     if isinstance(event, ToolResultEvent):
-        return "tool completed"
+        return "Tool completed"
     if isinstance(event, TextCompleteEvent):
-        return "reported output"
+        return "Reported output"
     if isinstance(event, ThinkingCompleteEvent):
-        return "completed reasoning"
+        return "Completed reasoning"
     return ""
 
 
@@ -859,7 +859,7 @@ async def _mark_parent_session_running(
             sandbox_container_generation=context.sandbox_container_generation,
         )
     except Exception:
-        logger.debug("failed to mark parent session running: %s", snapshot.session_id, exc_info=True)
+        logger.debug("Failed to mark parent session running: %s", snapshot.session_id, exc_info=True)
 
 
 def _subagent_context(

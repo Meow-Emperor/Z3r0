@@ -4,11 +4,11 @@ from schema.common.responses import CommonResponse
 # 401 / 403 are now driven from the route's auth dependencies; this dict only
 # carries shared error responses that have to be declared per-route
 COMMON_ERROR_RESPONSES = {
-    422: {"description": "Validation Error", "model": CommonResponse},
+    422: {"description": "Validation error", "model": CommonResponse},
 }
 
 BAD_REQUEST_RESPONSE = {
-    400: {"description": "Bad Request", "model": CommonResponse},
+    400: {"description": "Bad request", "model": CommonResponse},
 }
 
 FORBIDDEN_RESPONSE = {
@@ -16,7 +16,7 @@ FORBIDDEN_RESPONSE = {
 }
 
 INTERNAL_ERROR_RESPONSE = {
-    500: {"description": "Internal Server Error", "model": CommonResponse},
+    500: {"description": "Internal server error", "model": CommonResponse},
 }
 
 CONFLICT_RESPONSE = {

@@ -7,7 +7,7 @@ description: Use preinstalled pwntools for authorized exploit prototyping, binar
 
 Use `pwntools` for authorized exploit prototyping, binary interaction, cyclic patterns, packing helpers, shellcraft tasks, and its bundled helper CLIs such as `pwn` and `checksec`.
 
-## Help First
+## Help first
 
 Before constructing commands, use installed CLI help and the preinstalled `pwntools` Python environment:
 
@@ -17,7 +17,7 @@ pwn_python="$(dirname "$(readlink -f "$(command -v pwn)")")/python"
 "$pwn_python" -c 'from pwn import context; print(context.arch)'
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only against provided binaries, local challenge services, or explicitly authorized targets.
 - Prefer the preinstalled `pwntools` tool environment for one-off scripts: `pwn_python="$(dirname "$(readlink -f "$(command -v pwn)")")/python"; "$pwn_python" <script.py>`.
@@ -31,7 +31,7 @@ pwn_python="$(dirname "$(readlink -f "$(command -v pwn)")")/python"
 - Validate exploit assumptions with `checksec`, `gdb-pwndbg`, `strace`, or controlled test runs.
 - Do not use global `pip install`.
 
-## Common Workflows
+## Common workflows
 
 Generate and locate cyclic patterns:
 

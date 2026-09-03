@@ -22,7 +22,7 @@ export function SandboxImagesPage() {
   );
 
   useAdminResourceHeader({
-    createLabel: "Create Image",
+    createLabel: "Create sandbox image",
     refreshLabel: "Refresh sandbox images",
     loading: images.loading,
     onCreate: () => setModalOpen(true),
@@ -51,7 +51,7 @@ export function SandboxImagesPage() {
         />
       ),
     },
-    { key: "port", header: "Control Port", width: "130px", render: (image) => image.control_proxy_port },
+    { key: "port", header: "Control port", width: "130px", render: (image) => image.control_proxy_port },
     {
       key: "capabilities", header: "Capabilities", width: "180px",
       render: (image) => (

@@ -7,7 +7,7 @@ description: Use the pwntools-provided checksec CLI for authorized ELF hardening
 
 Use the `checksec` CLI provided by the bundled `pwntools` installation to inspect ELF hardening and mitigation settings for provided or task-scoped binaries. This skill documents a pwntools-provided entrypoint, not a separately installed package.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help output and use it as the source of truth:
 
@@ -16,7 +16,7 @@ checksec --help
 pwn checksec --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on provided binaries or build outputs in scope.
 - Treat mitigation output as triage evidence, not proof of exploitability.
@@ -25,7 +25,7 @@ pwn checksec --help
 - Use this skill for mitigation triage; use the `pwntools` skill only when exploit scripts, process interaction, packing, cyclic patterns, or shellcraft are needed.
 - Save batch output to files and report paths instead of streaming large tables.
 
-## Common Workflows
+## Common workflows
 
 Inspect one ELF binary:
 

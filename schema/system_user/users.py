@@ -67,7 +67,7 @@ class UpdateSystemUserRequest(BaseModel):
     @model_validator(mode="after")
     def validate_has_updates(self):
         if all(value is None for value in (self.username, self.password, self.email, self.role)):
-            raise ValueError("at least one field must be provided")
+            raise ValueError("At least one field must be provided")
         return self
 
 

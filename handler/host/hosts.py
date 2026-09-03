@@ -82,7 +82,7 @@ async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest
         docker_client_key=request.docker_client_key,
     )
     if result.not_found:
-        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Managed host not found")
     if result.host is None or result.message:
         raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=ManagedHostSchema.model_validate(result.host))
@@ -91,7 +91,7 @@ async def update_managed_host_handler(id: int, request: UpdateManagedHostRequest
 async def delete_managed_host_handler(id: int) -> CommonResponse:
     result = await delete_managed_host(id)
     if result.not_found:
-        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Managed host not found")
     if not result.deleted:
         raise_api_error(HTTPStatus.BAD_REQUEST, result.message)
     return CommonResponse(data=DeleteManagedHostResponse(id=id))
@@ -111,10 +111,10 @@ async def list_managed_host_images_handler(id: int) -> CommonResponse:
     try:
         images = await list_managed_host_images(id)
     except Exception as exc:
-        logger.warning("list host images failed: id=%s error=%s", id, exc)
-        raise_api_error(HTTPStatus.BAD_GATEWAY, "failed to connect to docker host")
+        logger.warning("List host images failed: id=%s error=%s", id, exc)
+        raise_api_error(HTTPStatus.BAD_GATEWAY, "Failed to connect to the Docker host")
     if images is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Managed host not found")
     return CommonResponse(data=ListManagedHostImagesResponse(items=images))
 
 
@@ -122,10 +122,10 @@ async def pull_managed_host_images_handler(id: int, request: PullManagedHostImag
     try:
         results = await pull_managed_host_images(id, request.image_names)
     except Exception as exc:
-        logger.warning("pull host images failed: id=%s error=%s", id, exc)
-        raise_api_error(HTTPStatus.BAD_GATEWAY, "failed to connect to docker host")
+        logger.warning("Pull host images failed: id=%s error=%s", id, exc)
+        raise_api_error(HTTPStatus.BAD_GATEWAY, "Failed to connect to the Docker host")
     if results is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "managed host not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Managed host not found")
     return CommonResponse(data=PullManagedHostImagesResponse(items=results))
 
 
@@ -134,7 +134,7 @@ async def delete_managed_host_image_handler(id: int, request: DeleteManagedHostI
     if error:
         code = HTTPStatus.NOT_FOUND.value if "not found" in error.lower() else HTTPStatus.BAD_REQUEST.value
         raise_api_error(code, error)
-    return CommonResponse(message="image removed")
+    return CommonResponse(message="Image removed")
 
 
 async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
@@ -158,7 +158,7 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
             shell = await open_host_shell(host)
         except Exception as exc:
             logger.warning(
-                "host shell connection failed: id=%s host=%s error=%s",
+                "Host shell connection failed: id=%s host=%s error=%s",
                 id,
                 host.ip_address,
                 str(exc).strip() or exc.__class__.__name__,
@@ -209,7 +209,7 @@ async def handle_host_shell_stream(websocket: WebSocket, id: int, token: str) ->
     except WebSocketDisconnect:
         pass
     except Exception:
-        logger.exception("host shell stream failed: %s", id)
+        logger.exception("Host shell stream failed: %s", id)
         await _close_silently(websocket)
     finally:
         try:

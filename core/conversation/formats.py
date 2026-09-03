@@ -6,19 +6,19 @@ from typing import Any
 from unicodedata import category
 
 
-CONTEXT_SUMMARY_HEADER = "# Context Summary"
-TASK_RESUMPTION_CONTEXT_HEADER = "# Task Resumption Context"
+CONTEXT_SUMMARY_HEADER = "# Context summary"
+TASK_RESUMPTION_CONTEXT_HEADER = "# Task resumption context"
 CONTEXT_SUMMARY_ITEM_ID = "context_summary"
 TASK_RESUMPTION_CONTEXT_ITEM_ID = "task_resumption_context"
-CONTEXT_SUMMARY_USER_GOALS_SECTION = "User Goals"
+CONTEXT_SUMMARY_USER_GOALS_SECTION = "User goals"
 CONTEXT_SUMMARY_SECTIONS = (
     CONTEXT_SUMMARY_USER_GOALS_SECTION,
-    "Active Constraints",
+    "Active constraints",
     "Decisions",
-    "Relevant Files And Code",
-    "Tool Results",
-    "Open Tasks",
-    "Current State",
+    "Relevant files and code",
+    "Tool results",
+    "Open tasks",
+    "Current state",
 )
 
 _CONTEXT_SUMMARY_INTRO = (
@@ -145,7 +145,7 @@ def _normalize_context_summary_body(summary: str) -> str:
             sections[current_section].append(line)
 
     if not found_section:
-        sections["Current State"] = unsectioned
+        sections["Current state"] = unsectioned
 
     rendered: list[str] = []
     for section in CONTEXT_SUMMARY_SECTIONS:

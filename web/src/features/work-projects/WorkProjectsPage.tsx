@@ -58,7 +58,7 @@ export function WorkProjectsPage() {
   }, []);
 
   useAdminResourceHeader({
-    createLabel: "Create Project",
+    createLabel: "Create work project",
     refreshLabel: "Refresh work projects",
     loading: projects.loading || adminAction !== null || detailLoadingId !== null,
     onCreate: () => {
@@ -214,7 +214,7 @@ export function WorkProjectsPage() {
         ]}
         empty={projects.items.length === 0}
         emptyIcon={<FolderKanban size={42} />}
-        emptyTitle="No projects found"
+        emptyTitle="No work projects found"
       >
         <ResourceTable<WorkProjectSummary>
           ariaLabel="Work projects"

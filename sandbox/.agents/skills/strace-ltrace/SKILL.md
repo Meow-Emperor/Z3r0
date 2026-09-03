@@ -7,7 +7,7 @@ description: Use strace and ltrace for authorized syscall and library-call traci
 
 Use `strace` and `ltrace` for syscall and library-call tracing during authorized runtime analysis.
 
-## Help First
+## Help first
 
 Before constructing commands, use installed help or version output as the source of truth:
 
@@ -16,7 +16,7 @@ strace --help
 ltrace --help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Trace only provided binaries, task-scoped test programs, or authorized processes.
 - Save traces to files for anything beyond a short bounded run.
@@ -24,7 +24,7 @@ ltrace --help
 - Treat command-line arguments, environment values, file paths, and network endpoints as potentially sensitive.
 - Do not run untrusted samples unless execution is explicitly authorized.
 
-## Common Workflows
+## Common workflows
 
 Trace a short local run and follow child processes:
 

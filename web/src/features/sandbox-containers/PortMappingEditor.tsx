@@ -37,7 +37,7 @@ export function PortMappingEditor({
   return (
     <div className="port-mapping-fieldset">
       <div className="port-mapping-heading">
-        <span>Port Mappings</span>
+        <span>Port mappings</span>
         <div className="port-mapping-actions">
           <Button icon={<Plus size={14} />} theme="borderless" type="tertiary" onClick={onAdd}>
             Add

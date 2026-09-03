@@ -81,7 +81,7 @@ class AgentRegistry:
     def _spec(self, agent_code: str) -> AgentSpec:
         spec = self._specs.get(agent_code)
         if spec is None:
-            raise ValueError(f"agent spec not declared for code: {agent_code}")
+            raise ValueError(f"Agent spec not declared for code: {agent_code}")
         return spec
 
     def _validate_subagent_graph(self) -> None:
@@ -94,10 +94,10 @@ class AgentRegistry:
             return
         for mount in spec.subagents:
             if mount.code == code:
-                raise ValueError(f"agent {code} cannot mount itself as a subagent")
+                raise ValueError(f"Agent {code} cannot mount itself as a subagent")
             if mount.code in path:
                 chain = " -> ".join([*path, mount.code])
-                raise ValueError(f"circular subagent mount detected: {chain}")
+                raise ValueError(f"Circular subagent mount detected: {chain}")
             self._check_subagent_chain(mount.code, [*path, mount.code])
 
     def _build(self, spec: AgentSpec, cfg: AgentConfig, graph: SessionAgentGraph) -> Agent:
@@ -167,7 +167,7 @@ class SessionAgentGraph:
         spec = self._registry._spec(agent_code)
         cfg = get_config().agents.get(agent_code)
         if cfg is None:
-            raise ValueError(f"agent config missing for code: {agent_code}")
+            raise ValueError(f"Agent config missing for code: {agent_code}")
 
         agent = self._registry._build(spec, cfg, self)
         self._agents[agent_code] = agent

@@ -7,7 +7,7 @@ description: Use openssl for authorized TLS, certificate, key, CSR, digest, sign
 
 Use `openssl` for authorized inspection of TLS endpoints and cryptographic material such as certificates, chains, CSRs, public keys, digests, signatures, encodings, and protocol evidence.
 
-## Help First
+## Help first
 
 Before constructing commands, run the installed help and subcommand help as needed:
 
@@ -16,7 +16,7 @@ openssl help
 openssl <subcommand> -help
 ```
 
-## Usage Rules
+## Usage rules
 
 - Work only on in-scope endpoints or provided cryptographic artifacts.
 - Prefer inspection and verification over transformation.
@@ -25,7 +25,7 @@ openssl <subcommand> -help
 - Save certificates, chains, handshake transcripts, and decoded outputs to files when they are large or sensitive.
 - Treat protocol and certificate observations as evidence for review; do not overstate cryptographic exploitability without separate validation.
 
-## Common Workflows
+## Common workflows
 
 Capture a TLS handshake and certificate chain:
 

@@ -46,7 +46,7 @@ async def open_container_shell(
 ) -> ContainerShellSession:
     target = await resolve_sandbox_control_proxy_target(id, require_running=True)
     if target is None:
-        raise ValueError("sandbox container not found")
+        raise ValueError("Sandbox container not found")
     url = f"{target.ws_base_url}/shell?token={target.token}"
     websocket = await websockets.connect(
         url,

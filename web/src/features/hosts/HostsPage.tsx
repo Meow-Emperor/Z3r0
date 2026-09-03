@@ -37,7 +37,7 @@ export function HostsPage() {
   );
 
   useAdminResourceHeader({
-    createLabel: "Create Host",
+    createLabel: "Create host",
     refreshLabel: "Refresh hosts",
     loading: hosts.loading,
     onCreate: () => setModal({ mode: "create" }),
@@ -74,7 +74,7 @@ export function HostsPage() {
       ),
     },
     {
-      key: "docker", header: "Docker Port", width: "110px",
+      key: "docker", header: "Docker port", width: "110px",
       render: (host) => host.docker_management_port,
     },
     {
@@ -119,7 +119,7 @@ export function HostsPage() {
         metrics={[
           { label: "Total", value: hosts.total },
           { label: "SSH", value: summary.ssh },
-          { label: "Docker Ports", value: summary.docker },
+          { label: "Docker ports", value: summary.docker },
         ]}
         emptyIcon={<Server size={42} />}
         emptyTitle="No hosts found"
@@ -227,7 +227,7 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
 
   return (
     <AppModal
-      title={host ? `Images on ${host.ip_address}` : "Host Images"}
+      title={host ? `Images on ${host.ip_address}` : "Host images"}
       titleIcon={<Boxes size={17} />}
       open={Boolean(host)}
       width={680}
@@ -267,7 +267,7 @@ function HostImagesModal({ host, onClose }: { host: ManagedHost | null; onClose:
           {
             title: "", dataIndex: "image_id", width: 50,
             render: (_value, record) => (
-              <DeleteRowAction title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "this image"}?`}
+              <DeleteRowAction title="Remove image" content={`Remove ${(record as ManagedHostImage).image_name || "This image"}?`}
                 label="Remove image" size="small" loading={removingId === (record as ManagedHostImage).image_id}
                 disabled={activeActionRef.current !== null} onConfirm={() => void removeImage(record as ManagedHostImage)}
               />

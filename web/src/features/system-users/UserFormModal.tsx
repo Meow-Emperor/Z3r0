@@ -49,7 +49,7 @@ export function UserFormModal({ open, user, saving, onCancel, onCreate, onUpdate
   return (
     <ResourceModal
       open={open}
-      title={editing ? "Edit User" : "Create User"}
+      title={editing ? "Edit user" : "Create user"}
       titleIcon={<UserRound size={17} />}
       saving={saving}
       submitLabel={editing ? "Save" : "Create"}

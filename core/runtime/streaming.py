@@ -21,7 +21,7 @@ class StreamIdleTimeout(TimeoutError):
     def __init__(self, phase: str, timeout_seconds: int) -> None:
         self.phase = phase
         self.timeout_seconds = timeout_seconds
-        super().__init__(f"{phase} was idle for more than {timeout_seconds} seconds")
+        super().__init__(f"{phase.capitalize()} was idle for more than {timeout_seconds} seconds")
 
 
 async def iter_normalized_stream_events(

@@ -1,7 +1,7 @@
 export const landingSeo = {
   siteUrl: "https://z3r0.fans/",
   siteName: "Z3r0",
-  title: "Z3r0 - Red Team Collaboration Workbench for Authorized Security Work",
+  title: "Z3r0 - Red team collaboration workbench for authorized security work",
   description:
     "Z3r0 is an open-source red team collaboration workbench with graph-driven specialist assignments, attributable evidence chains, lead review, validated findings and attack paths, distributed Docker sandboxes, controlled egress, and replayable timelines.",
   imagePath: "assets/z3r0-logo.png",
@@ -32,7 +32,7 @@ export const landingSeo = {
     "asset relationship graph",
     "graph-driven red team workflow",
     "security evidence chain",
-    "WorkProject records",
+    "work project records",
     "code audit automation",
     "source code security audit",
     "dependency review",

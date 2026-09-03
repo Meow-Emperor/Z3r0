@@ -106,7 +106,7 @@ async def create_work_project(
         await session.refresh(project)
         schema = await _project_schema(session, project, user_id=user_id, user_role=user_role)
 
-    logger.info("work project created: %s", project.id)
+    logger.info("Work project created: %s", project.id)
     return schema
 
 
@@ -159,7 +159,7 @@ async def update_work_project_metadata(
         await session.refresh(project)
         schema = await _project_schema(session, project, user_id=user_id, user_role=user_role)
 
-    logger.info("work project metadata updated: %s", id)
+    logger.info("Work project metadata updated: %s", id)
     return schema
 
 
@@ -188,8 +188,8 @@ async def cancel_work_project(
         await session.refresh(project)
         schema = await _project_schema(session, project, user_id=user_id, user_role=user_role)
 
-    await cancel_sessions(session_ids, "WorkProject canceled.")
-    logger.info("work project canceled: %s", id)
+    await cancel_sessions(session_ids, "Work project canceled.")
+    logger.info("Work project canceled: %s", id)
     return schema, True
 
 
@@ -224,7 +224,7 @@ async def delete_work_project(id: int) -> bool:
         await session.delete(project)
         await session.commit()
 
-    logger.info("work project deleted: %s", id)
+    logger.info("Work project deleted: %s", id)
     return True
 
 
@@ -250,7 +250,7 @@ async def retry_work_project(
         await session.refresh(project)
         schema = await _project_schema(session, project, user_id=user_id, user_role=user_role)
 
-    logger.debug("work project retried: %s", project.id)
+    logger.debug("Work project retried: %s", project.id)
     return schema, True
 
 
@@ -260,21 +260,21 @@ async def complete_work_project(project_id: int) -> str:
             select(WorkProject).where(WorkProject.id == project_id).with_for_update()
         )).one_or_none()
         if project is None:
-            return "work project not found"
+            return "Work project not found"
         if project.status != WorkProjectStatus.ACTIVE:
-            return f"work project is {project.status}"
+            return f"Work project is {project.status}"
         open_work = (await session.exec(select(WorkProjectWorkItem.id).where(
             WorkProjectWorkItem.project_id == project_id,
             WorkProjectWorkItem.status.not_in({WorkProjectWorkItemStatus.COMPLETED, WorkProjectWorkItemStatus.CANCELED}),
         ).limit(1))).first()
         if open_work is not None:
-            return "work project has non-terminal work items"
+            return "Work project has non-terminal work items"
         suspected = (await session.exec(select(WorkProjectFinding.id).where(
             WorkProjectFinding.project_id == project_id,
             WorkProjectFinding.verification == WorkProjectFindingVerification.SUSPECTED,
         ).limit(1))).first()
         if suspected is not None:
-            return "work project has suspected findings that require validation, refutation, or deferral"
+            return "Work project has suspected findings that require validation, refutation, or deferral"
         in_scope_assets = set((await session.exec(select(WorkProjectAsset.id).where(
             WorkProjectAsset.project_id == project_id,
             WorkProjectAsset.scope == WorkProjectAssetScope.IN_SCOPE,
@@ -289,7 +289,7 @@ async def complete_work_project(project_id: int) -> str:
             )
         )).all())
         if not in_scope_assets.issubset(covered_assets):
-            return "work project has in-scope assets without a covered or deferred target conclusion"
+            return "Work project has in-scope assets without a covered or deferred target conclusion"
         paths = list((await session.exec(select(WorkProjectAttackPath).where(WorkProjectAttackPath.project_id == project_id))).all())
         steps = list((await session.exec(select(WorkProjectAttackPathStep).where(WorkProjectAttackPathStep.project_id == project_id))).all())
         steps_by_path: dict[int, list[WorkProjectAttackPathStepSchema]] = {}
@@ -302,7 +302,7 @@ async def complete_work_project(project_id: int) -> str:
                 WorkProjectAttackPathStatus.REFUTED,
                 WorkProjectAttackPathStatus.ARCHIVED,
             }:
-                return "work project has unresolved attack paths"
+                return "Work project has unresolved attack paths"
         project.status = WorkProjectStatus.COMPLETED
         project.updated_at = datetime.now()
         session.add(project)
@@ -367,7 +367,7 @@ async def create_work_project_session(
         ))
         await session.commit()
 
-    logger.info("work project session created: project=%s session=%s", project_id, session_id)
+    logger.info("Work project session created: project=%s session=%s", project_id, session_id)
     return WorkProjectSessionCreateResult(session_id=session_id)
 
 
@@ -489,7 +489,7 @@ async def _next_project_session_title(session, project_id: int) -> str:
             AgentSessionMeta.title.op("~")(_PROJECT_SESSION_TITLE_REGEX),
         )
     )).one() or 0
-    return f"session {max_number + 1}"
+    return f"Session {max_number + 1}"
 
 
 async def _session_counts(session, project_ids: list[int]) -> dict[int, int]:
@@ -805,10 +805,10 @@ def _validate_work_project_metadata_static(
     request: CreateWorkProjectRequest | UpdateWorkProjectMetadataRequest,
 ) -> str:
     if not request.assets:
-        return "at least one asset is required"
+        return "At least one asset is required"
     duplicate_asset = _duplicate_asset_identity(request.assets)
     if duplicate_asset:
-        return f"duplicate asset: {duplicate_asset}"
+        return f"Duplicate asset: {duplicate_asset}"
     return ""
 
 
@@ -831,7 +831,7 @@ async def _validate_work_project_metadata_for_write(
         )).all()
         missing_owner_ids = sorted(set(request.owner_user_ids) - set(users))
         if missing_owner_ids:
-            return f"selected owners not found: {', '.join(str(id) for id in missing_owner_ids)}"
+            return f"Selected owners not found: {', '.join(str(id) for id in missing_owner_ids)}"
 
     if request.sandbox_container_id is None:
         return ""
@@ -859,9 +859,9 @@ async def _validate_project_sandbox_container(
     )
     container = (await session.exec(statement)).first()
     if container is None:
-        return "selected sandbox container not found"
+        return "Selected sandbox container not found"
     if user_role != SystemUserRole.ADMIN and container.owner_id != user_id:
-        return "selected sandbox container is not available to current user"
+        return "Selected sandbox container is not available to the current user"
 
     bound_to_current_project = project_id is not None and (await session.exec(
         select(WorkProject.id).where(
@@ -879,9 +879,9 @@ async def _validate_project_sandbox_container(
         binding_statement = binding_statement.where(WorkProject.id != project_id)
     bound_project_id = (await session.exec(binding_statement)).first()
     if bound_project_id is not None and bound_project_id != project_id:
-        return "selected sandbox container is already bound to another work project"
+        return "Selected sandbox container is already bound to another work project"
     if container.status != SandboxContainerStatus.RUNNING and not bound_to_current_project:
-        return "selected sandbox container is not running"
+        return "Selected sandbox container is not running"
     return ""
 
 

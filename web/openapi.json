@@ -2529,7 +2529,7 @@
             "default": 8000,
             "maximum": 65535.0,
             "minimum": 1.0,
-            "title": "Control Port",
+            "title": "Control port",
             "type": "integer"
           },
           "image_name": {
@@ -4636,11 +4636,11 @@
             "type": "string"
           },
           "control_proxy_host_port": {
-            "title": "Control Host Port",
+            "title": "Control host port",
             "type": "integer"
           },
           "control_proxy_port": {
-            "title": "Control Port",
+            "title": "Control port",
             "type": "integer"
           },
           "created_at": {
@@ -4753,7 +4753,7 @@
       "SandboxImageSchema": {
         "properties": {
           "control_proxy_port": {
-            "title": "Control Port",
+            "title": "Control port",
             "type": "integer"
           },
           "created_at": {
@@ -7787,7 +7787,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -7836,7 +7836,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -7866,7 +7866,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -7922,7 +7922,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -7989,7 +7989,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8056,7 +8056,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8142,7 +8142,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8209,7 +8209,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8286,7 +8286,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8363,7 +8363,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8440,7 +8440,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8486,7 +8486,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8577,7 +8577,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8621,7 +8621,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -8651,7 +8651,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8698,7 +8698,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -8738,7 +8738,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8793,7 +8793,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -8833,7 +8833,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -8910,7 +8910,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9001,7 +9001,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9045,7 +9045,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -9075,7 +9075,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9122,7 +9122,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -9162,7 +9162,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9247,7 +9247,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9324,7 +9324,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9411,7 +9411,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9468,7 +9468,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -9508,7 +9508,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9605,7 +9605,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9649,7 +9649,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -9679,7 +9679,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9758,7 +9758,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9835,7 +9835,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9927,7 +9927,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -9988,7 +9988,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -10018,7 +10018,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10099,7 +10099,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10178,7 +10178,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10259,7 +10259,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10303,7 +10303,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -10343,7 +10343,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10451,7 +10451,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10532,7 +10532,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10613,7 +10613,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10690,7 +10690,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10747,7 +10747,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -10787,7 +10787,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -10844,7 +10844,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -10884,7 +10884,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -10894,7 +10894,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -10951,7 +10951,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -10991,7 +10991,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11001,7 +11001,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11058,7 +11058,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11098,7 +11098,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11108,7 +11108,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11175,7 +11175,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11215,7 +11215,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11225,7 +11225,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11282,7 +11282,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11322,7 +11322,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11332,7 +11332,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11389,7 +11389,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11429,7 +11429,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11439,7 +11439,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11506,7 +11506,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11546,7 +11546,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11556,7 +11556,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11613,7 +11613,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11663,7 +11663,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11673,7 +11673,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11730,7 +11730,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11770,7 +11770,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           },
           "500": {
             "content": {
@@ -11780,7 +11780,7 @@
                 }
               }
             },
-            "description": "Internal Server Error"
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11827,7 +11827,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11867,7 +11867,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -11914,7 +11914,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -11954,7 +11954,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12001,7 +12001,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -12041,7 +12041,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12088,7 +12088,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -12128,7 +12128,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12219,7 +12219,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12283,7 +12283,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12330,7 +12330,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -12370,7 +12370,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12426,7 +12426,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12470,7 +12470,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -12500,7 +12500,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12591,7 +12591,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12665,7 +12665,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12721,7 +12721,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "summary": "System User Login Handler",
@@ -12763,7 +12763,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -12803,7 +12803,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12898,7 +12898,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -12979,7 +12979,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13023,7 +13023,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -13053,7 +13053,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13130,7 +13130,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13195,7 +13195,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13285,7 +13285,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13417,7 +13417,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13517,7 +13517,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13564,7 +13564,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -13604,7 +13604,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13736,7 +13736,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13868,7 +13868,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13935,7 +13935,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -13992,7 +13992,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -14032,7 +14032,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -14099,7 +14099,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -14146,7 +14146,7 @@
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Bad request"
           },
           "401": {
             "content": {
@@ -14186,7 +14186,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -14276,7 +14276,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -14341,7 +14341,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -14417,7 +14417,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [
@@ -14544,7 +14544,7 @@
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Validation error"
           }
         },
         "security": [

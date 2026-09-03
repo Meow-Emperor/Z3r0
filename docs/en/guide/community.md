@@ -11,7 +11,7 @@ Z3r0 welcomes users, security researchers, and software engineers who are intere
 
 Community discussion and contributions focus on the project and its technical domains, including:
 
-1. Multi-Agent runtime design, context management, and task continuity.
+1. Multi-agent runtime design, context management, and task continuity.
 2. Security assessment workflows, code auditing, vulnerability validation, and evidence modeling.
 3. Sandbox isolation, distributed execution resources, controlled egress, and operational security.
 4. LightRAG document ingestion, retrieval quality, graph data, and model integration.

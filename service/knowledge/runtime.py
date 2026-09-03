@@ -43,7 +43,7 @@ async def start_knowledge_document_runtime() -> None:
         name="knowledge-document-processing",
     )
     _processing_requested.set()
-    logger.info("knowledge document runtime started")
+    logger.info("Knowledge document runtime started")
 
 
 async def stop_knowledge_document_runtime() -> None:
@@ -57,7 +57,7 @@ async def stop_knowledge_document_runtime() -> None:
         await task
     except asyncio.CancelledError:
         pass
-    logger.info("knowledge document runtime stopped")
+    logger.info("Knowledge document runtime stopped")
 
 
 def request_knowledge_document_processing(track_ids: Iterable[str]) -> None:
@@ -99,7 +99,7 @@ async def _knowledge_document_processing_loop() -> None:
                 _recover_on_next_run = True
             raise
         except Exception:
-            logger.exception("knowledge document pipeline iteration failed")
+            logger.exception("Knowledge document pipeline iteration failed")
             if should_recover:
                 _recover_on_next_run = True
             _pending_track_ids.update(track_ids)
@@ -129,7 +129,7 @@ async def _recoverable_documents() -> tuple[bool, set[str]]:
         if document.track_id
     }
     if documents:
-        logger.info("recovering LightRAG document queue: documents=%s", len(documents))
+        logger.info("Recovering LightRAG document queue: documents=%s", len(documents))
     return bool(documents), track_ids
 
 
@@ -171,10 +171,10 @@ async def _wait_for_document_tracks(track_ids: set[str]) -> None:
                 ):
                     reported_failed_document_ids.add(document_id)
                     logger.error(
-                        "knowledge document processing failed: document_id=%s, file=%s, error=%s",
+                        "Knowledge document processing failed: document_id=%s, file=%s, error=%s",
                         document_id,
                         document.file_path,
-                        document.error_msg or "unspecified processing error",
+                        document.error_msg or "Unspecified processing error",
                     )
 
             if all(

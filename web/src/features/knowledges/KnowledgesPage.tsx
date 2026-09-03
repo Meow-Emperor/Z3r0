@@ -307,9 +307,9 @@ export function KnowledgesPage() {
     || (activeTab === "graph" && graphLoading);
 
   useAdminResourceHeader({
-    createLabel: "Upload Documents",
+    createLabel: "Upload documents",
     createIcon: <Upload size={16} />,
-    refreshLabel: "Refresh knowledges",
+    refreshLabel: "Refresh knowledge",
     loading: activeLoading,
     onCreate: () => fileInputRef.current?.click(),
     onRefresh: refreshActive,
@@ -319,7 +319,7 @@ export function KnowledgesPage() {
     { label: "Documents", value: statusCounts.total },
     { label: "Processed", value: statusCounts.processed },
     { label: "Vectors", value: vectors.loaded ? vectors.total : "-" },
-    { label: "Visible Graph", value: graphLoaded ? `${graph.nodes.length} / ${graph.edges.length}` : "-" },
+    { label: "Visible graph", value: graphLoaded ? `${graph.nodes.length} / ${graph.edges.length}` : "-" },
   ], [graph.edges.length, graph.nodes.length, graphLoaded, statusCounts, vectors.loaded, vectors.total]);
 
   return (
@@ -365,7 +365,7 @@ export function KnowledgesPage() {
             })}
           />
         </TabPane>
-        <TabPane itemKey="graph" tab={<TabLabel icon={<Network size={15} />} text="Knowledge Graph" />}>
+        <TabPane itemKey="graph" tab={<TabLabel icon={<Network size={15} />} text="Knowledge graph" />}>
           <ResourcePanel
             className="knowledge-graph-panel"
             toolbar={(
@@ -500,7 +500,7 @@ function VectorsTab({
 }) {
   const columns: ResourceColumn<KnowledgeVector>[] = [
     { key: "vector", header: "Vector", width: "minmax(260px, 0.8fr)", render: (item) => <ResourceIdentity icon={<Braces size={18} />} title={item.file_name} detail={item.id} /> },
-    { key: "content", header: "Chunk Content", width: "minmax(320px, 1.4fr)", render: (item) => <ResourceText>{item.content}</ResourceText> },
+    { key: "content", header: "Chunk content", width: "minmax(320px, 1.4fr)", render: (item) => <ResourceText>{item.content}</ResourceText> },
     { key: "index", header: "Index", width: "80px", render: (item) => item.chunk_index },
     { key: "tokens", header: "Tokens", width: "90px", render: (item) => item.tokens },
     { key: "dimension", header: "Dim", width: "80px", render: (item) => item.dimension },

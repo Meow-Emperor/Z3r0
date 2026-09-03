@@ -46,7 +46,7 @@ def resolve_report_download_path(report_id: str) -> Path:
     session_id, file_id = _parse_report_id(report_id)
     resolved_path = (_safe_session_report_dir(session_id) / f"{file_id}{REPORT_EXTENSION}").resolve()
     if not _is_report_file_path(resolved_path):
-        raise FileNotFoundError("report file not found")
+        raise FileNotFoundError("Report file not found")
     return resolved_path
 
 
@@ -58,20 +58,20 @@ def report_id_for_path(report_path: Path) -> str:
         or report_path.suffix.lower() != REPORT_EXTENSION
         or not _REPORT_FILE_ID_PATTERN.fullmatch(file_id)
     ):
-        raise ValueError("invalid report file")
+        raise ValueError("Invalid report file")
     return f"{session_id}{_REPORT_ID_SEPARATOR}{file_id}"
 
 
 def _parse_report_id(report_id: str) -> tuple[str, str]:
     raw_report_id = report_id.strip()
     if not raw_report_id:
-        raise ValueError("report id is required")
+        raise ValueError("Report ID is required")
     parts = raw_report_id.split(_REPORT_ID_SEPARATOR, 1)
     if len(parts) != 2:
-        raise ValueError("report id is invalid")
+        raise ValueError("Report ID is invalid")
     session_id, file_id = parts[0].strip(), parts[1].strip()
     if not _REPORT_SESSION_PATTERN.fullmatch(session_id) or not _REPORT_FILE_ID_PATTERN.fullmatch(file_id):
-        raise ValueError("report id is invalid")
+        raise ValueError("Report ID is invalid")
     return session_id, file_id
 
 
@@ -95,7 +95,7 @@ async def cleanup_expired_reports() -> int:
     threshold = time() - retention_seconds
     deleted = _cleanup_expired_reports_sync(threshold)
     if deleted:
-        logger.info("expired report files cleaned: %s", deleted)
+        logger.info("Expired report files cleaned: %s", deleted)
     return deleted
 
 
@@ -108,7 +108,7 @@ async def start_report_cleanup_runtime() -> None:
         _report_cleanup_loop(),
         name="report-cleanup",
     )
-    logger.info("report cleanup runtime started")
+    logger.info("Report cleanup runtime started")
 
 
 async def stop_report_cleanup_runtime() -> None:
@@ -121,7 +121,7 @@ async def stop_report_cleanup_runtime() -> None:
         await task
     except asyncio.CancelledError:
         pass
-    logger.info("report cleanup runtime stopped")
+    logger.info("Report cleanup runtime stopped")
 
 
 async def _report_cleanup_loop() -> None:
@@ -132,22 +132,22 @@ async def _report_cleanup_loop() -> None:
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("report cleanup iteration failed")
+            logger.exception("Report cleanup iteration failed")
 
 
 def _valid_report_content(content: str) -> str:
     if not isinstance(content, str) or not content.strip():
-        raise ValueError("report content is required")
+        raise ValueError("Report content is required")
     return content
 
 
 def _safe_session_report_dir(session_id: str) -> Path:
     normalized = session_id.strip()
     if not _REPORT_SESSION_PATTERN.fullmatch(normalized):
-        raise ValueError("invalid session id for report export")
+        raise ValueError("Invalid session ID for report export")
     session_dir = (REPORT_ROOT / normalized).resolve()
     if not _is_relative_to(session_dir, REPORT_ROOT.resolve()):
-        raise ValueError("invalid session id for report export")
+        raise ValueError("Invalid session ID for report export")
     return session_dir
 
 
@@ -232,7 +232,7 @@ def _delete_expired_file(path: Path, threshold: float) -> int:
     except FileNotFoundError:
         return 0
     except Exception:
-        logger.debug("failed to delete expired report file: %s", path, exc_info=True)
+        logger.debug("Failed to delete expired report file: %s", path, exc_info=True)
         return 0
 
 

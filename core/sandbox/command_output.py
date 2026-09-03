@@ -141,7 +141,7 @@ def validate_output_path(output_file: str) -> str:
         or parts != ("/", "tmp", "shell-command-output", filename)
         or not _OUTPUT_FILE_RE.fullmatch(filename)
     ):
-        raise ValueError("output_file must be a command result path returned by sandbox command tools")
+        raise ValueError("The `output_file` field must be a command result path returned by sandbox command tools")
     return normalized
 
 

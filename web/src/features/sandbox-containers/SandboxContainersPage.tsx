@@ -70,7 +70,7 @@ export function SandboxContainersPage() {
   );
 
   useAdminResourceHeader({
-    createLabel: "Create Container",
+    createLabel: "Create sandbox container",
     refreshLabel: "Refresh sandbox containers",
     loading: containers.loading,
     onCreate: () => setModalOpen(true),
@@ -246,7 +246,7 @@ function ContainerEgressModal({
       onSubmit={save}
       onCancel={onClose}
     >
-      <FormField label="Egress Mode">
+      <FormField label="Egress mode">
         <Select
           prefix={<Route size={16} />}
           value={egressMode}
@@ -260,7 +260,7 @@ function ContainerEgressModal({
         />
       </FormField>
       {egressMode === SANDBOX_CONTAINER_EGRESS_MODE.PROXY ? (
-        <FormField label="Managed Proxy">
+        <FormField label="Managed proxy">
           <OptionListSelect
             source={egressProxyOptions}
             prefix={<Network size={16} />}

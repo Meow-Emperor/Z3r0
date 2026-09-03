@@ -66,7 +66,7 @@ async def create_work_project_asset(
             return None, error
         existing = await _get_asset_by_identity(session, project_id, request)
         if existing is not None:
-            return None, "asset already exists"
+            return None, "Asset already exists"
         asset = WorkProjectAsset(
             project_id=project_id,
             origin=origin,
@@ -81,7 +81,7 @@ async def create_work_project_asset(
             await session.commit()
         except IntegrityError:
             await session.rollback()
-            return None, "asset already exists"
+            return None, "Asset already exists"
         await session.refresh(asset)
     return WorkProjectAssetSchema.model_validate(asset), ""
 
@@ -96,10 +96,10 @@ async def update_work_project_asset(
             return None, error
         asset = (await session.exec(select(WorkProjectAsset).where(WorkProjectAsset.id == asset_id).with_for_update())).one_or_none()
         if asset is None or asset.project_id != project_id:
-            return None, "asset not found"
+            return None, "Asset not found"
         conflict = await _get_asset_by_identity(session, project_id, request)
         if conflict is not None and conflict.id != asset_id:
-            return None, "asset already exists; merge the duplicate assets instead"
+            return None, "Asset already exists; merge the duplicate assets instead"
         apply_asset_request(asset, request, datetime.now())
         session.add(asset)
         await session.commit()
@@ -125,7 +125,7 @@ async def upsert_work_project_asset(
         created_by_agent_code=created_by_agent_code,
         created_from_session_id=created_from_session_id,
     )
-    if error != "asset already exists":
+    if error != "Asset already exists":
         return saved, error
     async with get_async_session() as session:
         winner = await _get_asset_by_identity(session, project_id, request)
@@ -139,7 +139,7 @@ async def merge_work_project_assets(
     target_asset_id: int,
 ) -> tuple[WorkProjectAssetSchema | None, str]:
     if source_asset_id == target_asset_id:
-        return None, "source and target assets must be different"
+        return None, "Source and target assets must be different"
     async with get_async_session() as session:
         if error := await lock_active_work_project(session, project_id):
             return None, error
@@ -150,7 +150,7 @@ async def merge_work_project_assets(
         source = by_id.get(source_asset_id)
         target = by_id.get(target_asset_id)
         if source is None or target is None or source.project_id != project_id or target.project_id != project_id:
-            return None, "asset not found"
+            return None, "Asset not found"
         source_path_ids = set((await session.exec(select(WorkProjectAttackPathStep.path_id).where(
             WorkProjectAttackPathStep.project_id == project_id,
             or_(
@@ -166,7 +166,7 @@ async def merge_work_project_assets(
             ),
         ))).all())
         if source_path_ids & target_path_ids:
-            return None, "asset merge would collapse distinct nodes in an attack path; revise the path first"
+            return None, "Asset merge would collapse distinct nodes in an attack path; revise the path first"
 
         await session.execute(update(WorkProjectEvidence).where(WorkProjectEvidence.primary_asset_id == source_asset_id).values(primary_asset_id=target_asset_id))
         await session.execute(update(WorkProjectFinding).where(WorkProjectFinding.primary_asset_id == source_asset_id).values(primary_asset_id=target_asset_id))
@@ -235,7 +235,7 @@ async def merge_work_project_assets(
             await session.commit()
         except IntegrityError:
             await session.rollback()
-            return None, "asset merge conflicts with an existing project reference"
+            return None, "Asset merge conflicts with an existing project reference"
         await session.refresh(target)
     return WorkProjectAssetSchema.model_validate(target), ""
 

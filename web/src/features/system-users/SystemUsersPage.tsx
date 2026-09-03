@@ -27,7 +27,7 @@ export function SystemUsersPage() {
   );
 
   useAdminResourceHeader({
-    createLabel: "Create User",
+    createLabel: "Create user",
     refreshLabel: "Refresh users",
     loading: users.loading,
     onCreate: () => setModal({ mode: "create" }),

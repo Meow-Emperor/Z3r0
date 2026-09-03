@@ -196,7 +196,7 @@ async def _run_async_sandbox_command(
         )
         await _queue_completion_notification(snapshot)
     except Exception as exc:
-        logger.exception("async sandbox command execution failed: %s", run_id)
+        logger.exception("Async sandbox command execution failed: %s", run_id)
         output_bytes, output_lines = await _stat_output_file(context.sandbox_container_id, stat_command)
         snapshot = await sandbox_async_jobs.fail_async_job(
             run_id,
@@ -220,7 +220,7 @@ async def _stat_output_file(container_id: int, stat_command: str) -> tuple[int, 
             timeout_seconds=_OUTPUT_STAT_TIMEOUT_SECONDS,
         )
     except Exception:
-        logger.debug("failed to stat async sandbox command output", exc_info=True)
+        logger.debug("Failed to stat async sandbox command output", exc_info=True)
         return 0, 0
     parts = result.output.strip().split()
     if len(parts) < 2:
@@ -237,7 +237,7 @@ def _finish_async_sandbox_command(run_id: str, task: asyncio.Task[None]) -> None
     except asyncio.CancelledError:
         pass
     except Exception:
-        logger.exception("async sandbox command task failed: %s", run_id)
+        logger.exception("Async sandbox command task failed: %s", run_id)
 
 
 async def _create_job_record(
@@ -272,7 +272,7 @@ async def _queue_completion_notification(snapshot: SandboxAsyncJobSnapshot | Non
     try:
         await resume_target_agent_instance(snapshot.session_id, snapshot.agent_instance_id)
     except Exception:
-        logger.exception("failed to resume owner after async job completion: %s", snapshot.run_id)
+        logger.exception("Failed to resume owner after async job completion: %s", snapshot.run_id)
 
 
 async def _queue_completion_notifications(snapshots: list[SandboxAsyncJobSnapshot]) -> None:

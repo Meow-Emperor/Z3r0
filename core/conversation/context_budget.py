@@ -18,7 +18,7 @@ from logger import get_logger
 logger = get_logger(__name__)
 
 _NOTICE_TEXT = (
-    "# Context Budget Notice\n\n"
+    "# Context budget notice\n\n"
     "Older items were omitted to fit the context window. Use the retained summary and recent "
     "messages. Reload the specific source file, command output, or document when an omitted "
     "exact detail is required."
@@ -94,7 +94,7 @@ def constrain_model_input(
     item_budget = budget.input_budget_tokens - instruction_tokens
     if item_budget <= 0:
         raise RuntimeError(
-            "agent instructions exceed configured model context budget "
+            "Agent instructions exceed configured model context budget "
             f"tokens={instruction_tokens} budget={budget.input_budget_tokens}",
         )
 
@@ -102,13 +102,13 @@ def constrain_model_input(
     constrained_tokens = _estimate_model_call_tokens(constrained, instructions, budget.model)
     if constrained_tokens > budget.input_budget_tokens:
         raise RuntimeError(
-            "model input exceeds configured context budget after pruning "
+            "Model input exceeds configured context budget after pruning "
             f"tokens={constrained_tokens} budget={budget.input_budget_tokens} "
             f"window={budget.context_window}",
         )
 
     logger.warning(
-        "agent model input pruned to context budget: model=%s tokens=%d original_tokens=%d budget=%d window=%d original_items=%d items=%d",
+        "Agent model input pruned to context budget: model=%s tokens=%d original_tokens=%d budget=%d window=%d original_items=%d items=%d",
         budget.model,
         constrained_tokens,
         current_tokens,
@@ -159,7 +159,7 @@ def _prune_items_to_budget(
 
     if not suffix and chunks:
         raise RuntimeError(
-            "latest model input item exceeds configured context budget; reduce the request or tool output size"
+            "Latest model input item exceeds configured context budget; reduce the request or tool output size"
         )
 
     if omitted_chunks <= 0:
@@ -178,7 +178,7 @@ def _prune_items_to_budget(
             return candidate
 
     raise RuntimeError(
-        "model input exceeds configured context budget after context pruning"
+        "Model input exceeds configured context budget after context pruning"
     )
 
 

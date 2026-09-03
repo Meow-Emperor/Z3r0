@@ -2,7 +2,7 @@ from sqlmodel import Field, SQLModel
 
 
 class AgentMessageMeta(SQLModel, table=True):
-    """app-level attribution for each SDK-managed agent_messages row"""
+    """App-level attribution for each SDK-managed agent_messages row."""
 
     __tablename__ = "agent_message_meta"
 

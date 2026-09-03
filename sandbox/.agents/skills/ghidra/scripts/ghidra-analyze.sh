@@ -182,7 +182,7 @@ CMD+=(-scriptPath "$FULL_SCRIPT_PATH")
 for i in "${!SCRIPTS[@]}"; do
     script="${SCRIPTS[$i]}"
     CMD+=(-postScript "$script")
-    
+
     # Check if there are args for this script
     for arg_entry in "${SCRIPT_ARGS[@]}"; do
         idx="${arg_entry%%:*}"

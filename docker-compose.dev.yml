@@ -16,7 +16,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    
+
   pgadmin:
     image: ghcr.io/yv1ing/pgadmin4:latest
     container_name: pgadmin

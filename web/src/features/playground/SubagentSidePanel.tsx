@@ -127,7 +127,7 @@ function SubagentRunView({ run }: { run: SubagentTarget["runs"][number] }) {
 function SubagentFallbackResult({ task }: { task: SubagentExecutionItem }) {
   const failed = isSubagentFailed(task.status);
   const running = isSubagentRunning(task.status);
-  const label = running ? "Progress" : failed ? "Error Preview" : "Result Preview";
+  const label = running ? "Progress" : failed ? "Error preview" : "Result preview";
   const body = running
     ? task.progress || "Running"
     : previewBody(task);

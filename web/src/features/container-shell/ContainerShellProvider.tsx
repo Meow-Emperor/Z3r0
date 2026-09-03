@@ -163,7 +163,7 @@ const ContainerShellContext = createContext<ContainerShellContextValue | null>(n
 
 export function useContainerShell() {
   const value = useContext(ContainerShellContext);
-  if (!value) throw new Error("useContainerShell must be used inside ContainerShellProvider");
+  if (!value) throw new Error("The useContainerShell hook must be used inside ContainerShellProvider");
   return value;
 }
 

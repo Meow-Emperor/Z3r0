@@ -86,7 +86,7 @@ class WorkProjectMetadataRequest(BaseModel):
         identities: set[tuple] = set()
         for asset in value:
             if asset.identity in identities:
-                raise ValueError("project scope contains a duplicate asset")
+                raise ValueError("Project scope contains a duplicate asset")
             identities.add(asset.identity)
         return value
 

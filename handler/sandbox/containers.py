@@ -111,7 +111,7 @@ async def create_sandbox_container_handler(
     user: AuthUser,
 ) -> CommonResponse:
     if user.role != SystemUserRole.ADMIN and request.owner_id not in {None, user.id}:
-        raise_api_error(HTTPStatus.FORBIDDEN, "no permission to assign sandbox container owner")
+        raise_api_error(HTTPStatus.FORBIDDEN, "No permission to assign the sandbox container owner")
     owner_id = request.owner_id if user.role == SystemUserRole.ADMIN and request.owner_id is not None else user.id
     result = await create_sandbox_container(
         host_id=request.host_id,
@@ -160,7 +160,7 @@ async def update_sandbox_container_egress_handler(
 async def delete_sandbox_container_handler(id: int, user: AuthUser) -> CommonResponse:
     await _require_manage_permission(id, user)
     if not await delete_sandbox_container(id):
-        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox container not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Sandbox container not found")
     return CommonResponse(data=DeleteSandboxContainerResponse(id=id))
 
 
@@ -255,9 +255,9 @@ async def _require_manage_permission(id: int, user: AuthUser) -> None:
         user_role=user.role,
     )
     if manageable is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox container not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Sandbox container not found")
     if not manageable:
-        raise_api_error(HTTPStatus.FORBIDDEN, "no permission to operate this sandbox container")
+        raise_api_error(HTTPStatus.FORBIDDEN, "No permission to operate this sandbox container")
 
 
 async def handle_container_shell_stream(websocket: WebSocket, id: int, token: str) -> None:
@@ -327,7 +327,7 @@ async def handle_container_shell_stream(websocket: WebSocket, id: int, token: st
     except WebSocketDisconnect:
         pass
     except Exception:
-        logger.exception("container shell stream failed: %s", id)
+        logger.exception("Container shell stream failed: %s", id)
         await _close_silently(websocket)
     finally:
         try:
@@ -387,12 +387,12 @@ async def _can_access_container_by_id(user, container_id: int) -> bool:
 
 async def _require_running_container_access(id: int, action: str, user=None) -> None:
     if user is not None and not await _can_access_container_by_id(user, id):
-        raise_api_error(HTTPStatus.FORBIDDEN, "no permission to access this sandbox container")
+        raise_api_error(HTTPStatus.FORBIDDEN, "No permission to access this sandbox container")
     status = await resolve_file_container_status(id)
     if status is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "sandbox container not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "Sandbox container not found")
     if status != SandboxContainerStatus.RUNNING:
-        raise_api_error(HTTPStatus.BAD_REQUEST, f"only running sandbox containers can {action}")
+        raise_api_error(HTTPStatus.BAD_REQUEST, f"Only running sandbox containers can {action}")
 
 
 async def handle_list_files(id: int, path: str, user=None) -> CommonResponse:
@@ -411,9 +411,9 @@ async def handle_read_file(id: int, path: str, base64_mode: bool = False, user=N
     except Exception as exc:
         _raise_container_file_operation_error(exc, id, "get container file info")
     if info is None:
-        raise_api_error(HTTPStatus.NOT_FOUND, "file not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, "File not found")
     if info.type == ContainerFileType.DIRECTORY:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "cannot read a directory")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "Cannot read a directory")
     try:
         content = await read_container_file(id, path, base64_mode=base64_mode)
     except Exception as exc:
@@ -432,8 +432,8 @@ async def handle_write_file(id: int, body: ContainerFileWriteRequest, user=None)
     except Exception as exc:
         _raise_container_file_operation_error(exc, id, "write container file")
     if not ok:
-        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to write container file")
-    return CommonResponse(message="file written")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to write container file")
+    return CommonResponse(message="File written")
 
 
 async def handle_upload_files(
@@ -445,7 +445,7 @@ async def handle_upload_files(
 ) -> CommonResponse:
     await _require_running_container_access(id, "upload files", user=user)
     if not files:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "no files uploaded")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "No files uploaded")
 
     try:
         sources = [ContainerUploadSource(filename=file.filename or "", stream=file.file) for file in files]
@@ -455,14 +455,14 @@ async def handle_upload_files(
 
     return CommonResponse(
         data=ContainerFileUploadResponse(path=path, files=uploaded),
-        message="files uploaded",
+        message="Files uploaded",
     )
 
 
 async def handle_download_files(id: int, paths: list[str], user=None) -> StreamingResponse:
     await _require_running_container_access(id, "download files", user=user)
     if not paths:
-        raise_api_error(HTTPStatus.BAD_REQUEST, "download path is required")
+        raise_api_error(HTTPStatus.BAD_REQUEST, "Download path is required")
 
     try:
         download = await download_container_paths(id, paths)
@@ -488,8 +488,8 @@ async def handle_copy_files(id: int, body: ContainerFileCopyRequest, user=None) 
     except Exception as exc:
         _raise_container_file_operation_error(exc, id, "copy container files")
     if not ok:
-        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to copy container files")
-    return CommonResponse(message="files copied")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to copy container files")
+    return CommonResponse(message="Files copied")
 
 
 async def handle_move_files(id: int, body: ContainerFileMoveRequest, user=None) -> CommonResponse:
@@ -499,8 +499,8 @@ async def handle_move_files(id: int, body: ContainerFileMoveRequest, user=None) 
     except Exception as exc:
         _raise_container_file_operation_error(exc, id, "move container files")
     if not ok:
-        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to move container files")
-    return CommonResponse(message="files moved")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to move container files")
+    return CommonResponse(message="Files moved")
 
 
 async def handle_delete_files(id: int, body: ContainerFileDeleteRequest, user=None) -> CommonResponse:
@@ -510,8 +510,8 @@ async def handle_delete_files(id: int, body: ContainerFileDeleteRequest, user=No
     except Exception as exc:
         _raise_container_file_operation_error(exc, id, "delete container files")
     if not ok:
-        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to delete container files")
-    return CommonResponse(message="files deleted")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to delete container files")
+    return CommonResponse(message="Files deleted")
 
 
 async def handle_mkdir(id: int, body: ContainerFileMkdirRequest, user=None) -> CommonResponse:
@@ -521,23 +521,23 @@ async def handle_mkdir(id: int, body: ContainerFileMkdirRequest, user=None) -> C
     except Exception as exc:
         _raise_container_file_operation_error(exc, id, "create container directory")
     if not ok:
-        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed to create container directory")
-    return CommonResponse(message="directory created")
+        raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Failed to create container directory")
+    return CommonResponse(message="Directory created")
 
 
 def _raise_container_file_operation_error(error: Exception, container_id: int, operation: str) -> Never:
     message = str(error).strip()
     if isinstance(error, FileNotFoundError):
-        raise_api_error(HTTPStatus.NOT_FOUND, message or "path not found")
+        raise_api_error(HTTPStatus.NOT_FOUND, message or "Path not found")
     if isinstance(error, FileExistsError):
-        raise_api_error(HTTPStatus.CONFLICT, message or "path already exists")
+        raise_api_error(HTTPStatus.CONFLICT, message or "Path already exists")
     if isinstance(error, ValueError):
-        raise_api_error(HTTPStatus.BAD_REQUEST, message or f"failed to {operation}")
+        raise_api_error(HTTPStatus.BAD_REQUEST, message or f"Failed to {operation}")
     if isinstance(error, (RuntimeError, OSError)):
-        logger.warning("sandbox control proxy operation failed: container=%s operation=%s", container_id, operation)
-        raise_api_error(HTTPStatus.BAD_GATEWAY, f"failed to {operation}")
-    logger.exception("failed to %s: %s", operation, container_id)
-    raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"failed to {operation}")
+        logger.warning("Sandbox control proxy operation failed: container=%s operation=%s", container_id, operation)
+        raise_api_error(HTTPStatus.BAD_GATEWAY, f"Failed to {operation}")
+    logger.exception("Failed to %s: %s", operation, container_id)
+    raise_api_error(HTTPStatus.INTERNAL_SERVER_ERROR, f"Failed to {operation}")
 
 
 # noVNC proxy handlers
@@ -547,15 +547,15 @@ async def handle_novnc_http_proxy(id: int, path: str, token: str, cookie_token: 
     effective_token = token or cookie_token
     user = await authenticate_ws_token(effective_token)
     if user is None or not await _can_access_container_by_id(user, id):
-        return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not Found")
+        return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not found")
 
     target = await resolve_novnc_target(id)
     if target is None:
-        return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not Found")
+        return FastAPIResponse(status_code=HTTPStatus.NOT_FOUND.value, content="Not found")
 
     response = await proxy_novnc_http(target, path)
     if response is None:
-        return FastAPIResponse(status_code=HTTPStatus.BAD_GATEWAY.value, content="Bad Gateway")
+        return FastAPIResponse(status_code=HTTPStatus.BAD_GATEWAY.value, content="Bad gateway")
 
     content_type = response.headers.get("content-type", "application/octet-stream")
     proxied = FastAPIResponse(
@@ -648,7 +648,7 @@ async def handle_novnc_ws_proxy(websocket: WebSocket, id: int, token: str) -> No
         for task in done:
             task.result()
     except Exception:
-        logger.debug("novnc ws proxy handler error: %s", id, exc_info=True)
+        logger.debug("noVNC WebSocket proxy handler error: %s", id, exc_info=True)
     finally:
         await _cancel_task(proxy_task)
         await _cancel_task(access_guard)

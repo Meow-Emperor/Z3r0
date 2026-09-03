@@ -43,13 +43,13 @@ async def delete_sandbox_image(id: int) -> DeleteSandboxImageResult:
             select(SandboxImage).where(SandboxImage.id == id).with_for_update()
         )).one_or_none()
         if sandbox_image is None:
-            return DeleteSandboxImageResult(deleted=False, not_found=True, message="sandbox image not found")
+            return DeleteSandboxImageResult(deleted=False, not_found=True, message="Sandbox image not found")
 
         result = await session.exec(select(SandboxContainer.id).where(SandboxContainer.image_id == id).limit(1))
         if result.first() is not None:
             return DeleteSandboxImageResult(
                 deleted=False,
-                message="sandbox image is used by sandbox containers",
+                message="Sandbox image is used by sandbox containers",
             )
 
         await session.delete(sandbox_image)

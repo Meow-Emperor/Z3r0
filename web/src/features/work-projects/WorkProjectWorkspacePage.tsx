@@ -17,12 +17,12 @@ export function WorkProjectWorkspacePage() {
   const { project, loading } = useWorkProjectDetails(validProjectId);
 
   const metrics = useMemo(() => [
-    { label: "In Scope", value: project?.in_scope_asset_count ?? 0 },
+    { label: "In scope", value: project?.in_scope_asset_count ?? 0 },
     { label: "Untouched", value: project?.untouched_asset_count ?? 0 },
-    { label: "Active Work", value: project?.active_work_item_count ?? 0 },
+    { label: "Active work", value: project?.active_work_item_count ?? 0 },
     { label: "Blocked", value: project?.blocked_work_item_count ?? 0 },
-    { label: "Validated Findings", value: project?.validated_finding_count ?? 0 },
-    { label: "Open Paths", value: project?.active_attack_path_count ?? 0 },
+    { label: "Validated findings", value: project?.validated_finding_count ?? 0 },
+    { label: "Open paths", value: project?.active_attack_path_count ?? 0 },
   ], [project]);
 
   return (

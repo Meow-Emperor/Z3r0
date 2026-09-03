@@ -26,9 +26,9 @@ const TLS_OPTIONS = [
 ];
 
 const CERT_FIELDS = [
-  { field: "docker_client_ca_cert", label: "Docker Client CA Certificate" },
-  { field: "docker_client_cert", label: "Docker Client Certificate" },
-  { field: "docker_client_key", label: "Docker Client Key" },
+  { field: "docker_client_ca_cert", label: "Docker client CA certificate" },
+  { field: "docker_client_cert", label: "Docker client certificate" },
+  { field: "docker_client_key", label: "Docker client key" },
 ] as const;
 
 type HostCertField = (typeof CERT_FIELDS)[number]["field"];
@@ -122,7 +122,7 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
   return (
     <ResourceModal
       open={open}
-      title={editing ? "Edit Host" : "Create Host"}
+      title={editing ? "Edit host" : "Create host"}
       titleIcon={<Server size={17} />}
       saving={saving}
       submitLabel={editing ? "Save" : "Create"}
@@ -132,14 +132,14 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
       onSubmit={submit}
     >
       <div className="host-form-row">
-        <FormField label="IP Address">
+        <FormField label="IP address">
           <Input prefix={<Server size={16} />} value={values.ip_address} maxLength={255} required
             autoComplete="off"
             disabled={isLocalHostEdit}
             onChange={(value) => setValue("ip_address", value)}
           />
         </FormField>
-        <FormField label="SSH Port">
+        <FormField label="SSH port">
           <InputNumber prefix={<Network size={16} />} value={values.ssh_port} min={1} max={65535}
             disabled={isLocalHostEdit}
             onChange={(value) => typeof value === "number" && setValue("ssh_port", value)}
@@ -147,14 +147,14 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
         </FormField>
       </div>
       <div className="host-form-row">
-        <FormField label="Host Account">
+        <FormField label="Host account">
           <Input prefix={<User size={16} />} value={values.host_account} maxLength={128} required
             autoComplete="off"
             disabled={isLocalHostEdit}
             onChange={(value) => setValue("host_account", value)}
           />
         </FormField>
-        <FormField label="Host Password">
+        <FormField label="Host password">
           <Input mode="password" prefix={<KeyRound size={16} />} value={values.host_password} maxLength={512} required
             autoComplete="new-password"
             disabled={isLocalHostEdit}
@@ -163,12 +163,12 @@ export function HostFormModal({ open, host, saving, onCancel, onCreate, onUpdate
         </FormField>
       </div>
       <div className="host-form-row">
-        <FormField label="Docker Management Port">
+        <FormField label="Docker management port">
           <InputNumber prefix={<PlugZap size={16} />} value={values.docker_management_port} min={1} max={65535}
             onChange={(value) => typeof value === "number" && setValue("docker_management_port", value)}
           />
         </FormField>
-        <FormField label="Docker TLS Mode">
+        <FormField label="Docker TLS mode">
           <Select
             prefix={<ShieldCheck size={16} />}
             value={values.docker_tls_enabled ? "tls" : "plain"}

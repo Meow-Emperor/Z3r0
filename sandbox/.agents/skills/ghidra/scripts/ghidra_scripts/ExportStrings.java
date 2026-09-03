@@ -74,7 +74,7 @@ public class ExportStrings extends GhidraScript {
     private boolean isStringData(Data data) {
         DataType dt = data.getBaseDataType();
         String typeName = dt.getName().toLowerCase();
-        return typeName.contains("string") || 
+        return typeName.contains("string") ||
                typeName.equals("char") ||
                typeName.contains("unicode");
     }

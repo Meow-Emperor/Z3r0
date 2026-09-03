@@ -9,7 +9,7 @@ async def lock_active_work_project(session, project_id: int) -> str:
         select(WorkProject).where(WorkProject.id == project_id).with_for_update()
     )).one_or_none()
     if project is None:
-        return "work project not found"
+        return "Work project not found"
     if project.status != WorkProjectStatus.ACTIVE:
-        return f"work project is {project.status}"
+        return f"Work project is {project.status}"
     return ""

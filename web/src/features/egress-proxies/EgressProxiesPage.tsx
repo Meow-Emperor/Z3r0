@@ -31,7 +31,7 @@ export function EgressProxiesPage() {
   );
 
   useAdminResourceHeader({
-    createLabel: "Create Egress Proxy",
+    createLabel: "Create egress proxy",
     refreshLabel: "Refresh egress proxies",
     loading: proxies.loading,
     onCreate: () => setModal({ mode: "create" }),

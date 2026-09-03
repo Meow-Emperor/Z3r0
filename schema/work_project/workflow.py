@@ -138,15 +138,15 @@ class WorkProjectWorkItemTargetUpdateRequest(WorkProjectWorkItemTargetKey):
             WorkProjectTargetStatus.COVERED,
             WorkProjectTargetStatus.DEFERRED,
         }:
-            raise ValueError("target updates support active, covered, or deferred; use the WorkItem commands for pending or blocked")
+            raise ValueError("Target updates support active, covered, or deferred; use the work item commands for pending or blocked")
         if self.status == WorkProjectTargetStatus.COVERED and not self.conclusion:
-            raise ValueError("covered target requires a conclusion")
+            raise ValueError("A covered target requires a conclusion")
         if self.status == WorkProjectTargetStatus.DEFERRED and not self.deferral_reason:
-            raise ValueError("deferred target requires a deferral reason")
+            raise ValueError("A deferred target requires a deferral reason")
         if self.status != WorkProjectTargetStatus.COVERED and self.conclusion:
-            raise ValueError("conclusion is only valid for a covered target")
+            raise ValueError("The `conclusion` field is only valid for a covered target")
         if self.status != WorkProjectTargetStatus.DEFERRED and self.deferral_reason:
-            raise ValueError("deferral_reason is only valid for a deferred target")
+            raise ValueError("The `deferral_reason` field is only valid for a deferred target")
         return self
 
 
@@ -183,11 +183,11 @@ class WorkProjectWorkItemPlanRequest(BaseModel):
             self.focus_attack_path_id, self.focus_attack_path_step_id,
         ))
         if focus_count > 1:
-            raise ValueError("work item can have at most one focus record")
+            raise ValueError("A work item can have at most one focus record")
         self.dependency_ids = list(dict.fromkeys(self.dependency_ids))
         target_keys = [(target.asset_id, target.surface) for target in self.targets]
         if len(target_keys) != len(set(target_keys)):
-            raise ValueError("work item contains a duplicate asset surface target")
+            raise ValueError("A work item contains a duplicate asset surface target")
         return self
 
 

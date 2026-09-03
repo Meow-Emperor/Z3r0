@@ -1,4 +1,4 @@
-"""Bounded, user-visible WorkProject projections."""
+"""Bounded, user-visible work project projections."""
 
 from collections import Counter
 

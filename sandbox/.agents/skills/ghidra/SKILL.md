@@ -7,7 +7,7 @@ description: Use Ghidra headless analysis for authorized binary reverse engineer
 
 Use Ghidra's `analyzeHeadless` tool through the bundled wrapper for automated reverse engineering. Import binaries, run analysis, decompile to C code, and export functions, strings, symbols, and call graphs.
 
-## Help First
+## Help first
 
 Before constructing commands, run the wrapper help and use it as the source of truth:
 
@@ -15,13 +15,13 @@ Before constructing commands, run the wrapper help and use it as the source of t
 .agents/skills/ghidra/scripts/ghidra-analyze.sh --help
 ```
 
-## Resource Paths
+## Resource paths
 
 - Wrapper script: `.agents/skills/ghidra/scripts/ghidra-analyze.sh`
 - Built-in export scripts: `.agents/skills/ghidra/scripts/ghidra_scripts`
 - Headless analyzer: `/usr/local/bin/analyzeHeadless`
 
-## Quick Reference
+## Quick reference
 
 | Task | Command |
 |------|---------|
@@ -32,7 +32,7 @@ Before constructing commands, run the wrapper help and use it as the source of t
 | Get call graph | `.agents/skills/ghidra/scripts/ghidra-analyze.sh -s ExportCalls.java -o ./output binary` |
 | Export symbols | `.agents/skills/ghidra/scripts/ghidra-analyze.sh -s ExportSymbols.java -o ./output binary` |
 
-## Usage Rules
+## Usage rules
 
 ```bash
 .agents/skills/ghidra/scripts/ghidra-analyze.sh [options] <binary>
@@ -60,7 +60,7 @@ Always call the wrapper with its `.agents/skills/ghidra/...` path. It handles pr
 - `--project-name <name>` - Project name (default: auto-generated)
 - `-v, --verbose` - Verbose output
 
-## Built-in Export Scripts
+## Built-in export scripts
 
 ### ExportAll.java
 Comprehensive export - runs all other exports and creates a summary. Best for initial analysis.
@@ -135,9 +135,9 @@ Export all symbols: imports, exports, and internal symbols.
 
 **Output:** `{name}_symbols.json`
 
-## Common Workflows
+## Common workflows
 
-### Analyze an Unknown Binary
+### Analyze an unknown binary
 
 ```bash
 # Create output directory
@@ -156,7 +156,7 @@ sed -n '1,160p' ./analysis/unknown_binary_interesting.txt
 grep -A 50 "encrypt" ./analysis/unknown_binary_decompiled.c
 ```
 
-### Analyze Firmware
+### Analyze firmware
 
 ```bash
 # Specify ARM architecture for firmware
@@ -167,7 +167,7 @@ grep -A 50 "encrypt" ./analysis/unknown_binary_decompiled.c
     firmware.bin
 ```
 
-### Quick Function Listing
+### Quick function listing
 
 ```bash
 # Just get function names and addresses (faster)
@@ -177,7 +177,7 @@ grep -A 50 "encrypt" ./analysis/unknown_binary_decompiled.c
 jq '.functions[] | "\(.address): \(.name)"' program_functions.json
 ```
 
-### Find Specific Patterns
+### Find specific patterns
 
 ```bash
 # After running ExportDecompiled, search for patterns
@@ -185,7 +185,7 @@ grep -n "password\|secret\|key" output_decompiled.c
 grep -n "strcpy\|sprintf\|gets" output_decompiled.c
 ```
 
-### Analyze Multiple Binaries
+### Analyze multiple binaries
 
 ```bash
 for bin in ./samples/*; do
@@ -194,7 +194,7 @@ for bin in ./samples/*; do
 done
 ```
 
-## Architecture/Processor IDs
+## Architecture and processor IDs
 
 Common processor IDs for the `-p` option:
 
@@ -214,7 +214,7 @@ ls /opt/ghidra/Ghidra/Processors/
 
 ## Troubleshooting
 
-### Ghidra Not Found
+### Ghidra not found
 
 Inside the sandbox, `GHIDRA_HOME` is `/opt/ghidra` and the wrapper should find `/usr/local/bin/analyzeHeadless`. If running the skill outside the image, set `GHIDRA_HOME` explicitly:
 
@@ -223,7 +223,7 @@ export GHIDRA_HOME=/path/to/ghidra_PUBLIC
 .agents/skills/ghidra/scripts/ghidra-analyze.sh ...
 ```
 
-### Analysis Takes Too Long
+### Analysis takes too long
 ```bash
 # Set a timeout (seconds)
 .agents/skills/ghidra/scripts/ghidra-analyze.sh --timeout 300 -s ExportAll.java binary
@@ -232,7 +232,7 @@ export GHIDRA_HOME=/path/to/ghidra_PUBLIC
 .agents/skills/ghidra/scripts/ghidra-analyze.sh --no-analysis -s ExportSymbols.java binary
 ```
 
-### Out of Memory
+### Out of memory
 
 Set a larger Ghidra heap before running the wrapper:
 
@@ -240,7 +240,7 @@ Set a larger Ghidra heap before running the wrapper:
 export MAXMEM=4G
 ```
 
-### Wrong Architecture Detected
+### Wrong architecture detected
 Explicitly specify the processor:
 ```bash
 .agents/skills/ghidra/scripts/ghidra-analyze.sh -p "ARM:LE:32:v7" -s ExportAll.java firmware.bin

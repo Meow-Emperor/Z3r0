@@ -89,7 +89,7 @@ async def create_subagent_task(
             )
         await session.commit()
         await session.refresh(task)
-    logger.debug("subagent task created: %s", task.run_id)
+    logger.debug("Subagent task created: %s", task.run_id)
     return snapshot_from_task(task)
 
 
@@ -246,7 +246,7 @@ async def mark_stale_running_subagent_tasks_failed() -> list[AgentSubordinateTas
             for task in rows:
                 await session.refresh(task)
     if rows:
-        logger.info("stale subagent tasks marked failed: %d", len(rows))
+            logger.info("Stale subagent tasks marked failed: %d", len(rows))
     return [snapshot_from_task(task) for task in rows]
 
 

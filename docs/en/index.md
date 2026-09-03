@@ -5,24 +5,24 @@ pageClass: z3r0-docs-home
 
 hero:
   name: Z3r0
-  text: Red Team Workbench
-  tagline: A multi-Agent collaboration platform for authorized penetration testing and vulnerability discovery
+  text: Red team workbench
+  tagline: AI-native red-team workbench for authorized penetration testing and vulnerability research, with specialist agents, sandboxed tooling, evidence records, and replayable timelines.
   image:
     src: /z3r0-logo.png
     alt: Z3r0 logo
   actions:
     - theme: brand
-      text: Quick Start
+      text: Quick start
       link: /en/guide/quick-start
     - theme: alt
       text: Documentation
       link: /en/guide/overview
 
 features:
-  - title: Multi-Agent orchestration
-    details: A lead Agent coordinates specialist Agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis.
+  - title: Multi-agent orchestration
+    details: A lead agent coordinates specialist agents for intelligence gathering, validation, code audit, reverse analysis, and cryptanalysis.
   - title: Project evidence plane
-    details: WorkProject binds graph-targeted WorkItems to authorized assets, WorkItem-attributed evidence, validated findings, continuous attack paths, retest candidates, and lead review decisions.
+    details: Work projects bind graph-targeted work items to authorized assets, work item-attributed evidence, validated findings, continuous attack paths, retest candidates, and lead review decisions.
   - title: Retrieval context plane
     details: Building knowledge graphs with LightRAG Core provides matching original document chunks and graph context for task-oriented inputs.
   - title: Replayable event timeline

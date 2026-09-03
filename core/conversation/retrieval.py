@@ -12,7 +12,6 @@ from core.conversation.formats import (
     sanitize_context_text,
 )
 from core.conversation.items import extract_message_text
-from core.conversation.utterances import canonical_utterance_key, is_non_topic_utterance
 from logger import get_logger
 
 
@@ -23,7 +22,7 @@ _RECENT_TOPIC_LIMIT = 3
 _CURRENT_TEXT_MAX_CHARS = 4_000
 _RECENT_TOPICS_MAX_CHARS = 2_000
 _RECENT_TOPIC_MAX_CHARS = 800
-_EMPTY_SUMMARY_KEYS = frozenset({"none", "无", "暂无", "没有"})
+_EMPTY_SUMMARY_KEYS = frozenset({"none", "nosummary", "nothing", "notavailable"})
 
 
 class RetrievalSession(Protocol):
@@ -36,12 +35,10 @@ async def build_conversation_retrieval_query(
 ) -> str:
     """Combine the current request with bounded, user-authored session context."""
     current = _clip_text(_normalize_text(current_text), _CURRENT_TEXT_MAX_CHARS)
-    if is_non_topic_utterance(current):
-        current = ""
     try:
         items = await session.get_items_for_retrieval(_HISTORY_ITEM_LIMIT)
     except Exception:
-        logger.exception("failed to load session context for retrieval")
+        logger.exception("Failed to load session context for retrieval")
         return _format_retrieval_query(current, "")
 
     recent_topics, retrieval_summary = _history_context(items, current)
@@ -50,7 +47,7 @@ async def build_conversation_retrieval_query(
 
 
 def _history_context(items: list[Any], current: str) -> tuple[str, str]:
-    current_key = canonical_utterance_key(current)
+    current_key = _dedupe_key(current)
     seen = {current_key} if current_key else set()
     recent: list[str] = []
     recent_chars = 0
@@ -69,8 +66,6 @@ def _history_context(items: list[Any], current: str) -> tuple[str, str]:
         if is_internal_context_item(raw_item):
             continue
 
-        if is_non_topic_utterance(text):
-            continue
         separator_chars = 2 if recent else 0
         remaining = _RECENT_TOPICS_MAX_CHARS - recent_chars - separator_chars
         if remaining <= 0 or len(recent) >= _RECENT_TOPIC_LIMIT:
@@ -78,7 +73,7 @@ def _history_context(items: list[Any], current: str) -> tuple[str, str]:
         topic = _clip_text(text, min(_RECENT_TOPIC_MAX_CHARS, remaining))
         if not topic:
             continue
-        key = canonical_utterance_key(topic)
+        key = _dedupe_key(topic)
         if not key or key in seen:
             continue
         seen.add(key)
@@ -93,7 +88,7 @@ def _summary_retrieval_text(summary: str) -> str:
         _normalize_text(context_summary_section(summary, CONTEXT_SUMMARY_USER_GOALS_SECTION)),
         _RECENT_TOPICS_MAX_CHARS,
     )
-    return "" if canonical_utterance_key(user_goals) in _EMPTY_SUMMARY_KEYS else user_goals
+    return "" if _dedupe_key(user_goals) in _EMPTY_SUMMARY_KEYS else user_goals
 
 
 def _format_retrieval_query(current: str, historical: str) -> str:
@@ -124,3 +119,7 @@ def _clip_text(value: str, limit: int) -> str:
     if len(value) <= limit:
         return value
     return value[:limit].rstrip()
+
+
+def _dedupe_key(value: str) -> str:
+    return " ".join(value.casefold().split())

@@ -96,12 +96,12 @@ class WorkProjectAssetRequest(BaseModel):
 def canonicalize_asset_locator(kind: WorkProjectAssetKind, value: str) -> str:
     value = value.strip()
     if not value:
-        raise ValueError("asset locator is required")
+        raise ValueError("Asset locator is required")
     if kind == WorkProjectAssetKind.NETWORK:
         try:
             return str(ipaddress.ip_network(value.removeprefix("cidr:"), strict=False))
         except ValueError as error:
-            raise ValueError("network locator must be a valid CIDR or IP address") from error
+            raise ValueError("Network locator must be a valid CIDR or IP address") from error
     if kind == WorkProjectAssetKind.HOST:
         candidate = value.removeprefix("host:").strip().lower().rstrip(".")
         _validate_hostname_or_ip(candidate, "host")
@@ -119,7 +119,7 @@ def canonicalize_asset_locator(kind: WorkProjectAssetKind, value: str) -> str:
     if kind == WorkProjectAssetKind.ARTIFACT and value.lower().startswith("sha256:"):
         digest = value.split(":", 1)[1].lower()
         if not re.fullmatch(r"[0-9a-f]{64}", digest):
-            raise ValueError("artifact sha256 locator must contain a 64-character hexadecimal digest")
+            raise ValueError("Artifact SHA-256 locator must contain a 64-character hexadecimal digest")
         return f"sha256:{digest}"
     return value
 
@@ -127,12 +127,12 @@ def canonicalize_asset_locator(kind: WorkProjectAssetKind, value: str) -> str:
 def _canonicalize_url(value: str, *, require_port: bool, require_http: bool = False) -> str:
     parsed = urlsplit(value)
     if not parsed.scheme or not parsed.hostname:
-        raise ValueError("asset locator must be an absolute URI")
+        raise ValueError("Asset locator must be an absolute URI")
     scheme = parsed.scheme.lower()
     if require_http and scheme not in {"http", "https"}:
-        raise ValueError("endpoint locator must use http or https")
+        raise ValueError("Endpoint locator must use HTTP or HTTPS")
     if require_port and parsed.port is None:
-        raise ValueError("service locator must include an explicit port")
+        raise ValueError("Service locator must include an explicit port")
     host = parsed.hostname.lower().rstrip(".")
     netloc = host
     if ":" in host and not host.startswith("["):
@@ -140,7 +140,7 @@ def _canonicalize_url(value: str, *, require_port: bool, require_http: bool = Fa
     if parsed.port is not None:
         netloc = f"{netloc}:{parsed.port}"
     if parsed.username:
-        raise ValueError("asset locator must not contain credentials")
+        raise ValueError("Asset locator must not contain credentials")
     path = parsed.path or ("/" if require_http else "")
     return urlunsplit((scheme, netloc, path, parsed.query, ""))
 
@@ -150,9 +150,9 @@ def _validate_hostname_or_ip(value: str, label: str, *, allow_ip: bool = True) -
         ipaddress.ip_address(value)
         if allow_ip:
             return
-        raise ValueError(f"{label} locator must be a DNS name")
+        raise ValueError(f"{label.capitalize()} locator must be a DNS name")
     except ValueError:
         if not allow_ip and re.fullmatch(r"\d+(?:\.\d+){3}", value):
-            raise ValueError(f"{label} locator must be a DNS name")
+            raise ValueError(f"{label.capitalize()} locator must be a DNS name")
     if len(value) > 253 or not re.fullmatch(r"(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", value):
-        raise ValueError(f"{label} locator must be a valid hostname")
+        raise ValueError(f"{label.capitalize()} locator must be a valid hostname")

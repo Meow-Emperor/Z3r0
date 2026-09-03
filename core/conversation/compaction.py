@@ -27,7 +27,7 @@ from model.agent.context_compactions import AgentContextCompaction
 logger = get_logger(__name__)
 
 _SUMMARY_SECTIONS = "\n".join(f"## {section}" for section in CONTEXT_SUMMARY_SECTIONS)
-_SUMMARY_AGENT_INSTRUCTIONS = f"""# Context Compression
+_SUMMARY_AGENT_INSTRUCTIONS = f"""# Context compression
 
 Compress earlier conversation items for continuation. Return only a concise Markdown summary with exactly these sections:
 
@@ -36,7 +36,7 @@ Compress earlier conversation items for continuation. Return only a concise Mark
 Write "None" for an empty section. Preserve user requests, constraints, decisions, durable facts,
 file and code references, tool results, errors, open tasks, and current state. Remove greetings,
 repeated reasoning, obsolete plans, and narration. Preserve everything needed to continue safely
-after the source messages are replaced. Do not infer or invent facts. In `User Goals`, include only
+after the source messages are replaced. Do not infer or invent facts. In `User goals`, include only
 user-authored goals, requests, and topics; place assistant conclusions, retrieved data, tool output,
 and resumption context in their proper sections."""
 
@@ -135,7 +135,7 @@ async def compact_if_needed(
         return CompactionDecision(False, projected_tokens, context_window, trigger_tokens, target_tokens)
     if len(candidate_items) < cfg.context_compression_min_items:
         logger.debug(
-            "agent context compaction skipped: too few candidate items session=%s viewer=%s candidates=%d min=%d tokens=%d trigger=%d window=%d",
+            "Agent context compaction skipped: too few candidate items session=%s viewer=%s candidates=%d min=%d tokens=%d trigger=%d window=%d",
             scope.session_id,
             scope.viewer_agent_code,
             len(candidate_items),
@@ -148,7 +148,7 @@ async def compact_if_needed(
 
     candidate_tokens = sum(item.token_estimate for item in candidate_items)
     logger.debug(
-        "agent context compaction starting session=%s viewer=%s nested_for=%s nested_call=%s model=%s items=%d candidate_items=%d tokens=%d trigger=%d target=%d window=%d end_message_id=%s",
+        "Agent context compaction starting session=%s viewer=%s nested_for=%s nested_call=%s model=%s items=%d candidate_items=%d tokens=%d trigger=%d target=%d window=%d end_message_id=%s",
         scope.session_id,
         scope.viewer_agent_code,
         scope.nested_for,
@@ -164,7 +164,7 @@ async def compact_if_needed(
     )
 
     logger.debug(
-        "agent context compaction summarizing session=%s viewer=%s candidate_items=%d candidate_tokens=%d",
+        "Agent context compaction summarizing session=%s viewer=%s candidate_items=%d candidate_tokens=%d",
         scope.session_id,
         scope.viewer_agent_code,
         len(candidate_items),
@@ -180,21 +180,21 @@ async def compact_if_needed(
         summary_text = await _summarize_items([item.item for item in candidate_items], agent_config)
     except Exception as exc:
         logger.warning(
-            "agent context compaction failed session=%s viewer=%s reason=%s",
+            "Agent context compaction failed session=%s viewer=%s reason=%s",
             scope.session_id,
             scope.viewer_agent_code,
             _one_line_error(exc),
         )
-        _raise_if_hard_stop(projected_tokens, hard_stop_tokens, "context compaction failed near model context limit")
+        _raise_if_hard_stop(projected_tokens, hard_stop_tokens, "Context compaction failed near model context limit")
         return CompactionDecision(False, projected_tokens, context_window, trigger_tokens, target_tokens)
     if not summary_text.strip():
         logger.warning(
-            "agent context compaction produced empty summary session=%s viewer=%s candidate_items=%d",
+            "Agent context compaction produced empty summary session=%s viewer=%s candidate_items=%d",
             scope.session_id,
             scope.viewer_agent_code,
             len(candidate_items),
         )
-        _raise_if_hard_stop(projected_tokens, hard_stop_tokens, "context compaction produced an empty summary")
+        _raise_if_hard_stop(projected_tokens, hard_stop_tokens, "Context compaction produced an empty summary")
         return CompactionDecision(False, projected_tokens, context_window, trigger_tokens, target_tokens)
 
     summary_item = _summary_item(summary_text)
@@ -203,7 +203,7 @@ async def compact_if_needed(
     async with session_factory() as sess:
         if not await _try_lock_compaction(sess, scope):
             logger.debug(
-                "agent context compaction skipped: lock busy session=%s viewer=%s nested_for=%s nested_call=%s",
+                "Agent context compaction skipped: lock busy session=%s viewer=%s nested_for=%s nested_call=%s",
                 scope.session_id,
                 scope.viewer_agent_code,
                 scope.nested_for,
@@ -225,7 +225,7 @@ async def compact_if_needed(
         finally:
             await _unlock_compaction(sess, scope)
     logger.info(
-        "agent context compacted session=%s viewer=%s nested_for=%s nested_call=%s items=%d tokens=%d summary_tokens=%d window=%d end_message_id=%s",
+        "Agent context compacted session=%s viewer=%s nested_for=%s nested_call=%s items=%d tokens=%d summary_tokens=%d window=%d end_message_id=%s",
         scope.session_id,
         scope.viewer_agent_code,
         scope.nested_for,
@@ -287,7 +287,7 @@ def _select_compaction_candidates(
     # If the target cannot be reached because the recent tail or incoming prompt is too large,
     # compact all eligible prefix items and let the next turn decide whether another pass is needed.
     if incoming_tokens >= target_tokens:
-        logger.debug("incoming prompt tokens exceed compression target: incoming=%d target=%d", incoming_tokens, target_tokens)
+        logger.debug("Incoming prompt tokens exceed compression target: incoming=%d target=%d", incoming_tokens, target_tokens)
     if open_atomic_groups:
         return candidates[:last_complete_index + 1]
     return candidates
@@ -359,7 +359,7 @@ async def _store_compaction(
 async def _summarize_items(items: list[TResponseInputItem], agent_config: AgentConfig) -> str:
     cfg = get_config().agent_runtime
     agent = Agent(
-        name="Context Compressor",
+        name="Context compressor",
         model=build_openai_model(agent_config),
         model_settings=ModelSettings(
             max_tokens=cfg.context_compression_summary_max_tokens,
@@ -372,7 +372,7 @@ async def _summarize_items(items: list[TResponseInputItem], agent_config: AgentC
         result = await Runner.run(
             starting_agent=agent,
             input=(
-                "# Context Compression Input\n\n"
+                "# Context compression input\n\n"
                 "Compress the following earlier conversation items into a replacement summary. "
                 "Return only the summary body with the required sections.\n\n"
                 "## Items\n\n"
@@ -409,7 +409,7 @@ def _summary_safe_value(value: Any) -> Any:
             "type": "input_image",
             "image_url": f"data:{media_type};base64,[omitted]",
             "detail": value.get("detail") or "auto",
-            "note": "image bytes omitted from context compaction prompt",
+            "note": "Image bytes omitted from context compaction prompt",
         }
     return {key: _summary_safe_value(item) for key, item in value.items()}
 

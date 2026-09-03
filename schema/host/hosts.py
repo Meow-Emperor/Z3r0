@@ -55,7 +55,7 @@ class CreateManagedHostRequest(BaseModel):
         try:
             return str(ip_address(value))
         except ValueError as exc:
-            raise ValueError("ip address must be a valid IPv4 or IPv6 address") from exc
+            raise ValueError("IP address must be a valid IPv4 or IPv6 address") from exc
 
     @model_validator(mode="after")
     def validate_docker_tls_certificates(self):
@@ -64,7 +64,7 @@ class CreateManagedHostRequest(BaseModel):
             self.docker_client_cert,
             self.docker_client_key,
         )):
-            raise ValueError("docker TLS CA certificate, client certificate, and client key are required")
+            raise ValueError("Docker TLS CA certificate, client certificate, and client key are required")
         if not self.docker_tls_enabled:
             self.docker_client_ca_cert = ""
             self.docker_client_cert = ""
@@ -105,7 +105,7 @@ class UpdateManagedHostRequest(BaseModel):
         try:
             return str(ip_address(value))
         except ValueError as exc:
-            raise ValueError("ip address must be a valid IPv4 or IPv6 address") from exc
+            raise ValueError("IP address must be a valid IPv4 or IPv6 address") from exc
 
     @model_validator(mode="after")
     def validate_has_updates(self):
@@ -123,7 +123,7 @@ class UpdateManagedHostRequest(BaseModel):
                 self.docker_client_key,
             )
         ):
-            raise ValueError("at least one field must be provided")
+            raise ValueError("At least one field must be provided")
         return self
 
 
@@ -158,7 +158,7 @@ class PullManagedHostImagesRequest(BaseModel):
             result.append(image_name)
             seen.add(image_name)
         if not result:
-            raise ValueError("at least one image name is required")
+            raise ValueError("At least one image name is required")
         return result
 
 

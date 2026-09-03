@@ -7,13 +7,13 @@ description: Use when a task requires shell-level work inside the sandbox, inclu
 
 Use sandbox command tools for authorized task work inside the selected sandbox container.
 
-## Skill Loading Required
+## Skill loading required
 
 - Before using any domain-specific tool, load and follow that tool's matching skill when one exists.
 - Loading only `sandbox-shell` is not enough for specialized tools such as `agent-browser-cli`, `apktool`, `binwalk`, `checksec`, `dnsx`, `gdb-pwndbg`, `ghidra`, `httpx`, `jadx`, `nmap`, `openssl`, `pwntools`, or `strace-ltrace`.
 - If no dedicated skill exists for a needed command, use this skill plus the installed command help as the source of truth.
 
-## Usage Rules
+## Usage rules
 
 - Prefer the sandbox image's preinstalled tools. Do not install, upgrade, reinstall, or replace a tool that is already available.
 - Check an existing command with `command -v`, `--version`, or installed help before considering any install step.
@@ -21,7 +21,7 @@ Use sandbox command tools for authorized task work inside the selected sandbox c
 - Treat the preinstalled network inventory as the normal execution boundary. Use its listed tools with small reviewed inputs and conservative rates; do not add network CLIs during ordinary task work.
 - Keep environment changes task-scoped. Do not use `apt`, global `pip`, curl-piped installers, or language package managers to overwrite bundled tools unless the user explicitly asks.
 
-## Tool Contract
+## Tool contract
 
 Command tools return compact JSON metadata; raw output is captured to `output_file`:
 
@@ -30,7 +30,7 @@ Command tools return compact JSON metadata; raw output is captured to `output_fi
 - Status values: `running`, `completed`, `failed`, `canceled`.
 - Read output with `read_sandbox_command_output` using `output_file` and `start_line: 1`, at most 200 lines per call. Do not use `cat`.
 
-## Choosing Execution
+## Choosing execution
 
 Use `execute_sync_command` for short, local, bounded commands expected to finish within 30 seconds:
 
@@ -45,7 +45,7 @@ Use `execute_async_command` for anything slow, remote, stateful, or externally d
 
 Always pass timing arguments explicitly via `timeout_seconds`.
 
-## Async Jobs
+## Async jobs
 
 Dispatching `execute_async_command` ends the current turn immediately.
 
@@ -54,7 +54,7 @@ Dispatching `execute_async_command` ends the current turn immediately.
 - Never poll, read, or check a running job, and never use `sleep`, shell wait loops, or filler progress messages — there is nothing to do but wait to be resumed.
 - Use `cancel_sandbox_async_job` only when cancellation is requested or the job is no longer useful.
 
-## Output Handling
+## Output handling
 
 - When metadata has terminal `status` and `output_lines > 0`, read needed chunks with `read_sandbox_command_output`.
 - Continue with the next `start_line` only when the next chunk is needed.
@@ -62,7 +62,7 @@ Dispatching `execute_async_command` ends the current turn immediately.
 - Use a new bounded command only when file-side filtering/counting is more efficient than reading chunks.
 - Keep generated files and installed packages scoped to the task.
 
-## Python Packages
+## Python packages
 
 - Use `uv` only when the required Python package or CLI is not already preinstalled, or when task isolation is necessary.
 - Create task virtual environments with `uv venv --python /usr/bin/python3 <dir>` when a script needs dependencies outside the bundled toolset.
@@ -73,7 +73,7 @@ Dispatching `execute_async_command` ends the current turn immediately.
 - Prefer the existing `/usr/bin/python3`; `UV_PYTHON_DOWNLOADS=never` is set in the image, and another Python should be downloaded only when the user explicitly asks.
 - Do not use global `pip install` or assume `pip3` is available unless the user explicitly asks and the reason is recorded.
 
-## Available Tools
+## Available tools
 
 - Archives: `7z`, `unzip`, `tar`
 - Shell/runtime: `python3`, `uv`, `uvx`, `node`, `npm`, `jq`, `rg`, `git`, `sha256sum`
@@ -83,14 +83,14 @@ Dispatching `execute_async_command` ends the current turn immediately.
 - File/firmware: `file`, `binwalk`, `readelf`
 - Browser: Chrome for Testing (`google-chrome`, `chrome`) and `agent-browser-cli`
 
-## Tool Selection Boundaries
+## Tool selection boundaries
 
 - `checksec` is provided by `pwntools`; do not install a separate checksec package.
 - Use `dnsx` only for bounded batch DNS validation; use `dns-whois` tools for targeted manual DNS or registration triage.
 - Use `httpx` for bounded HTTP liveness and normalization, and `nmap` for targeted port or service checks.
 - Use `gdb`/`pwndbg` for debugger state, `strace`/`ltrace` for runtime traces, and `pwntools` for repeatable binary interaction.
 
-## Skill Resource Paths
+## Skill resource paths
 
 Use `.agents/skills/<skill-name>/...` paths in sandbox commands for skill-shipped files:
 

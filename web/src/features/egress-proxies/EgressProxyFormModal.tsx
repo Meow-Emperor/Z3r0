@@ -65,7 +65,7 @@ export function EgressProxyFormModal({ open, proxy, saving, onCancel, onCreate, 
   return (
     <ResourceModal
       open={open}
-      title={editing ? "Edit Egress Proxy" : "Create Egress Proxy"}
+      title={editing ? "Edit egress proxy" : "Create egress proxy"}
       titleIcon={<Network size={17} />}
       saving={saving}
       submitLabel={editing ? "Save" : "Create"}
@@ -73,7 +73,7 @@ export function EgressProxyFormModal({ open, proxy, saving, onCancel, onCreate, 
       onCancel={onCancel}
       onSubmit={submit}
     >
-      <FormField label="Proxy Type">
+      <FormField label="Proxy type">
         <Select
           prefix={<Network size={16} />}
           value={values.proxy_type}
@@ -83,24 +83,24 @@ export function EgressProxyFormModal({ open, proxy, saving, onCancel, onCreate, 
           }}
         />
       </FormField>
-      <FormField label="Proxy Host">
+      <FormField label="Proxy host">
         <Input prefix={<Server size={16} />} value={values.proxy_host} maxLength={255} required
           autoComplete="off"
           onChange={(proxy_host) => setValues((current) => ({ ...current, proxy_host }))}
         />
       </FormField>
-      <FormField label="Proxy Port">
+      <FormField label="Proxy port">
         <InputNumber prefix={<Network size={16} />} value={values.proxy_port} min={1} max={65535}
           onChange={(proxy_port) => typeof proxy_port === "number" && setValues((current) => ({ ...current, proxy_port }))}
         />
       </FormField>
-      <FormField label="Proxy Account">
+      <FormField label="Proxy account">
         <Input prefix={<User size={16} />} value={values.proxy_account} maxLength={255}
           autoComplete="off"
           onChange={(proxy_account) => setValues((current) => ({ ...current, proxy_account }))}
         />
       </FormField>
-      <FormField label="Proxy Password">
+      <FormField label="Proxy password">
         <Input mode="password" prefix={<KeyRound size={16} />} value={values.proxy_password} maxLength={512}
           autoComplete="new-password"
           onChange={(proxy_password) => setValues((current) => ({ ...current, proxy_password }))}

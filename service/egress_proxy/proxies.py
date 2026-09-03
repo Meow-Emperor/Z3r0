@@ -106,7 +106,7 @@ async def _update_egress_proxy(
             select(EgressProxy).where(EgressProxy.id == id).with_for_update()
         )).one_or_none()
         if proxy is None:
-            return UpdateEgressProxyResult(proxy=None, not_found=True, message="egress proxy not found")
+            return UpdateEgressProxyResult(proxy=None, not_found=True, message="Egress proxy not found")
 
         if proxy_type is not None:
             proxy.proxy_type = proxy_type
@@ -142,11 +142,11 @@ async def _delete_egress_proxy(id: int) -> DeleteEgressProxyResult:
             select(EgressProxy).where(EgressProxy.id == id).with_for_update()
         )).one_or_none()
         if proxy is None:
-            return DeleteEgressProxyResult(deleted=False, not_found=True, message="egress proxy not found")
+            return DeleteEgressProxyResult(deleted=False, not_found=True, message="Egress proxy not found")
         if await _egress_proxy_has_sandbox_containers(session, id):
             return DeleteEgressProxyResult(
                 deleted=False,
-                message="egress proxy is used by sandbox containers",
+                message="Egress proxy is used by sandbox containers",
             )
 
         await session.delete(proxy)
@@ -189,7 +189,7 @@ async def test_egress_proxy(id: int) -> TestEgressProxyResult:
             success=False,
             status_code=None,
             elapsed_ms=0,
-            message="egress proxy not found",
+            message="Egress proxy not found",
             not_found=True,
         )
 
@@ -202,7 +202,7 @@ async def test_egress_proxy(id: int) -> TestEgressProxyResult:
             success=False,
             status_code=None,
             elapsed_ms=int((perf_counter() - started) * 1000),
-            message=f"proxy test failed: {exc}",
+            message=f"Proxy test failed: {exc}",
         )
 
     elapsed_ms = int((perf_counter() - started) * 1000)
@@ -212,7 +212,7 @@ async def test_egress_proxy(id: int) -> TestEgressProxyResult:
         success=success,
         status_code=status_code,
         elapsed_ms=elapsed_ms,
-        message="proxy test succeeded" if success else f"proxy test returned HTTP {status_code}",
+        message="Proxy test succeeded" if success else f"Proxy test returned HTTP {status_code}",
     )
 
 
@@ -233,7 +233,7 @@ async def _test_proxy_connectivity(proxy: EgressProxy) -> int:
 def _test_proxy_connectivity_sync(proxy: EgressProxy) -> int:
     target = urlsplit(EGRESS_PROXY_TEST_URL)
     if target.scheme != "https" or not target.hostname:
-        raise ValueError("proxy test URL must be https")
+        raise ValueError("Proxy test URL must use HTTPS")
     target_host = target.hostname
     target_port = target.port or 443
     target_addr = f"{target_host}:{target_port}"
@@ -246,7 +246,7 @@ def _test_proxy_connectivity_sync(proxy: EgressProxy) -> int:
     elif proxy.proxy_type in {EgressProxyType.HTTP, EgressProxyType.HTTPS}:
         sock = _connect_http_proxy(proxy, target_addr)
     else:
-        raise ValueError(f"unsupported proxy type: {proxy.proxy_type.value}")
+        raise ValueError(f"Unsupported proxy type: {proxy.proxy_type.value}")
 
     try:
         with ssl.create_default_context().wrap_socket(sock, server_hostname=target_host) as tls_sock:
@@ -289,7 +289,7 @@ def _connect_http_proxy(proxy: EgressProxy, target_addr: str) -> socket.socket:
         sock.sendall(("\r\n".join(headers) + "\r\n\r\n").encode("ascii"))
         status_code = _read_http_response_status(sock)
         if status_code < 200 or status_code > 299:
-            raise OSError(f"http proxy CONNECT returned HTTP {status_code}")
+            raise OSError(f"HTTP proxy CONNECT returned HTTP {status_code}")
         return sock
     except Exception:
         sock.close()
@@ -309,22 +309,22 @@ def _connect_socks5_proxy(proxy: EgressProxy, target_host: str, target_port: int
         sock.sendall(bytes([0x05, len(methods)]) + methods)
         reply = _read_exact(sock, 2)
         if reply[0] != 0x05 or reply[1] == 0xFF:
-            raise OSError("socks5 method rejected")
+            raise OSError("SOCKS5 method rejected")
         if reply[1] == 0x02:
             user = proxy.proxy_account.encode("utf-8")
             password = proxy.proxy_password.encode("utf-8")
             if len(user) > 255 or len(password) > 255:
-                raise ValueError("socks5 credentials too long")
+                raise ValueError("SOCKS5 credentials are too long")
             sock.sendall(bytes([0x01, len(user)]) + user + bytes([len(password)]) + password)
             auth_reply = _read_exact(sock, 2)
             if len(auth_reply) != 2 or auth_reply[1] != 0:
-                raise OSError("socks5 authentication failed")
+                raise OSError("SOCKS5 authentication failed")
         elif reply[1] != 0x00:
-            raise OSError(f"unsupported socks5 authentication method: {reply[1]}")
+            raise OSError(f"Unsupported SOCKS5 authentication method: {reply[1]}")
 
         host_bytes = target_host.encode("idna")
         if len(host_bytes) > 255:
-            raise ValueError("target host too long")
+            raise ValueError("Target host is too long")
         request = (
             b"\x05\x01\x00\x03"
             + bytes([len(host_bytes)])
@@ -334,7 +334,7 @@ def _connect_socks5_proxy(proxy: EgressProxy, target_host: str, target_port: int
         sock.sendall(request)
         head = _read_exact(sock, 4)
         if head[1] != 0:
-            raise OSError(f"socks5 connect failed: {head[1]}")
+            raise OSError(f"SOCKS5 connect failed: {head[1]}")
         if head[3] == 0x01:
             _read_exact(sock, 4)
         elif head[3] == 0x03:
@@ -343,7 +343,7 @@ def _connect_socks5_proxy(proxy: EgressProxy, target_host: str, target_port: int
         elif head[3] == 0x04:
             _read_exact(sock, 16)
         else:
-            raise OSError(f"invalid socks5 address type: {head[3]}")
+            raise OSError(f"Invalid SOCKS5 address type: {head[3]}")
         _read_exact(sock, 2)
         return sock
     except Exception:
@@ -364,7 +364,7 @@ def _read_exact(sock: socket.socket, size: int) -> bytes:
     while remaining > 0:
         chunk = sock.recv(remaining)
         if not chunk:
-            raise OSError("connection closed while reading proxy response")
+            raise OSError("Connection closed while reading the proxy response")
         chunks.append(chunk)
         remaining -= len(chunk)
     return b"".join(chunks)
@@ -375,12 +375,12 @@ def _read_http_response_status(sock: socket.socket) -> int:
     while b"\r\n\r\n" not in data:
         chunk = sock.recv(1024)
         if not chunk:
-            raise OSError("connection closed before HTTP response headers")
+            raise OSError("Connection closed before the HTTP response headers")
         data.extend(chunk)
         if len(data) > 65536:
             raise OSError("HTTP response headers are too large")
     line = bytes(data).split(b"\r\n", 1)[0].decode("iso-8859-1")
     parts = line.split(" ", 2)
     if len(parts) < 2 or not parts[1].isdigit():
-        raise OSError(f"invalid HTTP status line: {line}")
+        raise OSError(f"Invalid HTTP status line: {line}")
     return int(parts[1])

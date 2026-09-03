@@ -180,9 +180,9 @@ def _get_access_token_header() -> str:
 
 
 def _patch_auth_contracts(app: Any, schema: dict[str, Any]) -> None:
-    """drive OpenAPI security from the FastAPI dependency tree.
+    """Drive OpenAPI security from the FastAPI dependency tree.
 
-    routes that depend on require_user get AccessTokenAuth + 401; routes that
+    Routes that depend on require_user get AccessTokenAuth + 401; routes that
     additionally depend on require_admin also get 403."""
     components = schema.setdefault("components", {})
     schemas = components.setdefault("schemas", {})
@@ -238,22 +238,22 @@ def _walk_dependant(dependant: Any, funcs: set) -> None:
 
 
 def _patch_validation_contracts(schema: dict[str, Any]) -> None:
-    """rewrite FastAPI's default 422 docs to the runtime CommonResponse shape"""
+    """Rewrite FastAPI's default 422 docs to the runtime CommonResponse shape."""
     for methods in schema.get("paths", {}).values():
         for operation in methods.values():
             responses = operation.get("responses")
             if isinstance(responses, dict) and "422" in responses:
-                _ensure_common_response(responses["422"], "Validation Error")
+                _ensure_common_response(responses["422"], "Validation error")
 
 
 def _patch_error_contracts(schema: dict[str, Any]) -> None:
-    """normalize documented error responses to the runtime CommonResponse shape"""
+    """Normalize documented error responses to the runtime CommonResponse shape."""
     descriptions = {
-        "400": "Bad Request",
+        "400": "Bad request",
         "401": "Unauthorized",
         "403": "Forbidden",
-        "404": "Not Found",
-        "422": "Validation Error",
+        "404": "Not found",
+        "422": "Validation error",
     }
     for methods in schema.get("paths", {}).values():
         for operation in methods.values():
@@ -267,7 +267,7 @@ def _patch_error_contracts(schema: dict[str, Any]) -> None:
 
 
 def _register_extra_schemas(schema: dict[str, Any]) -> None:
-    """publish ws contracts as OpenAPI components so the frontend can derive types"""
+    """Publish WebSocket contracts as OpenAPI components so the frontend can derive types."""
     components = schema.setdefault("components", {})
     schemas = components.setdefault("schemas", {})
 

@@ -43,7 +43,7 @@
   width: min(100%, 1340px);
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(420px, 0.9fr) minmax(620px, 1.16fr);
+  grid-template-columns: minmax(380px, 0.78fr) minmax(700px, 1.28fr);
   align-items: center;
   gap: 46px;
   padding-block: 48px 78px;
@@ -60,6 +60,8 @@
 
 .landing-hero-copy {
   min-width: 0;
+  position: relative;
+  top: -24px;
   gap: 18px;
   justify-items: center;
   text-align: center;
