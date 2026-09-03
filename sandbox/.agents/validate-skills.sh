@@ -44,11 +44,11 @@ echo "$skill_files" | while IFS= read -r skill_file; do
   [ -n "$h1" ] || fail "$skill_file: missing H1 title"
   [ "$h1" = "$skill_name" ] || fail "$skill_file: H1 '$h1' does not match skill name '$skill_name'"
 
-  grep -Eq '^## (Help First|Resource Paths|Core Rules|Tool Contract)$' "$skill_file" || \
+  grep -Eq '^## (Help first|Resource paths|Core rules|Tool contract)$' "$skill_file" || \
     fail "$skill_file: missing help, resource, core-rule, or tool-contract section"
-  grep -Eq '^## (Usage Rules|Core Rules)$' "$skill_file" || \
+  grep -Eq '^## (Usage rules|Core rules)$' "$skill_file" || \
     fail "$skill_file: missing usage or core rules"
-  grep -Eq '^## (Common Workflows|Command Selection|Quick Reference|Choosing Execution)$' "$skill_file" || \
+  grep -Eq '^## (Common workflows|Command selection|Quick reference|Choosing execution)$' "$skill_file" || \
     fail "$skill_file: missing workflow or command-selection section"
   grep -q '^## Output$' "$skill_file" || fail "$skill_file: missing Output section"
 done
