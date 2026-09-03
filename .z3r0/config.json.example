@@ -43,11 +43,11 @@
     },
     "lightrag": {
         "embedding_api": "https://api.openai.com/v1",
-        "embedding_key": "",
+        "embedding_key": "sk-3844...",
         "embedding_model": "text-embedding-3-small",
         "embedding_dim": 1536,
         "llm_api": "https://api.openai.com/v1",
-        "llm_key": "",
+        "llm_key": "sk-3844...",
         "llm_model": "gpt-5",
         "graph_matches": 5,
         "chunk_matches": 10
